@@ -9,6 +9,10 @@ generated copy, so never edit it by hand:
 - links between lessons become wiki links ([[Text|Page Name]])
 - links to other repo files (AGENTS.md, .github/..., .claude/...) become
   absolute GitHub URLs
+- every lesson with a notebook gets a direct "Open in Colab" link: in the
+  sidebar, on a Notebooks page, and in a nav bar (Colab, source, prev/next) at
+  the top and bottom of the lesson
+- Marp-only directives (<!-- _class: ... -->) are dropped
 - _Sidebar.md is built from the README's sections, and _Footer.md says where
   to edit
 
@@ -35,6 +39,51 @@ LINK_RE = re.compile(r"(?<!!)\[((?:[^\[\]]|\[[^\]]*\])*)\]\((<[^>]+>|[^)\s]+)\)"
 
 
 FRONT_MATTER_RE = re.compile(r"\A---\n.*?\n---\n", re.DOTALL)
+MARP_DIRECTIVE_RE = re.compile(r"^<!--\s*_?\w+:.*?-->\n", re.MULTILINE)
+COLAB_RE = re.compile(r"https://colab\.research\.google\.com/github/[^)\s]+\.ipynb")
+TITLE_RE = re.compile(r"^# (.+)$", re.MULTILINE)
+COLAB_BADGE = "https://colab.research.google.com/assets/colab-badge.svg"
+
+
+def colab_url(text: str) -> str | None:
+    """The lesson's notebook link, taken from its Colab badge."""
+    m = COLAB_RE.search(text)
+    return m.group(0) if m else None
+
+
+def wiki_slug(page: str) -> str:
+    return urllib.parse.quote(page.replace(" ", "-"))
+
+
+def nav_bar(src: Path, colab: str | None, prev: Path | None, nxt: Path | None) -> str:
+    """One line of links: Colab, source, previous and next lesson."""
+    parts = []
+    if colab:
+        parts.append(f"**[▶ Open in Colab]({colab})**")
+    rel = urllib.parse.quote(os.path.relpath(src, ROOT))
+    parts.append(f"[Source deck](https://github.com/{REPO}/blob/{BRANCH}/{rel})")
+    if prev:
+        parts.append(f"[[← {page_name(prev.name)}|{page_name(prev.name)}]]")
+    parts.append("[[Home|Home]]")
+    if nxt:
+        parts.append(f"[[{page_name(nxt.name)} →|{page_name(nxt.name)}]]")
+    return " · ".join(parts)
+
+
+def notebooks_page(lesson_files: list[Path]) -> str:
+    rows = ["# Notebooks", "",
+            "Every lesson runs end to end in Colab: the notebook clones this repo, "
+            "installs it and runs the lesson's Kedro pipeline. No local setup needed.", "",
+            "| Lesson | Notebook |", "| --- | --- |"]
+    for f in lesson_files:
+        text = f.read_text(encoding="utf-8")
+        url = colab_url(text)
+        if not url:
+            continue
+        m = TITLE_RE.search(FRONT_MATTER_RE.sub("", text))
+        title = (m.group(1).strip() if m else page_name(f.name)).replace("|", "/")
+        rows.append(f"| [[{title}|{page_name(f.name)}]] | [![Open In Colab]({COLAB_BADGE})]({url}) |")
+    return "\n".join(rows) + "\n"
 
 
 def lessons() -> list[Path]:
@@ -58,7 +107,7 @@ def rewrite_links(text: str, pages: set[str], src_dir: Path = ROOT) -> str:
         if path in pages:
             # Image links ([![..](..)](page)) can't use [[..]] syntax.
             if label.startswith("!["):
-                slug = urllib.parse.quote(page_name(path).replace(" ", "-"))
+                slug = wiki_slug(page_name(path))
                 return f"[{label}]({slug}{'#' + anchor if anchor else ''})"
             return f"[[{label.replace('|', '/')}|{page_name(path)}]]"
         kind = "tree" if (ROOT / path).is_dir() else "blob"
@@ -73,8 +122,8 @@ def rewrite_links(text: str, pages: set[str], src_dir: Path = ROOT) -> str:
     return "".join(out)
 
 
-def sidebar(readme: str, pages: set[str]) -> str:
-    lines = ["**[[deep-actuarial-science|Home]]**"]
+def sidebar(readme: str, pages: set[str], colab: dict[str, str]) -> str:
+    lines = ["**[[deep-actuarial-science|Home]]**", "", "[[▶ All notebooks in Colab|Notebooks]]"]
     section = None
     for line in readme.splitlines():
         if line.startswith("## ") and "Maintaining" not in line:
@@ -84,7 +133,11 @@ def sidebar(readme: str, pages: set[str]) -> str:
             if section:
                 lines += ["", f"**{section}**"]
                 section = None
-            lines.append(f"- [[{m.group(1)}|{page_name(urllib.parse.unquote(m.group(2)))}]]")
+            name = urllib.parse.unquote(m.group(2))
+            link = f"- [[{m.group(1)}|{page_name(name)}]]"
+            if name in colab:
+                link += f" · [Colab]({colab[name]})"
+            lines.append(link)
     return "\n".join(lines).strip() + "\n"
 
 
@@ -99,12 +152,26 @@ def main(out_dir: str) -> int:
         if old.read_text(encoding="utf-8").startswith(GENERATED_MARK):
             old.unlink()
 
+    lesson_files = sorted((ROOT / "lessons").glob("*.md"))
+    colab = {f.name: u for f in lesson_files if (u := colab_url(f.read_text(encoding="utf-8")))}
+
     for src in files:
         text = FRONT_MATTER_RE.sub("", src.read_text(encoding="utf-8"))
+        text = MARP_DIRECTIVE_RE.sub("", text)
         body = rewrite_links(text, pages, src.parent)
+        if src in lesson_files:
+            i = lesson_files.index(src)
+            prev = lesson_files[i - 1] if i > 0 else None
+            nxt = lesson_files[i + 1] if i + 1 < len(lesson_files) else None
+            nav = nav_bar(src, colab.get(src.name), prev, nxt)
+            body = f"{nav}\n\n{body.strip()}\n\n---\n\n{nav}\n"
         (out / f"{page_name(src.name)}.md").write_text(
             f"{GENERATED_MARK}\n{body}", encoding="utf-8"
         )
+
+    (out / "Notebooks.md").write_text(
+        f"{GENERATED_MARK}\n{notebooks_page(lesson_files)}", encoding="utf-8"
+    )
 
     figs = ROOT / "lessons" / "figures"
     if figs.is_dir():
@@ -112,7 +179,7 @@ def main(out_dir: str) -> int:
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     (out / "_Sidebar.md").write_text(
-        f"{GENERATED_MARK}\n{sidebar(readme, pages)}", encoding="utf-8"
+        f"{GENERATED_MARK}\n{sidebar(readme, pages, colab)}", encoding="utf-8"
     )
     (out / "_Footer.md").write_text(
         f"{GENERATED_MARK}\n_This wiki is generated from [{REPO}](https://github.com/{REPO}). "
@@ -120,7 +187,7 @@ def main(out_dir: str) -> int:
         "Edits made here are overwritten._\n",
         encoding="utf-8",
     )
-    print(f"Wrote {len(files)} pages + sidebar/footer to {out}")
+    print(f"Wrote {len(files) + 1} pages + sidebar/footer to {out} ({len(colab)} Colab links)")
     return 0
 
 
