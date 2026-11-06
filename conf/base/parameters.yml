@@ -1,0 +1,17 @@
+# true = the published reference setup: reconcile nodes compare results to benchmarks.
+# Environments that shrink data or training (conf/smoke) set it to false.
+reference_setup: true
+
+# Data sources. Downloads are cached under data/01_raw.
+ingest:
+  aitools:
+    # Wüthrich, Richman et al. (2025), AI Tools for Actuaries, https://aitools4actuaries.com
+    url: https://people.math.ethz.ch/~wueth/AITools/Data.zip
+    cache_dir: data/01_raw/aitools
+    frequency_member: Data/freMTPL2freqEmb.parquet  # freMTPL2 + fixed split + brand/region embeddings
+    mortality_member: Data/CHE.Mx_1x1.txt           # Human Mortality Database, Switzerland
+  cas:
+    # Meyers & Shi (2011), CAS Loss Reserving Database (NAIC Schedule P, 1988-1997)
+    url: https://www.casact.org/sites/default/files/2021-04/{lob}_pos.csv
+    cache_dir: data/01_raw/cas
+    lines: [ppauto, wkcomp, comauto, medmal, prodliab, othliab]

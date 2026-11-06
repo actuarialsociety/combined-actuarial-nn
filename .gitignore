@@ -1,0 +1,21 @@
+.env
+.claude/settings.local.json
+__pycache__/
+.DS_Store
+
+# Kedro / MLflow outputs
+data/**
+!data/**/
+!data/**/.gitkeep
+mlruns/
+mlartifacts/
+conf/local/**
+!conf/local/.gitkeep
+*.egg-info/
+.venv/
+.ipynb_checkpoints/
+info.log
+errors.log
+lessons/*.html
+site/
+mlflow*.db

@@ -1,0 +1,52 @@
+name: Slides
+
+# Renders every lesson (a Marp markdown deck in lessons/) to HTML slides and publishes
+# them to GitHub Pages. Preview locally: npx @marp-team/marp-cli@4.5.1 -s lessons
+
+on:
+  push:
+    branches: [main]
+    paths: ["lessons/**", ".github/workflows/slides.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Render decks
+        run: |
+          npx -y @marp-team/marp-cli@4.5.1 --input-dir lessons --output site --html --allow-local-files
+          cp -r lessons/figures site/figures
+          {
+            echo '<!doctype html><meta charset="utf-8"><title>deep-actuarial-science slides</title>'
+            echo '<body style="font-family:system-ui;max-width:40rem;margin:3rem auto;padding:0 1rem">'
+            echo '<h1>Deep Actuarial Science: slides</h1><ul>'
+            for f in site/*.html; do n=$(basename "$f" .html); echo "<li><a href=\"$(basename "$f")\">$n</a></li>"; done
+            echo '</ul></body>'
+          } > site/index.html.tmp && mv site/index.html.tmp site/index.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

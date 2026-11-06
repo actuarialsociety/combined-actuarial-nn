@@ -1,0 +1,53 @@
+# Claim frequency on freMTPL2 (678,007 French motor TPL policies).
+# Change the data scale or a model's settings here, or on the command line:
+#   kedro run --pipeline frequency --params frequency.data.scale=0.1
+frequency:
+  data:
+    scale: 1.0          # 1.0 = reference setup (benchmarks apply); 0.01-0.5 for quick experiments
+    sample_seed: 1
+    noise_seed: 500     # RandN: pure-noise covariate for LocalGLMnet variable selection
+
+  models:
+    homogeneous:
+      kind: homogeneous
+
+    glm:
+      kind: glm
+      formula: "ClaimNb ~ DrivAgeGLM + VehBrand + VehGas + DensityGLM + AreaGLM"
+
+    gbm:
+      kind: gbm
+      seed: 1
+      num_boost_round: 2000
+      early_stopping: 50
+      lgb:
+        learning_rate: 0.05
+        num_leaves: 31
+        min_data_in_leaf: 1000
+        feature_fraction: 0.8
+
+    fnn:
+      kind: fnn
+      seed: 21456783
+      hidden: [20, 15, 10]
+      embedding_dims: [2, 2]
+      epochs: 200
+      batch_size: 5000
+      balance_correction: false
+
+    cann:
+      kind: cann
+      seed: 21456783
+      hidden: [20, 15, 10]
+      embedding_dims: [2, 2]
+      epochs: 200
+      batch_size: 5000
+
+    localglmnet:
+      kind: localglmnet
+      seed: 21456783
+      hidden: [20, 15, 10]
+      epochs: 100
+      batch_size: 5000
+      features: [Area, VehPower, VehAge, DrivAge, BonusMalus, VehGas, Density,
+                 VehBrandEmb1, VehBrandEmb2, RegionEmb1, RegionEmb2, RandN]

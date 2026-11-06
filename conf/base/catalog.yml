@@ -1,0 +1,148 @@
+# Data catalog. Dataset factories ("{ns}.…") cover every model namespace, so adding a
+# model needs no catalog changes. Figures are also logged to MLflow by MlflowFigureHook.
+
+# --- Raw (cached downloads) -----------------------------------------------------------------
+freq_raw:
+  type: pandas.ParquetDataset
+  filepath: data/01_raw/freMTPL2freqEmb.parquet
+
+mortality_raw:
+  type: pandas.ParquetDataset
+  filepath: data/01_raw/hmd_che_mx.parquet
+
+cas_raw:
+  type: pandas.ParquetDataset
+  filepath: data/01_raw/cas_schedule_p.parquet
+
+# --- Frequency --------------------------------------------------------------------------------
+freq_learn:
+  type: pandas.ParquetDataset
+  filepath: data/03_primary/freq_learn.parquet
+
+freq_test:
+  type: pandas.ParquetDataset
+  filepath: data/03_primary/freq_test.parquet
+
+"{ns}.freq_model":
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  artifact_path: models
+  dataset:
+    type: pickle.PickleDataset
+    filepath: data/06_models/frequency/{ns}.pkl
+
+"{ns}.freq_predictions":
+  type: pandas.ParquetDataset
+  filepath: data/07_model_output/frequency/{ns}.parquet
+
+"{ns}.freq_metrics":
+  type: json.JSONDataset
+  filepath: data/08_reporting/frequency/{ns}/metrics.json
+
+"{ns}.freq_metrics_mlflow":
+  type: kedro_mlflow.io.metrics.MlflowMetricsHistoryDataset
+  prefix: "{ns}"
+
+"{ns}.freq_figures":
+  type: matplotlib.MatplotlibDataset
+  filepath: data/08_reporting/frequency/{ns}/figures
+
+"{ns}.freq_reconciliation":
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  artifact_path: benchmarks
+  dataset:
+    type: pandas.CSVDataset
+    filepath: data/08_reporting/frequency/{ns}/reconciliation.csv
+
+freq_leaderboard:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pandas.CSVDataset
+    filepath: data/08_reporting/frequency/leaderboard.csv
+
+freq_comparison_figures:
+  type: matplotlib.MatplotlibDataset
+  filepath: data/08_reporting/frequency/comparison
+
+# --- Mortality --------------------------------------------------------------------------------
+mort_data:
+  type: pandas.ParquetDataset
+  filepath: data/03_primary/mortality.parquet
+
+"{ns}.mort_results":
+  type: pandas.ParquetDataset
+  filepath: data/07_model_output/mortality/{ns}.parquet
+
+"{ns}.mort_history":
+  type: json.JSONDataset
+  filepath: data/07_model_output/mortality/{ns}_history.json
+
+"{ns}.mort_metrics":
+  type: json.JSONDataset
+  filepath: data/08_reporting/mortality/{ns}/metrics.json
+
+"{ns}.mort_metrics_mlflow":
+  type: kedro_mlflow.io.metrics.MlflowMetricsHistoryDataset
+  prefix: "{ns}"
+
+"{ns}.mort_figures":
+  type: matplotlib.MatplotlibDataset
+  filepath: data/08_reporting/mortality/{ns}/figures
+
+"{ns}.mort_reconciliation":
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  artifact_path: benchmarks
+  dataset:
+    type: pandas.CSVDataset
+    filepath: data/08_reporting/mortality/{ns}/reconciliation.csv
+
+mort_leaderboard:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pandas.CSVDataset
+    filepath: data/08_reporting/mortality/leaderboard.csv
+
+mort_comparison_figures:
+  type: matplotlib.MatplotlibDataset
+  filepath: data/08_reporting/mortality/comparison
+
+# --- Reserving --------------------------------------------------------------------------------
+res_triangles:
+  type: pandas.ParquetDataset
+  filepath: data/03_primary/reserving_triangles.parquet
+
+"{ns}.res_predictions":
+  type: pandas.ParquetDataset
+  filepath: data/07_model_output/reserving/{ns}.parquet
+
+"{ns}.res_history":
+  type: json.JSONDataset
+  filepath: data/07_model_output/reserving/{ns}_history.json
+
+"{ns}.res_metrics":
+  type: json.JSONDataset
+  filepath: data/08_reporting/reserving/{ns}/metrics.json
+
+"{ns}.res_metrics_mlflow":
+  type: kedro_mlflow.io.metrics.MlflowMetricsHistoryDataset
+  prefix: "{ns}"
+
+"{ns}.res_reconciliation":
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  artifact_path: benchmarks
+  dataset:
+    type: pandas.CSVDataset
+    filepath: data/08_reporting/reserving/{ns}/reconciliation.csv
+
+res_leaderboard:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pandas.CSVDataset
+    filepath: data/08_reporting/reserving/leaderboard.csv
+
+res_company_reserves:
+  type: pandas.CSVDataset
+  filepath: data/08_reporting/reserving/company_reserves.csv
+
+res_comparison_figures:
+  type: matplotlib.MatplotlibDataset
+  filepath: data/08_reporting/reserving/comparison

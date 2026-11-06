@@ -1,0 +1,91 @@
+---
+marp: true
+theme: default
+paginate: true
+math: katex
+title: "05 · Mortality: Lee–Carter to deep learning"
+---
+
+<!-- _class: lead -->
+# 05 · Mortality: Lee–Carter to deep learning
+### Forecast 22 years of Swiss mortality and compare four network types with Lee–Carter
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/05_mortality.ipynb) · `kedro run --pipeline mortality`
+
+---
+
+## Theory
+
+$$
+\log m_{x,t} = a_x + b_x k_t, \qquad k_{t+1} = k_t + \delta + \varepsilon_{t+1}
+\qquad \text{(Lee–Carter [1])}
+$$
+
+$$
+\log m_{\cdot,t} = f_\theta\big(\log m_{\cdot,t-10},\dots,\log m_{\cdot,t-1}\big)
+\qquad \text{(neural forecaster [2])}
+$$
+
+- Inputs: 10-year windows of the whole age profile (ages 0–89)
+- CNN, CNN with tanh, LSTM and a one-block Transformer; forecasts are **recursive**
+
+---
+
+## The data: HMD Switzerland, males, 1900–2021
+
+![w:700](figures/05-observed.png)
+
+Learn 1900–1999, forecast 2000–2021 (dashed line).
+
+---
+
+## Results: reconciled to the benchmark
+
+| Model | RMSE in-sample | RMSE out-of-sample | Published out | Status |
+| --- | --- | --- | --- | --- |
+| Lee–Carter | <!--r:lee_carter.rmse_in-->0.1555<!--/r--> | <!--r:lee_carter.rmse_out-->0.3425<!--/r--> | 0.3425 | <!--r:lee_carter.status-->PASS<!--/r--> |
+| CNN | <!--r:cnn.rmse_in-->0.1808<!--/r--> | <!--r:cnn.rmse_out-->0.4281<!--/r--> | 0.4281 | <!--r:cnn.status-->PASS<!--/r--> |
+| CNN (tanh) | <!--r:cnn_tanh.rmse_in-->0.1570<!--/r--> | <!--r:cnn_tanh.rmse_out-->0.3535<!--/r--> | 0.3533 | <!--r:cnn_tanh.status-->PASS<!--/r--> |
+| LSTM | <!--r:lstm.rmse_in-->0.1595<!--/r--> | <!--r:lstm.rmse_out-->0.3428<!--/r--> | 0.3428 | <!--r:lstm.status-->PASS<!--/r--> |
+| Transformer | <!--r:transformer.rmse_in-->0.1819<!--/r--> | <!--r:transformer.rmse_out-->0.3831<!--/r--> | 0.3831 | <!--r:transformer.status-->PASS<!--/r--> |
+
+RMSE of $\log m_{x,t}$. Lee–Carter is closed-form and reproduces the benchmark exactly [3].
+
+---
+
+## Where forecasts go wrong
+
+![w:470](figures/05-lc-residuals.png) ![w:470](figures/05-lstm-residuals.png)
+
+Right of the dashed line: the LSTM forecasts too high at ages 15–40 (blue) and too low at the youngest and oldest ages (red). Note the 1918 influenza spike in the training data.
+
+---
+
+## Forecast quality by horizon
+
+![w:470](figures/05-horizon.png) ![w:470](figures/05-age-profile.png)
+
+---
+
+## In production
+
+- **Look-ahead:** the reference scales $\log m$ with all years, test included. Set
+  `mortality.training.scaler_fit: learn` for an honest forecast
+- **Recursive error growth:** errors compound with horizon; report by horizon, not one number
+- **Uncertainty:** point forecasts are not enough for reserving; bootstrap intervals [4]
+- **Many populations:** jointly trained networks with embeddings beat per-country Lee–Carter fits [5, 6]
+
+---
+
+## Learn more
+
+1. Lee, R. D., & Carter, L. R. (1992). Modeling and forecasting U.S. mortality. *JASA*, 87(419), 659–671. [doi:10.1080/01621459.1992.10475265](https://doi.org/10.1080/01621459.1992.10475265)
+2. Perla, F., Richman, R., Scognamiglio, S., & Wüthrich, M. V. (2021). Time-series forecasting of mortality rates using deep learning. *Scandinavian Actuarial Journal*, 2021(7), 572–598. [doi:10.1080/03461238.2020.1867232](https://doi.org/10.1080/03461238.2020.1867232)
+3. Wüthrich, M. V., Richman, R., et al. (2025). AI tools for actuaries. *SSRN 5162304*. [SSRN](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5162304)
+4. Schnürch, S., & Korn, R. (2022). Point and interval forecasts of death rates using neural networks. *ASTIN Bulletin*, 52(1), 333–360. [doi:10.1017/asb.2021.34](https://doi.org/10.1017/asb.2021.34)
+5. Richman, R., & Wüthrich, M. V. (2021). A neural network extension of the Lee–Carter model to multiple populations. *Annals of Actuarial Science*, 15(2), 346–366. [doi:10.1017/S1748499519000071](https://doi.org/10.1017/S1748499519000071)
+6. Scognamiglio, S. (2022). Calibrating the Lee–Carter and the Poisson Lee–Carter models via neural networks. *ASTIN Bulletin*, 52(2), 519–561. [doi:10.1017/asb.2022.5](https://doi.org/10.1017/asb.2022.5)
+
+Data: [Human Mortality Database](https://www.mortality.org/).
+
+_Last reviewed: 2026-11-06_

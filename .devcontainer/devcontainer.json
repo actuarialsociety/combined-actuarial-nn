@@ -1,0 +1,28 @@
+{
+  "name": "deep-actuarial-science",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "lab",
+  "runServices": ["lab", "mlflow"],
+  "workspaceFolder": "/workspace",
+  "overrideCommand": true,
+  "forwardPorts": [8888, 5000],
+  "portsAttributes": {
+    "8888": {"label": "JupyterLab"},
+    "5000": {"label": "MLflow UI"}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-toolsai.jupyter",
+        "kedro.kedro",
+        "marp-team.marp-vscode",
+        "charliermarsh.ruff"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "markdown.marp.enableHtml": true
+      }
+    }
+  }
+}

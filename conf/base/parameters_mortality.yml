@@ -1,0 +1,25 @@
+# Mortality forecasting on Swiss HMD data (1900-2021, ages 0-89).
+# Reference setup (benchmarks apply): sexes [Male], obs_year 1999.
+mortality:
+  data:
+    sexes: [Male]       # [Male, Female] fits each sex separately
+    max_age: 90
+    first_year: 1900
+    last_year: 2021
+    obs_year: 1999      # learn <= obs_year < test: a 22-year forecast horizon
+
+  training:             # shared by the neural models
+    lookback: 10
+    epochs: 1000
+    batch_size: 4
+    lr: 0.001
+    patience: 5
+    shuffle_seed: 100
+    scaler_fit: all     # reference notebook; use `learn` to remove look-ahead
+
+  models:
+    lee_carter: {kind: lee_carter}
+    cnn: {kind: cnn, seed: 100, arch: {filters: 3, kernel: 3}}
+    cnn_tanh: {kind: cnn_tanh, seed: 100, arch: {filters: 3, kernel: 3, qq: [20, 20]}}
+    lstm: {kind: lstm, seed: 100, arch: {q: 20, units: 20}}
+    transformer: {kind: transformer, seed: 100, arch: {units: 3}}
