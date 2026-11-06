@@ -4,6 +4,10 @@ theme: default
 paginate: true
 math: katex
 title: "00 · Quickstart"
+style: |
+  details { border: 1px solid rgba(140,149,159,.45); border-radius: 8px; padding: .25em .8em; margin: .35em 0; font-size: .72em; }
+  summary { cursor: pointer; font-size: 1.15em; }
+  details[open] { background: rgba(140,149,159,.08); }
 ---
 
 <!-- _class: lead -->
@@ -11,6 +15,83 @@ title: "00 · Quickstart"
 ### Theory → pipeline → reconciled result, in one command
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/00_quickstart.ipynb) · `kedro run --env smoke`
+
+
+---
+
+## Core ideas
+
+_Click a panel to open it; work through them in order._
+
+<details>
+<summary><b>① Every model answers the same question</b></summary>
+
+Claim counts are modelled as $N_i \sim \mathrm{Poi}(\mu_i)$ with $\mu_i = v_i\thinspace\lambda(\boldsymbol{x}_i)$: exposure $v_i$ (policy years) times a frequency $\lambda(\boldsymbol{x})$ that depends on the covariates. The lessons differ only in how $\lambda(\boldsymbol{x})$ is built:
+
+homogeneous (one number) → GLM (hand-made features) → GBM (trees) → FNN (learned features) → CANN (GLM + learned correction) → LocalGLMnet (learned, but readable as coefficients).
+
+Mortality (lesson 05) and reserving (lesson 06) reuse the same pattern on time series and triangles.
+
+</details>
+
+<details>
+<summary><b>② One score for all: the Poisson deviance</b></summary>
+
+$$
+D = \frac{1}{\sum_i v_i}\sum_i v_i\thinspace d\Big(\frac{N_i}{v_i}, \frac{\mu_i}{v_i}\Big) \times 100,
+\qquad d(y,m) = 2\Big(m - y - y\log\frac{m}{y}\Big)
+$$
+
+- $d$ is twice the log-likelihood gap to a model that fits every observation exactly, so **minimising deviance = maximum likelihood**
+- Lower is better. Values are reported in units of $10^{-2}$, as in the published benchmarks
+- It rewards both ranking risks correctly and getting the level right. The other lessons separate the two with Lorenz curves (ranking) and calibration plots (level)
+
+</details>
+
+<details>
+<summary><b>③ Learn, validation and test sets</b></summary>
+
+- **Test** (67,801 policies): a fixed hold-out, used only to report results, never to choose anything
+- **Learn** (the rest): used to fit
+- **Validation**: 10% of *learn*, used by GBMs and networks to decide when to stop training
+
+Using the same split as the published notebooks is what makes the results comparable to their numbers.
+
+</details>
+
+<details>
+<summary><b>④ Reconciliation: proving the implementation first</b></summary>
+
+`conf/base/parameters_benchmarks.yml` holds, per model, the published value, a tolerance and the source. After each run:
+
+$$
+\text{PASS} \iff |\text{this repo} - \text{published}| \le \text{tolerance}
+$$
+
+Benchmarks apply only at the reference setup (e.g. `scale: 1.0`); smaller experiments report `SKIPPED`. A model that reproduces a published number is a trustworthy starting point for your own changes. Where no like-for-like number exists (reserving), the lesson back-tests against realised outcomes instead.
+
+</details>
+
+<details>
+<summary><b>⑤ Reproducible by construction</b></summary>
+
+- **Config, not code:** data scale, architectures and epochs live in `conf/base/parameters_*.yml`
+- **Seeds** are fixed per model, so a rerun gives the same numbers
+- **MLflow** logs parameters, metrics, figures and the reconciliation table for every run
+- **Same pipeline everywhere:** Colab, the container and a local clone all run `kedro run`
+
+</details>
+
+<details>
+<summary><b>⑥ What a pricing team checks beyond deviance</b></summary>
+
+- **Calibration:** actual vs expected by predicted-risk decile
+- **Balance:** total predicted claims = total observed claims on the learning data
+- **Ranking:** Lorenz curve and Gini index
+- **Stability:** refit with other seeds; average fits before pricing
+- **Look-ahead:** nothing from the test period may enter training or scaling
+
+</details>
 
 ---
 

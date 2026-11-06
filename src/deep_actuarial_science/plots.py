@@ -10,7 +10,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-INK, MUTED, GRID = "#1f2937", "#6b7280", "#e5e7eb"
+# Figures have transparent backgrounds so they sit on any page (GitHub light/dark, wiki,
+# Marp slides). Text, axes and grid use mid greys that stay readable on white and on near-black.
+INK, MUTED, GRID = "#6e7781", "#8c959f", "#8c959f"
 PALETTE = ["#2563eb", "#dc2626", "#059669", "#d97706", "#7c3aed", "#0891b2", "#db2777"]
 
 plt.rcParams.update(
@@ -18,15 +20,26 @@ plt.rcParams.update(
         "figure.dpi": 110,
         "savefig.dpi": 110,
         "savefig.bbox": "tight",
+        "savefig.transparent": True,
+        "figure.facecolor": "none",
+        "axes.facecolor": "none",
+        "savefig.facecolor": "none",
         "axes.spines.top": False,
         "axes.spines.right": False,
         "axes.edgecolor": MUTED,
         "axes.grid": True,
         "grid.color": GRID,
+        "grid.alpha": 0.35,
         "grid.linewidth": 0.8,
         "axes.titleweight": "bold",
         "axes.titlesize": 11,
+        "text.color": INK,
+        "axes.titlecolor": INK,
         "axes.labelcolor": INK,
+        "xtick.color": MUTED,
+        "ytick.color": MUTED,
+        "xtick.labelcolor": INK,
+        "ytick.labelcolor": INK,
         "axes.prop_cycle": matplotlib.cycler(color=PALETTE),
         "font.size": 10,
         "legend.frameon": False,

@@ -1,7 +1,7 @@
 name: Slides
 
 # Renders every lesson (a Marp markdown deck in lessons/) to HTML slides and publishes
-# them to GitHub Pages. Preview locally: npx @marp-team/marp-cli@4.5.1 -s lessons
+# them to GitHub Pages. Preview locally: npx @marp-team/marp-cli@4.5.1 --html -s lessons
 
 on:
   push:

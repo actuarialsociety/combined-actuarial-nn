@@ -4,6 +4,10 @@ theme: default
 paginate: true
 math: katex
 title: "01 · Baselines: GLM and GBM"
+style: |
+  details { border: 1px solid rgba(140,149,159,.45); border-radius: 8px; padding: .25em .8em; margin: .35em 0; font-size: .72em; }
+  summary { cursor: pointer; font-size: 1.15em; }
+  details[open] { background: rgba(140,149,159,.08); }
 ---
 
 <!-- _class: lead -->
@@ -17,7 +21,7 @@ title: "01 · Baselines: GLM and GBM"
 ## Theory
 
 $$
-N_i \sim \mathrm{Poi}\big(v_i\,\lambda(\boldsymbol{x}_i)\big), \qquad
+N_i \sim \mathrm{Poi}\big(v_i\thinspace\lambda(\boldsymbol{x}_i)\big), \qquad
 \log \lambda^{\mathrm{GLM}}(\boldsymbol{x}) = \beta_0 + \langle \boldsymbol{\beta}, \boldsymbol{x}\rangle
 $$
 
@@ -27,6 +31,88 @@ $$
 
 - **GLM** [1]: interpretable, but features are hand-engineered (age bands, log density)
 - **GBM** [2, 3]: learns interactions with trees; Poisson loss with $\log v_i$ as offset
+
+
+---
+
+## Core ideas
+
+_Click a panel to open it; work through them in order._
+
+<details>
+<summary><b>① Exposure enters as an offset</b></summary>
+
+With a log link, the expected count of policy $i$ is
+
+$$
+\log \mathbb{E}[N_i] = \log v_i + \eta(\boldsymbol{x}_i), \qquad \eta = \log\lambda .
+$$
+
+$\log v_i$ has a fixed coefficient of 1 (an **offset**), so a policy on cover for half a year expects half the claims. Covariates act **multiplicatively** on frequency: $\exp(\beta_j)$ is a relativity, the familiar form of a rating table.
+
+</details>
+
+<details>
+<summary><b>② Fitting = maximum likelihood = minimum deviance</b></summary>
+
+Up to terms that do not depend on the model, the Poisson log-likelihood is
+
+$$
+\ell(\boldsymbol\beta) = \sum_i \big(N_i \log\mu_i - \mu_i\big), \qquad \mu_i = v_i\exp(\beta_0 + \langle\boldsymbol\beta, \boldsymbol{x}_i\rangle).
+$$
+
+The deviance is $2(\ell_{\text{saturated}} - \ell)$, so the parameters that maximise $\ell$ also minimise the deviance on the learning data. statsmodels solves this with iteratively reweighted least squares.
+
+</details>
+
+<details>
+<summary><b>③ The GLM's features are made by hand</b></summary>
+
+`add_glm_features` builds the design the GLM can use:
+
+- `DrivAge` in 7 bands (18–20, …, 71+), with 31–40 as the reference level
+- `log(Density)`; `Area` as an ordinal code 1–6; `VehBrand` and `VehGas` as categories
+- The reference formula `DrivAgeGLM + VehBrand + VehGas + DensityGLM + AreaGLM` reproduces the published deviance. It leaves out `BonusMalus`, `VehAge` and `VehPower`, which the GBM and the networks do use
+
+Every band and transformation is a modelling decision. Deep models aim to learn these from the data.
+
+</details>
+
+<details>
+<summary><b>④ The balance property</b></summary>
+
+For a Poisson GLM with log link and an intercept, the likelihood equation for $\beta_0$ is
+
+$$
+\frac{\partial \ell}{\partial\beta_0} = \sum_i (N_i - \hat\mu_i) = 0 .
+$$
+
+The fitted GLM therefore reproduces the total observed claim count on the learning data exactly (balance = 1.0000). Models fitted another way, such as networks with early stopping, lose this property and must be checked for it.
+
+</details>
+
+<details>
+<summary><b>⑤ Gradient boosting: many small trees</b></summary>
+
+$$
+\eta_M(\boldsymbol{x}) = \eta_0 + \sum_{m=1}^{M} \nu\thinspace h_m(\boldsymbol{x})
+$$
+
+- Each tree $h_m$ is fitted to the negative gradient of the Poisson loss, which on the log scale is $N_i - \mu_i$: the trees chase the remaining residuals
+- $\eta_0 = \log v_i + \log\bar\lambda$: exposure offset plus the portfolio frequency
+- Here: learning rate $\nu = 0.05$, 31 leaves, at least 1,000 policies per leaf, 80% of features per tree; stop after 50 rounds without improvement on the validation set
+- Trees find thresholds and interactions themselves, which is why the GBM beats the GLM
+
+</details>
+
+<details>
+<summary><b>⑥ Ranking vs level</b></summary>
+
+- **Lorenz curve / Gini:** sort policies from highest to lowest predicted frequency and plot the cumulative share of claims against the cumulative share of exposure. A higher Gini means better **ranking** of risks
+- **Calibration by decile:** within each predicted-risk decile, compare observed and predicted frequency. This checks the **level**
+- A model can rank well and still be mis-priced, or the reverse. Deviance mixes both, so look at both
+
+</details>
 
 ---
 

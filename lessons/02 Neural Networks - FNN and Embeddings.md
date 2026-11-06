@@ -4,6 +4,10 @@ theme: default
 paginate: true
 math: katex
 title: "02 · Neural networks and embeddings"
+style: |
+  details { border: 1px solid rgba(140,149,159,.45); border-radius: 8px; padding: .25em .8em; margin: .35em 0; font-size: .72em; }
+  summary { cursor: pointer; font-size: 1.15em; }
+  details[open] { background: rgba(140,149,159,.08); }
 ---
 
 <!-- _class: lead -->
@@ -17,13 +21,97 @@ title: "02 · Neural networks and embeddings"
 ## Theory
 
 $$
-\lambda^{\mathrm{FNN}}(\boldsymbol{x}) = \exp\big\{w_0 + \langle \boldsymbol{w}, \boldsymbol{z}^{(d:1)}(\boldsymbol{x})\rangle\big\},
+\lambda^{\mathrm{FNN}}(\boldsymbol{x}) = \exp\big\lbrace w_0 + \langle \boldsymbol{w}, \boldsymbol{z}^{(d:1)}(\boldsymbol{x})\rangle\big\rbrace,
 \qquad \boldsymbol{z}^{(m)} = \tanh\big(W^{(m)}\boldsymbol{z}^{(m-1)} + \boldsymbol{b}^{(m)}\big)
 $$
 
 - **Entity embeddings** [1]: `VehBrand` and `Region` map to learned vectors in $\mathbb{R}^2$
 - **Start at the homogeneous model:** $\boldsymbol{w}=0$, $w_0=\log\bar\lambda$
 - **Early stopping** on a 10% validation split; keep the best epoch [2]
+
+
+---
+
+## Core ideas
+
+_Click a panel to open it; work through them in order._
+
+<details>
+<summary><b>① A network is a stack of learned features</b></summary>
+
+$$
+\boldsymbol{z}^{(m)} = \tanh\big(W^{(m)}\boldsymbol{z}^{(m-1)} + \boldsymbol{b}^{(m)}\big),\quad m = 1,\dots,d,
+\qquad \mu(\boldsymbol{x}) = v\exp\big(w_0 + \langle\boldsymbol{w}, \boldsymbol{z}^{(d)}\rangle\big)
+$$
+
+- Here $d = 3$ hidden layers of 20, 15 and 10 units (<!--r:fnn.n_params-->792<!--/r--> parameters in total)
+- The last layer is a Poisson GLM on the learned features $\boldsymbol{z}^{(d)}$, so the network is a GLM whose features are learned rather than hand-made
+- Non-linearities and interactions come from composing the layers
+
+</details>
+
+<details>
+<summary><b>② Preparing the inputs</b></summary>
+
+`tanh` saturates for large inputs, so the scale of each input matters:
+
+- `VehAge`, `DrivAge`, `BonusMalus`, `VehPower` are capped at 20, 90, 150 and 15, then standardised
+- `Area` becomes an ordinal code and `Density` is logged; both are standardised
+- `VehGas` becomes a 0/1 diesel indicator
+- `VehBrand` and `Region` stay as integer codes for the embedding layers
+
+</details>
+
+<details>
+<summary><b>③ Entity embeddings for categories</b></summary>
+
+A categorical covariate with $K$ levels is mapped to a learned vector:
+
+$$
+e: \lbrace 1,\dots,K\rbrace \to \mathbb{R}^{b}, \qquad b = 2 .
+$$
+
+- One-hot encoding needs $K-1$ inputs per covariate; an embedding needs $b$
+- The vectors are trained together with the rest of the network, so levels with similar claim behaviour end up close together, which you can plot and interpret
+- The embeddings are concatenated with the continuous inputs before the first hidden layer
+
+</details>
+
+<details>
+<summary><b>④ Training: Poisson loss, NAdam, mini-batches</b></summary>
+
+$$
+L(\theta) = \sum_i \big(\mu_i(\theta) - N_i\log\mu_i(\theta)\big)
+$$
+
+- This is the negative Poisson log-likelihood (`PoissonNLLLoss`), the same objective as the GLM
+- Optimiser NAdam; mini-batches of 5,000 policies; up to 200 epochs; fixed seed
+- The output layer starts at $\boldsymbol{w} = \boldsymbol{0}$, $w_0 = \log(\sum N_i / \sum v_i)$, so training starts **at the homogeneous model** and every step has to improve on it
+
+</details>
+
+<details>
+<summary><b>⑤ Early stopping as regularisation</b></summary>
+
+- 10% of the learning data is held out for validation
+- After each epoch, the validation loss is computed; the weights of the **best** epoch are kept
+- Without this, a network keeps fitting noise in the learning data and gets worse out of sample
+- Read the training plot: the gap between training and validation loss shows how much of the fit generalises
+
+</details>
+
+<details>
+<summary><b>⑥ Why the balance property breaks, and the fix</b></summary>
+
+Gradient descent stopped early has not solved $\sum_i(N_i - \hat\mu_i) = 0$, so the total prediction drifts from the observed total (here <!--r:fnn.balance_learn-->1.0031<!--/r-->×). Because the output is $\exp(w_0 + \cdots)$, shifting the bias rescales every prediction by the same factor:
+
+$$
+w_0 \leftarrow w_0 + \log\frac{\sum_i N_i}{\sum_i \hat\mu_i} .
+$$
+
+`balance_correction: true` applies this after training. The relative ranking of policies is unchanged.
+
+</details>
 
 ---
 
@@ -50,7 +138,7 @@ Loss: Poisson NLL; optimiser: NAdam; batch 5,000; 200 epochs.
 | GLM | <!--r:glm.deviance_learn-->46.954<!--/r--> | <!--r:glm.deviance_test-->47.179<!--/r--> | 47.179 | <!--r:glm.balance_learn-->1.0000<!--/r--> | <!--r:glm.status-->PASS<!--/r--> |
 | FNN | <!--r:fnn.deviance_learn-->44.973<!--/r--> | <!--r:fnn.deviance_test-->44.928<!--/r--> | 44.928 | <!--r:fnn.balance_learn-->1.0031<!--/r--> | <!--r:fnn.status-->PASS<!--/r--> |
 
-<!--r:fnn.n_params-->792<!--/r--> parameters; fitted in <!--r:fnn.fit_seconds-->93<!--/r--> s on a CPU.
+<!--r:fnn.n_params-->792<!--/r--> parameters; fitted in <!--r:fnn.fit_seconds-->62<!--/r--> s on a CPU.
 
 ---
 

@@ -30,7 +30,9 @@ MLflow APIs) goes stale in ~3 months; actuarial theory in ~18 months.
   the new run; never edit numbers by hand.
 - Search Exa for papers published after `_Last reviewed:` that improve the model or
   publish a better benchmark. Verify DOIs with Crossref before citing.
-- Keep theory to one or two equations; cut rather than add.
+- Keep the Theory slide to one or two equations; cut rather than add. Depth belongs in the
+  `## Core ideas` panels: check they still match the code and config, and run
+  `python3 scripts/fix_math.py --check`.
 - Set `_Last reviewed: <today>` on every lesson you reviewed.
 
 ## 4. Report

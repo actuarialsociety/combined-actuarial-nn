@@ -4,6 +4,10 @@ theme: default
 paginate: true
 math: katex
 title: "NN · Model name"
+style: |
+  details { border: 1px solid rgba(140,149,159,.45); border-radius: 8px; padding: .25em .8em; margin: .35em 0; font-size: .72em; }
+  summary { cursor: pointer; font-size: 1.15em; }
+  details[open] { background: rgba(140,149,159,.08); }
 ---
 
 <!-- _class: lead -->
@@ -22,6 +26,47 @@ $$
 
 - What is new versus the previous lesson's model (one bullet)
 - The trick that makes it work (one bullet)
+
+---
+
+## Core ideas
+
+_Click a panel to open it; work through them in order._
+
+<details>
+<summary><b>① The problem the model solves</b></summary>
+
+The setting, notation and the equation that defines the model.
+
+</details>
+
+<details>
+<summary><b>② The key mechanism</b></summary>
+
+What is new versus the previous lesson, with its equation.
+
+</details>
+
+<details>
+<summary><b>③ How it is fitted here</b></summary>
+
+Loss, optimiser, initialisation, early stopping: the exact settings in `conf/base/parameters_<domain>.yml`.
+
+</details>
+
+<details>
+<summary><b>④ How to read the output</b></summary>
+
+What each diagnostic shows; numbers via `<!--r:model.metric-->` markers only.
+
+</details>
+
+<details>
+<summary><b>⑤ What can go wrong</b></summary>
+
+Balance, look-ahead, seed stability, extrapolation.
+
+</details>
 
 ---
 
