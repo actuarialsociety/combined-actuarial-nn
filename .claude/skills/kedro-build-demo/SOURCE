@@ -1,0 +1,2 @@
+Vendored from https://github.com/kedro-org/kedro-skills/tree/c0331492a4fbc053c66b075a2beb2950b9fedb59/skills/kedro-build-demo (Apache-2.0).
+Not yet in a kedro-skills PyPI release; re-vendor with scripts/update_kedro_skills.sh.

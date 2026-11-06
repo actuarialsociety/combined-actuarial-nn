@@ -1,0 +1,28 @@
+{
+  "kedro_skills_version": "0.2.0",
+  "skills": {
+    "catalog-config": {
+      "files": [
+        {
+          "block_id": null,
+          "kind": "managed_copy",
+          "path": ".agents/skills/catalog-config/SKILL.md",
+          "sha256": "703bcbcad665057a992ef56f8796ec89607f4fc934fbefe62fd9747243690efa"
+        },
+        {
+          "block_id": "kedro-skills:catalog-config",
+          "kind": "agents_md_block",
+          "path": "AGENTS.md",
+          "sha256": "b8f337c38e9524fc72a1ab0417cac0d75761db92b5b8661452474b4347beaa3d"
+        },
+        {
+          "block_id": null,
+          "kind": "managed_copy",
+          "path": ".claude/skills/catalog-config/SKILL.md",
+          "sha256": "703bcbcad665057a992ef56f8796ec89607f4fc934fbefe62fd9747243690efa"
+        }
+      ],
+      "version": "0.2.0"
+    }
+  }
+}
