@@ -8,6 +8,7 @@ style: |
   details { border: 1px solid rgba(140,149,159,.45); border-radius: 8px; padding: .25em .8em; margin: .35em 0; font-size: .72em; }
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
+  section:has(details[open]) details:not([open]) { display: none; }
 ---
 
 <!-- _class: lead -->
@@ -20,16 +21,16 @@ style: |
 
 ## Theory
 
-$$
+```math
 \mathbb{E}[X_{i,j}] = \mu_{i,j} = \exp(\alpha_i + \beta_j), \quad
 \mathrm{Var}(X_{i,j}) = \varphi\thinspace\mu_{i,j}
 \qquad \text{(ODP = chain-ladder [1, 2])}
-$$
+```
 
-$$
+```math
 \log \mu^{(c)}_{i,j} = \log \mu^{\mathrm{CL},(c)}_{i,j} + \mathrm{NN}\big(e_c,\thinspace e_{\ell},\thinspace e_j,\thinspace i\big),
 \qquad \mathrm{NN}\equiv 0 \text{ at initialisation}
-$$
+```
 
 - A CANN in the spirit of [3]: one network across **all companies** $c$ and lines $\ell$
 - Payments scaled by company premium; early stopping on the **latest diagonal**
@@ -57,9 +58,7 @@ $X_{i,j}$ is the amount paid for accident year $i$ in development year $j = 1,\d
 
 Volume-weighted development factors, over the accident years where both columns are known:
 
-$$
-\hat f_j = \frac{\sum_i C_{i,j+1}}{\sum_i C_{i,j}}, \qquad \hat C_{i,j+1} = \hat C_{i,j}\thinspace\hat f_j .
-$$
+$\displaystyle \hat f_j = \frac{\sum_i C_{i,j+1}}{\sum_i C_{i,j}}, \qquad \hat C_{i,j+1} = \hat C_{i,j}\thinspace\hat f_j .$
 
 Each accident year is projected from its latest known diagonal to development year 10. The predicted incremental payments are the differences of the projected cumulatives.
 
@@ -68,9 +67,7 @@ Each accident year is projected from its latest known diagonal to development ye
 <details>
 <summary><b>③ The stochastic model behind it: ODP</b></summary>
 
-$$
-\mathbb{E}[X_{i,j}] = \exp(\alpha_i + \beta_j), \qquad \mathrm{Var}(X_{i,j}) = \varphi\thinspace\mathbb{E}[X_{i,j}]
-$$
+$\displaystyle \mathbb{E}[X_{i,j}] = \exp(\alpha_i + \beta_j), \qquad \mathrm{Var}(X_{i,j}) = \varphi\thinspace\mathbb{E}[X_{i,j}]$
 
 Fitting this over-dispersed Poisson (ODP) GLM to the upper triangle by quasi-likelihood gives the same reserves as the chain-ladder. Its fitted means reproduce every row total and column total of the upper triangle. The pipeline builds them directly from the chain-ladder as ultimate × payment pattern.
 
@@ -79,9 +76,7 @@ Fitting this over-dispersed Poisson (ODP) GLM to the upper triangle by quasi-lik
 <details>
 <summary><b>④ Neural ODP: a CANN for triangles</b></summary>
 
-$$
-\log\mu^{(c)}_{i,j} = \log\mu^{\mathrm{CL},(c)}_{i,j} + \mathrm{NN}\big(e_c, e_\ell, e_j, \tilde\imath\big)
-$$
+$\displaystyle \log\mu^{(c)}_ {i,j} = \log\mu^{\mathrm{CL},(c)}_ {i,j} + \mathrm{NN}\big(e_c, e_\ell, e_j, \tilde\imath\big)$
 
 - 2-dimensional embeddings for company $c$, line $\ell$ and development year $j$, plus a scaled accident year $\tilde\imath$; two tanh layers [16, 8]
 - Output layer initialised at zero, so training starts **exactly at the chain-ladder**
