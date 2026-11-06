@@ -8,6 +8,18 @@
 - Verb-led, testable outcome (e.g. "Train an XGBoost model on a claims dataset")
 - 3 to 5 bullets
 
+# Theory
+
+## 1. <Classical baseline>
+Short statement of the model, with its key equation [1]:
+
+$$
+\log \lambda(\boldsymbol{x}) = \beta_0 + \langle \boldsymbol{\beta}, \boldsymbol{x} \rangle
+$$
+
+## 2. <Neural extension>
+How the network nests or extends the baseline, and what the literature found [2].
+
 # Content
 * [Official docs page](https://example.com/docs): what to read there
 
@@ -29,6 +41,10 @@
 2. Concrete step the learner runs
 3. Concrete step, with the command or code to type
 4. A small change for the learner to make themselves ("now try ...")
+
+# References
+1. Surname, A. B., & Surname, C. (Year). Title. *Journal*, Vol(Issue), pages. [doi:10.xxxx/yyyy](https://doi.org/10.xxxx/yyyy)
+2. Surname, A. B. (Year). Title. *SSRN NNNNNNN*. [SSRN](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=NNNNNNN)
 
 ---
 _Last reviewed: YYYY-MM-DD_

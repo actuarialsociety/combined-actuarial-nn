@@ -12,14 +12,26 @@ still work and keep each lesson short.
 
 ## Project rules (read first)
 
-### 1. A lesson = videos + a repo to code along in
+### 1. A lesson = research-referenced theory + videos + a repo to code along in
 
-- Videos carry the teaching. Prose stays short: a one-paragraph intro at most,
-  plus Prerequisites, Objectives and Follow-along steps.
+- Lessons are **research-focused**. A short `# Theory` section states the
+  models in LaTeX (`$...$` inline, `$$...$$` on their own lines; GitHub and
+  the wiki render both) and cites sources as numbered references `[n]`.
+- Cite **academic sources**: peer-reviewed journals (ASTIN Bulletin,
+  Scandinavian Actuarial Journal, Annals of Actuarial Science, European
+  Actuarial Journal, Insurance: Mathematics and Economics, Risks), textbooks,
+  or SSRN/arXiv preprints by recognised authors. Every lesson ends with a
+  `# References` list in author–year style, with a `https://doi.org/...` link
+  wherever a DOI exists. Verify each DOI's authors, year, volume and pages with
+  `curl -s https://api.crossref.org/works/<DOI>` before you write it. Never
+  cite from memory, and never describe a paper's findings beyond its abstract.
+- Keep the prose tight: each theory subsection is a few sentences plus the key
+  equation. Prerequisites, Objectives and Follow-along steps stay short.
 - Every new lesson has a **Follow-along** section that points at a real GitHub
   repo or notebook (Colab link where possible). It gives 3 to 6 concrete steps
   the learner types and runs.
-- 3 to 6 videos per lesson. Choose official channels first (Anthropic, Hugging
+- Up to 6 videos per lesson, when good ones exist (CANN talks are scarce; do
+  not pad with weak videos). Choose official channels first (Anthropic, Hugging
   Face, Google, NVIDIA, Microsoft/VS Code, the library's own maintainers),
   then actuarial bodies and researchers (SAV/Actuarial Data Science, IFoA,
   SOA, ASSA, Wüthrich, Richman), then trusted educators (StatQuest and similar). Pick recent, short videos over

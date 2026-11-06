@@ -4,6 +4,9 @@
 - YouTube videos are checked with the public oEmbed endpoint (no API key). A
   video that is private, deleted or region-blocked fails.
 - Relative links must point at a file in this repo.
+- DOI links (doi.org) are checked against the Crossref API, because many
+  publishers (Taylor & Francis, MDPI, Elsevier) refuse automated requests.
+  DataCite DOIs (e.g. SSRN, arXiv) fall back to doi.org's own handle API.
 - Other http(s) links must answer with a status below 400.
 
 Usage:
@@ -35,7 +38,8 @@ CODE_RE = re.compile(r"```.*?```|`[^`\n]*`", re.S)
 # Thumbnails are derived from the video ID, so the video check covers them.
 SKIP_RE = re.compile(r"^(mailto:|#)|img\.youtube\.com/vi/")
 # Sites that refuse automated requests; a 403 from them is not a dead link.
-BOT_BLOCKERS = ("giphy.com", "linkedin.com", "medium.com", "openai.com", "kaggle.com")
+BOT_BLOCKERS = ("giphy.com", "linkedin.com", "medium.com", "openai.com", "kaggle.com", "papers.ssrn.com")
+DOI_RE = re.compile(r"^https?://(?:dx\.)?doi\.org/(10\.\d{4,9}/\S+)$", re.I)
 UA = "Mozilla/5.0 (combined-actuarial-nn link checker)"
 
 
@@ -82,6 +86,18 @@ def check(source: Path, link: str) -> dict:
             result.update(ok=True, detail=f"{data.get('title')} | {data.get('author_name')}")
         else:
             result["detail"] = f"YouTube oEmbed {status} (private/deleted/unavailable)"
+        return result
+    doi = DOI_RE.match(link)
+    if doi:
+        d = urllib.parse.unquote(doi.group(1))
+        status, body = fetch("https://api.crossref.org/works/" + urllib.parse.quote(d, safe="/"), "GET")
+        if status == 200:
+            msg = json.loads(body)["message"]
+            result.update(ok=True, detail=f"Crossref: {(msg.get('title') or [''])[0]}")
+            return result
+        status, body = fetch("https://doi.org/api/handles/" + urllib.parse.quote(d, safe="/"), "GET")
+        ok = status == 200 and json.loads(body).get("responseCode") == 1
+        result.update(ok=ok, detail="DOI registered (handle API)" if ok else f"DOI not found ({status})")
         return result
     if not link.startswith(("http://", "https://")):
         target = (source.parent / urllib.parse.unquote(link.split("#")[0])).resolve()

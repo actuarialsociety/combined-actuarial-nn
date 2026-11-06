@@ -3,8 +3,16 @@
 > * *Every lesson is **video-driven** with a **repo to code along in**. Lessons are kept current by Claude Code (see [Maintaining these lessons](#maintaining-these-lessons))*
 > * *New to Python, VS Code or Git? Start with [ds-training](https://github.com/actuarialsociety/ds-training)*
 
-## Lessons
-_No lessons yet. Add one with `/build-lesson <topic> [level]`._
+Lessons are **research-focused**: short theory with LaTeX maths, numbered citations to peer-reviewed papers, the best available talks, and a notebook to code along in.
+
+## Foundations
+- [CANN - Foundations](./CANN%20-%20Foundations.md): Poisson GLM → neural network → CANN; zero initialisation, balance property, freMTPL2 in PyTorch
+
+## General Insurance
+- [CANN - General Insurance](./CANN%20-%20General%20Insurance.md): Telematics CANNs, LocalGLMnet for interpretable rating factors, and neural chain-ladder (ODP) reserving
+
+## Life Insurance
+- [CANN - Life Insurance](./CANN%20-%20Life%20Insurance.md): Lee–Carter to neural mortality forecasting (multi-population, CNN/LSTM, prediction intervals) and neural surrogates for life calculations
 
 ## Maintaining these lessons
 Browse the lessons as a [wiki](https://github.com/actuarialsociety/combined-actuarial-nn/wiki). It is regenerated from this repo on every merge to `main`.

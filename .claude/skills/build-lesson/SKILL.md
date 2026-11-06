@@ -71,6 +71,23 @@ then a well-starred tutorial repo. Use the `exa-contents` skill, or
 write 3 to 6 follow-along steps that match the real files, including the exact
 commands.
 
+## 3b. Find the research
+
+Search Exa for the foundational and most recent papers, then confirm the
+metadata of each one with Crossref:
+
+```bash
+curl -sS -X POST "https://api.exa.ai/search" \
+  -H "Content-Type: application/json" -H "x-api-key: $EXA_API_KEY" \
+  -d '{"query": "<topic> neural network actuarial paper", "type": "auto", "numResults": 8,
+       "includeDomains": ["cambridge.org", "tandfonline.com", "springer.com", "mdpi.com", "ssrn.com", "arxiv.org", "sciencedirect.com"]}' \
+  | jq -r '.results[] | "\(.publishedDate[:10])  \(.title)  \(.url)"'
+curl -s "https://api.crossref.org/works/<DOI>" | jq '.message | {author: [.author[].family], year: .issued["date-parts"][0][0], title: .title[0], journal: ."container-title"[0], volume, issue, page}'
+```
+
+Use the `exa-contents` skill with a `summary` query to read an abstract before
+you describe a paper's method or findings.
+
 ## 4. Write the lesson
 
 - Copy `.claude/skills/build-lesson/template.md` to the new file and fill it in.
@@ -88,4 +105,4 @@ python3 scripts/check_links.py "<New Lesson>.md" README.md
 ```
 
 It must report `0 broken`. Report the file, the videos (title and channel),
-the repo, and anything you could not find. Do not commit unless asked.
+the papers cited, the repo, and anything you could not find. Do not commit unless asked.
