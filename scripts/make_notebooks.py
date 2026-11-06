@@ -26,7 +26,7 @@ if "google.colab" in sys.modules:
 os.environ.setdefault("DO_NOT_TRACK", "1")
 os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
 
-from deep_actuarial_science.notebook import run, load, show, leaderboard, parameters
+from deep_actuarial_science.notebook import run, load, show, leaderboard, parameters, mlflow_ui
 FAST = os.environ.get("DAS_ENV") == "smoke"   # CI runs every notebook in smoke mode
 """
 
@@ -51,7 +51,16 @@ def notebook(name: str, title: str, intro: str, cells: list[tuple[str, str]]) ->
         nb.cells.append(
             nbf.v4.new_markdown_cell(src) if kind == "md" else nbf.v4.new_code_cell(src)
         )
+    nb.cells += [nbf.v4.new_markdown_cell(MLFLOW_MD), nbf.v4.new_code_cell("mlflow_ui()")]
     nbf.write(nb, OUT / name)
+
+
+MLFLOW_MD = (
+    "## Explore the runs in MLflow\n"
+    "Parameters, metrics, figures and the benchmark table of every run above. In Colab the UI"
+    " opens below and in a new tab through Colab's proxy (MLflow runs on the Colab machine, so"
+    " a plain localhost link would point at your own computer)."
+)
 
 
 md, py = "md", "py"
@@ -104,8 +113,8 @@ LESSONS = [
             (
                 md,
                 "## 5. Tracking\nEvery run above is in MLflow (params, metrics, figures, model"
-                " pickle, benchmark table). Locally: `mlflow ui --backend-store-uri sqlite:///mlflow.db`;"
-                " in the container: http://localhost:5000.",
+                " pickle, benchmark table). Query it from Python below, or open the UI with"
+                " `mlflow_ui()` in the last cell (works in Colab, the container and locally).",
             ),
             (
                 py,
