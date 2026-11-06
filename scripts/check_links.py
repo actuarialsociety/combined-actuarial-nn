@@ -10,8 +10,8 @@
 - Other http(s) links must answer with a status below 400.
 
 Usage:
-    python3 scripts/check_links.py               # all *.md in the repo root
-    python3 scripts/check_links.py "CANN - Basic.md"    # specific files
+    python3 scripts/check_links.py               # README, AGENTS and lessons/*.md
+    python3 scripts/check_links.py "lessons/03 CANN.md"    # specific files
     python3 scripts/check_links.py --json        # machine-readable report
 
 Exit code 1 if any link is broken. Stdlib only, so it runs anywhere.
@@ -34,19 +34,26 @@ LINK_RE = re.compile(r"\]\((<[^>]+>|[^)\s]+)\)")
 YT_ID_RE = re.compile(
     r"(?:youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})"
 )
-CODE_RE = re.compile(r"```.*?```|`[^`\n]*`", re.S)
+CODE_RE = re.compile(r"```.*?```|`[^`\n]*`", re.DOTALL)
 # Thumbnails are derived from the video ID, so the video check covers them.
 SKIP_RE = re.compile(r"^(mailto:|#)|img\.youtube\.com/vi/")
 # Sites that refuse automated requests; a 403 from them is not a dead link.
-BOT_BLOCKERS = ("giphy.com", "linkedin.com", "medium.com", "openai.com", "kaggle.com", "papers.ssrn.com")
-DOI_RE = re.compile(r"^https?://(?:dx\.)?doi\.org/(10\.\d{4,9}/\S+)$", re.I)
-UA = "Mozilla/5.0 (combined-actuarial-nn link checker)"
+BOT_BLOCKERS = (
+    "giphy.com",
+    "linkedin.com",
+    "medium.com",
+    "openai.com",
+    "kaggle.com",
+    "papers.ssrn.com",
+)
+DOI_RE = re.compile(r"^https?://(?:dx\.)?doi\.org/(10\.\d{4,9}/\S+)$", re.IGNORECASE)
+UA = "Mozilla/5.0 (deep-actuarial-science link checker)"
 
 
 def lesson_files(args: list[str]) -> list[Path]:
     if args:
         return [ROOT / a if not Path(a).is_absolute() else Path(a) for a in args]
-    return sorted(p for p in ROOT.glob("*.md"))
+    return sorted([*ROOT.glob("*.md"), *(ROOT / "lessons").glob("*.md")])
 
 
 def extract_links(path: Path) -> list[str]:
@@ -90,14 +97,20 @@ def check(source: Path, link: str) -> dict:
     doi = DOI_RE.match(link)
     if doi:
         d = urllib.parse.unquote(doi.group(1))
-        status, body = fetch("https://api.crossref.org/works/" + urllib.parse.quote(d, safe="/"), "GET")
+        status, body = fetch(
+            "https://api.crossref.org/works/" + urllib.parse.quote(d, safe="/"), "GET"
+        )
         if status == 200:
             msg = json.loads(body)["message"]
             result.update(ok=True, detail=f"Crossref: {(msg.get('title') or [''])[0]}")
             return result
-        status, body = fetch("https://doi.org/api/handles/" + urllib.parse.quote(d, safe="/"), "GET")
+        status, body = fetch(
+            "https://doi.org/api/handles/" + urllib.parse.quote(d, safe="/"), "GET"
+        )
         ok = status == 200 and json.loads(body).get("responseCode") == 1
-        result.update(ok=ok, detail="DOI registered (handle API)" if ok else f"DOI not found ({status})")
+        result.update(
+            ok=ok, detail="DOI registered (handle API)" if ok else f"DOI not found ({status})"
+        )
         return result
     if not link.startswith(("http://", "https://")):
         target = (source.parent / urllib.parse.unquote(link.split("#")[0])).resolve()

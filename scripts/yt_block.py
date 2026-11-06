@@ -29,7 +29,9 @@ def oembed(vid: str) -> dict | None:
     url = "https://www.youtube.com/oembed?format=json&url=" + urllib.parse.quote(
         f"https://www.youtube.com/watch?v={vid}", safe=""
     )
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (combined-actuarial-nn)"})
+    req = urllib.request.Request(
+        url, headers={"User-Agent": "Mozilla/5.0 (deep-actuarial-science)"}
+    )
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
             return json.load(r)
@@ -51,7 +53,9 @@ def main(argv: list[str]) -> int:
             continue
         title = data["title"].replace("[", "(").replace("]", ")")
         print(f"### {title}")
-        print(f"[![{title}](https://img.youtube.com/vi/{vid}/0.jpg)](https://www.youtube.com/watch?v={vid})")
+        print(
+            f"[![{title}](https://img.youtube.com/vi/{vid}/0.jpg)](https://www.youtube.com/watch?v={vid})"
+        )
         print(f"> *{data['author_name']} · TODO: why this video*")
         print("\n---")
     return 1 if failed else 0

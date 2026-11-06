@@ -1,108 +1,59 @@
 ---
 name: build-lesson
-description: Build a new video-driven, code-centric lesson for this combined-actuarial-nn (CANN) repo. Searches for the best recent videos and a follow-along repo with Exa, checks every link, writes `Topic - Level.md` from the template and adds it to README.md. Use when asked to add, create or draft a lesson or course module.
-argument-hint: <topic> [Basic|Intermediate|Advanced]
+description: Take a deep learning model or paper in actuarial science from theory to a benchmarked lesson in this deep-actuarial-science repo. Finds the paper and reference results with Exa, implements the model in the Kedro pipeline, reconciles it to a benchmark, exports figures, and writes a Marp slide deck plus a Colab notebook. Use when asked to add, create or draft a lesson, model or course module.
+argument-hint: <model or paper> [domain: frequency|mortality|reserving]
 ---
 
 # Build a lesson
 
-Goal: a **short** lesson. A learner watches 3 to 6 videos and codes along in a
-real repo. Read `AGENTS.md` first; its rules apply here.
+Goal: new theory → workable, reconciled analysis, fast. Read `AGENTS.md` first.
 
-## 1. Scope it (2 minutes, no tools)
+## 1. Scope (no tools)
 
-- Pick the file name (`<Topic> - <Level>.md`, or `<Topic>.md` for a single
-  lesson), the README section it belongs to, and its prerequisites, which are
-  existing lessons in `README.md`.
-- Write 3 to 5 objectives. Each one is something the learner can **do**. Every
-  video and follow-along step must serve an objective.
-- If the topic overlaps an existing lesson, extend that lesson instead and say so.
+- Domain pipeline (`frequency`, `mortality`, `reserving`, or a new one), the baseline
+  it must beat, and 3 objectives the learner can *do*.
+- If the model is a variant of an existing one, add it as a new namespace, not a new
+  pipeline.
 
-## 2. Find videos with Exa
-
-Use the `exa-search` skill (needs `$EXA_API_KEY`). Run 2 or 3 queries, each
-written as a description of the ideal video, restricted to YouTube and recent
-uploads:
+## 2. Research: paper, equations and a benchmark
 
 ```bash
 curl -sS -X POST "https://api.exa.ai/search" \
   -H "Content-Type: application/json" -H "x-api-key: $EXA_API_KEY" \
-  -d '{
-    "query": "short beginner tutorial video: <objective>, hands-on demo",
-    "type": "auto",
-    "numResults": 10,
-    "includeDomains": ["youtube.com"],
-    "startPublishedDate": "<today minus 18 months>",
-    "contents": {"highlights": true}
-  }' | jq -r '.results[] | "\(.publishedDate[:10])  \(.title)  \(.url)"'
-```
-
-- Add the vendor name to the query (e.g. "Anthropic official", "Hugging Face
-  channel") to bias towards official channels; confirm via oEmbed `author_name`.
-- If `EXA_API_KEY` is unset, use the WebSearch tool and say so in your summary.
-- Shortlist candidates. Favour official channels, recent uploads, runtimes
-  under 20 minutes and a hands-on demo. Drop clickbait, reaction videos and
-  anything that only sells a course.
-
-Then verify the shortlist and generate the blocks in one step:
-
-```bash
-python3 scripts/yt_block.py <id-or-url> <id-or-url> ...
-```
-
-Replace each `TODO: why this video` with a short reason. Never type a title
-or ID by hand.
-
-## 3. Find the follow-along repo
-
-```bash
-curl -sS -X POST "https://api.exa.ai/search" \
-  -H "Content-Type: application/json" -H "x-api-key: $EXA_API_KEY" \
-  -d '{"query": "official hands-on tutorial notebooks for <topic>", "type": "auto",
-       "numResults": 8, "includeDomains": ["github.com"]}' | jq -r '.results[].url'
-gh repo view <owner/name> --json description,pushedAt,isArchived,stargazerCount
-```
-
-Prefer, in this order: the vendor's official examples or course repo, a
-notebook that opens in Colab
-(`https://colab.research.google.com/github/<owner>/<repo>/blob/<branch>/<path>.ipynb`),
-then a well-starred tutorial repo. Use the `exa-contents` skill, or
-`gh api repos/<o>/<r>/contents/<path>`, to read the README or notebook. Then
-write 3 to 6 follow-along steps that match the real files, including the exact
-commands.
-
-## 3b. Find the research
-
-Search Exa for the foundational and most recent papers, then confirm the
-metadata of each one with Crossref:
-
-```bash
-curl -sS -X POST "https://api.exa.ai/search" \
-  -H "Content-Type: application/json" -H "x-api-key: $EXA_API_KEY" \
-  -d '{"query": "<topic> neural network actuarial paper", "type": "auto", "numResults": 8,
-       "includeDomains": ["cambridge.org", "tandfonline.com", "springer.com", "mdpi.com", "ssrn.com", "arxiv.org", "sciencedirect.com"]}' \
+  -d '{"query": "<model> actuarial neural network paper", "type": "auto", "numResults": 8,
+       "includeDomains": ["cambridge.org", "tandfonline.com", "springer.com", "mdpi.com", "ssrn.com", "arxiv.org", "github.com"]}' \
   | jq -r '.results[] | "\(.publishedDate[:10])  \(.title)  \(.url)"'
 curl -s "https://api.crossref.org/works/<DOI>" | jq '.message | {author: [.author[].family], year: .issued["date-parts"][0][0], title: .title[0], journal: ."container-title"[0], volume, issue, page}'
 ```
 
-Use the `exa-contents` skill with a `summary` query to read an abstract before
-you describe a paper's method or findings.
+- Use `exa-contents` with a `summary` query to read abstracts before you describe a paper.
+- Find a **reference result** on a public dataset (paper table, or the authors' notebook
+  outputs, e.g. wueth/AITools4Actuaries). Record it with its source in
+  `conf/base/parameters_benchmarks.yml`. No like-for-like result: say so, and back-test.
+
+## 3. Implement and run
+
+1. Model class in `src/deep_actuarial_science/models/<domain>.py`; register it.
+2. Parameters under `<domain>.models.<name>`; add the namespace to the pipeline's `MODELS`.
+3. `kedro run --env smoke --pipeline <domain> --namespaces <name>` until clean.
+4. Reference run: `kedro run --pipeline <domain> --namespaces <baseline>,<name>`.
+   Check `data/08_reporting/<domain>/<name>/reconciliation.csv`. Investigate any FAIL
+   before writing the lesson; never loosen a tolerance to make it pass.
+5. Add a test in `tests/` for the model's defining property (e.g. initialisation).
 
 ## 4. Write the lesson
 
-- Copy `.claude/skills/build-lesson/template.md` to the new file and fill it in.
-  Delete every placeholder.
-- Order the videos from concept to hands-on to advanced. Put a `---` between
-  video blocks, as the existing lessons do.
-- Finish with `_Last reviewed: <today>_`.
-- Add the lesson to `README.md` under the right section. Create a section only
-  if no existing one fits.
+- Copy `.claude/skills/build-lesson/template.md` to `lessons/NN Title.md`. Theory: one or
+  two equations. Results: real numbers from the run and figures exported with
+  `python3 scripts/export_figures.py`.
+- Add the notebook entry to `scripts/make_notebooks.py` and regenerate.
+- Add the lesson to the README table.
 
 ## 5. Verify, then report
 
 ```bash
-python3 scripts/check_links.py "<New Lesson>.md" README.md
+pytest -q && kedro run --env smoke && python3 scripts/check_links.py
 ```
 
-It must report `0 broken`. Report the file, the videos (title and channel),
-the papers cited, the repo, and anything you could not find. Do not commit unless asked.
+Report: the model, the benchmark and whether it reconciled, the figures, the papers
+cited, and anything you could not reproduce. Do not commit unless asked.

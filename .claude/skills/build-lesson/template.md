@@ -1,50 +1,68 @@
-# <Lesson Title>
-> *One sentence: what this lesson is about and why an actuary should care.*
+---
+marp: true
+theme: default
+paginate: true
+math: katex
+title: "NN · Model name"
+---
 
-# Prerequisites
-- [Previous Lesson](./Previous%20Lesson.md)
+<!-- _class: lead -->
+# NN · Model name
+### One line: what it does and why an actuary cares
 
-# Objectives
-- Verb-led, testable outcome (e.g. "Train an XGBoost model on a claims dataset")
-- 3 to 5 bullets
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/NN_name.ipynb) · `kedro run --pipeline <domain> --namespaces <name>`
 
-# Theory
+---
 
-## 1. <Classical baseline>
-Short statement of the model, with its key equation [1]:
+## Theory
 
 $$
-\log \lambda(\boldsymbol{x}) = \beta_0 + \langle \boldsymbol{\beta}, \boldsymbol{x} \rangle
+\text{one key equation}
 $$
 
-## 2. <Neural extension>
-How the network nests or extends the baseline, and what the literature found [2].
-
-# Content
-* [Official docs page](https://example.com/docs): what to read there
-
-### <Exact video title from oEmbed>
-[![<Exact video title from oEmbed>](https://img.youtube.com/vi/<VIDEO_ID>/0.jpg)](https://www.youtube.com/watch?v=<VIDEO_ID>)
-> *Channel name · one line on why this video is here*
-
----
-### <Next video>
-[![<Next video>](https://img.youtube.com/vi/<VIDEO_ID>/0.jpg)](https://www.youtube.com/watch?v=<VIDEO_ID>)
-> *Channel name · why*
+- What is new versus the previous lesson's model (one bullet)
+- The trick that makes it work (one bullet)
 
 ---
 
-# Follow-along
-**Repo:** [owner/name](https://github.com/owner/name) · [Open in Colab](https://colab.research.google.com/github/owner/name/blob/main/path.ipynb) *(if it is a notebook)*
+## In code
 
-1. Clone or open the repo (`git clone https://github.com/owner/name` in VS Code, as in [Python - Basic](https://github.com/actuarialsociety/ds-training/blob/main/Python%20-%20Basic.md))
-2. Concrete step the learner runs
-3. Concrete step, with the command or code to type
-4. A small change for the learner to make themselves ("now try ...")
+```python
+# the 5-10 lines of the model that matter, copied from src/deep_actuarial_science/models/
+```
 
-# References
-1. Surname, A. B., & Surname, C. (Year). Title. *Journal*, Vol(Issue), pages. [doi:10.xxxx/yyyy](https://doi.org/10.xxxx/yyyy)
-2. Surname, A. B. (Year). Title. *SSRN NNNNNNN*. [SSRN](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=NNNNNNN)
+Config: `conf/base/parameters_<domain>.yml` → `<domain>.models.<name>`
 
 ---
+
+## Results: reconciled to the benchmark
+
+| Model | Learn | Test | Published test | Status |
+| --- | --- | --- | --- | --- |
+| baseline | … | … | … | PASS |
+| **this model** | … | … | … | PASS |
+
+![w:560](figures/NN-leaderboard.png)
+
+---
+
+## Diagnostics
+
+![w:480](figures/NN-diagnostic-1.png) ![w:480](figures/NN-diagnostic-2.png)
+
+---
+
+## In production
+
+- Calibration / balance property
+- Stability across seeds and data scale
+- Look-ahead, drift, monitoring
+
+---
+
+## Learn more
+
+1. Surname, A. (Year). Title. *Journal*, Vol(Issue), pages. [doi:10.xxxx/yyyy](https://doi.org/10.xxxx/yyyy)
+2. …
+
 _Last reviewed: YYYY-MM-DD_

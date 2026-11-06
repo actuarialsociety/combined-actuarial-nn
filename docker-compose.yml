@@ -1,0 +1,27 @@
+# The repo is mounted at /workspace, so data, MLflow runs (mlflow-container.db, mlruns/) and
+# notebook edits persist on the host. Ports bind to localhost only. The container keeps its own
+# MLflow store (MLflow records absolute artifact paths, so host and container runs don't mix).
+services:
+  lab:
+    build: .
+    image: deep-actuarial-science
+    command: >
+      jupyter lab --ip 0.0.0.0 --port 8888 --no-browser --allow-root
+      --ServerApp.root_dir=/workspace
+    ports: ["127.0.0.1:8888:8888"]
+    volumes: [".:/workspace"]
+
+  mlflow:
+    image: deep-actuarial-science
+    depends_on: [lab]
+    command: >
+      mlflow ui --backend-store-uri sqlite:////workspace/mlflow-container.db
+      --host 0.0.0.0 --port 5000
+    ports: ["127.0.0.1:5000:5000"]
+    volumes: [".:/workspace"]
+
+  pipeline:
+    image: deep-actuarial-science
+    profiles: [run]
+    command: kedro run
+    volumes: [".:/workspace"]

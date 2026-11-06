@@ -8,7 +8,7 @@ name: Wiki sync
 on:
   push:
     branches: [main]
-    paths: ["*.md", "scripts/build_wiki.py", ".github/workflows/wiki-sync.yml"]
+    paths: ["*.md", "lessons/**", "scripts/build_wiki.py", ".github/workflows/wiki-sync.yml"]
   workflow_dispatch:
 
 permissions:

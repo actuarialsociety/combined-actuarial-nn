@@ -1,0 +1,87 @@
+---
+marp: true
+theme: default
+paginate: true
+math: katex
+title: "03 · CANN"
+---
+
+<!-- _class: lead -->
+# 03 · CANN
+### Nest the GLM inside a network: keep the baseline, learn what it misses
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/03_cann.ipynb) · `kedro run --pipeline frequency --namespaces glm,cann`
+
+---
+
+## Theory
+
+$$
+\lambda^{\mathrm{CANN}}(\boldsymbol{x}) =
+\underbrace{\lambda^{\mathrm{GLM}}(\boldsymbol{x})}_{\text{offset}}\;
+\exp\big\{w_0 + \langle \boldsymbol{w}, \boldsymbol{z}^{(d:1)}(\boldsymbol{x})\rangle\big\}
+$$
+
+- **Zero initialisation:** $w_0 = 0,\ \boldsymbol{w} = \boldsymbol{0}$ ⇒ training starts *exactly* at the GLM [1, 2]
+- The network term is a **multiplicative correction**: it shows where the GLM is wrong
+- If training barely moves it, the GLM was adequate
+
+---
+
+## In code
+
+```python
+class CANN(FNN):                     # same network as lesson 02 …
+    uses_base = True                 # … but the offset is the fitted GLM's expected counts
+
+def _offset(self, df, base):
+    return base.predict(df) if self.uses_base else df.Exposure.to_numpy()
+
+nn.init.zeros_(self.out.weight)      # output layer starts at zero
+nn.init.constant_(self.out.bias, 0)  # → CANN(x) = GLM(x) before training
+```
+
+`tests/test_core.py::test_cann_starts_exactly_at_glm` checks the zero-initialisation property.
+
+---
+
+## Results: reconciled to the benchmark
+
+| Model | Learn | Test | Published test | Status |
+| --- | --- | --- | --- | --- |
+| GLM | <!--r:glm.deviance_learn-->46.954<!--/r--> | <!--r:glm.deviance_test-->47.179<!--/r--> | 47.179 | <!--r:glm.status-->PASS<!--/r--> |
+| CANN | <!--r:cann.deviance_learn-->44.989<!--/r--> | <!--r:cann.deviance_test-->44.976<!--/r--> | 44.976 | <!--r:cann.status-->PASS<!--/r--> |
+| FNN | <!--r:fnn.deviance_learn-->44.973<!--/r--> | <!--r:fnn.deviance_test-->44.928<!--/r--> | 44.928 | <!--r:fnn.status-->PASS<!--/r--> |
+| GBM (lesson 01) | <!--r:gbm.deviance_learn-->44.144<!--/r--> | <!--r:gbm.deviance_test-->44.394<!--/r--> | n/a | leaderboard only |
+
+![w:520](figures/03-leaderboard.png)
+
+The tuned GBM beats all three networks here: a network has to earn its place.
+
+---
+
+## Where the network corrects the GLM
+
+![w:470](figures/03-cann-drivage.png) ![w:470](figures/03-cann-training.png)
+
+The CANN keeps the GLM's age bands as its starting point and corrects within and across them, using every covariate.
+
+---
+
+## In production
+
+- **Governance:** the GLM stays filed and explainable; the CANN is a documented uplift
+- **Calibration:** here the CANN's predictions sum to <!--r:cann.balance_learn-->0.9833<!--/r--> × observed claims on the learning set; restore the balance property before pricing [3]
+- **Extensions:** telematics CANNs put new data in the network term only [4]
+- **Monitoring:** track the size of the correction $\exp\{\cdot\}$ by segment over time
+
+---
+
+## Learn more
+
+1. Wüthrich, M. V., & Merz, M. (2019). Editorial: Yes, we CANN! *ASTIN Bulletin*, 49(1), 1–3. [doi:10.1017/asb.2018.42](https://doi.org/10.1017/asb.2018.42)
+2. Schelldorfer, J., & Wüthrich, M. V. (2019). Nesting classical actuarial models into neural networks. *SSRN 3320525*. [SSRN](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3320525)
+3. Wüthrich, M. V. (2022). The balance property in neural network modelling. *Statistical Theory and Related Fields*, 6(1), 1–9. [doi:10.1080/24754269.2021.1877960](https://doi.org/10.1080/24754269.2021.1877960)
+4. Duval, F., Boucher, J.-P., & Pigeon, M. (2024). Telematics combined actuarial neural networks for cross-sectional and longitudinal claim count data. *ASTIN Bulletin*, 54(2), 239–262. [doi:10.1017/asb.2024.4](https://doi.org/10.1017/asb.2024.4)
+
+_Last reviewed: 2026-11-06_

@@ -1,63 +1,39 @@
 ---
 name: refresh-lessons
-description: Audit and update existing combined-actuarial-nn (CANN) lessons. Fixes dead links, finds newer or better videos and repos with Exa, and keeps each lesson short. Use when asked to refresh, update, audit or check the lessons, or when the scheduled lesson-refresh workflow runs.
-argument-hint: "[lesson file | all]"
+description: Audit and update the deep-actuarial-science lessons. Fixes dead links, re-runs pipelines to confirm results still reconcile to their benchmarks, finds newer papers and better reference results with Exa, and keeps each Marp deck succinct. Use when asked to refresh, update, audit or check the lessons, or when the scheduled lesson-refresh workflow runs.
+argument-hint: "[lessons/<file> | all]"
 ---
 
 # Refresh lessons
 
-Read `AGENTS.md` first. The goal is to keep lessons **current and succinct**.
-That means replacing material more often than adding it.
+Read `AGENTS.md` first. Keep lessons **current, reconciled and succinct**.
 
 ## 1. Find what's broken
 
 ```bash
-python3 scripts/check_links.py            # or pass specific files; --json for a report
+python3 scripts/check_links.py            # or pass files; --json for a report
+pytest -q && kedro run --env smoke        # code still runs with current dependencies
 ```
 
-Fix every broken link. Search Exa for a replacement first, e.g. the same video
-re-uploaded or the docs page at its new URL. If no replacement exists, delete
-the link.
+Fix broken links (search Exa for the moved page first; delete only if nothing exists).
 
-## 2. Pick lessons to refresh
+## 2. Pick lessons
 
-- With an argument, refresh only that file. With `all`, or no argument,
-  refresh the lessons whose `_Last reviewed:` date is oldest, or missing, up to
-  **3 lessons per run**. Keeping each run small keeps the PR reviewable.
-- Fast-moving topics (PyTorch/Keras APIs, deep learning libraries, AI tooling)
-  go stale in about 3 months. Stable ones (GLM theory, the CANN approach,
-  actuarial pricing basics) last about 18 months.
+With an argument, refresh that lesson. With `all` or nothing, take the up to **3**
+lessons with the oldest `_Last reviewed:` date. Deep-learning tooling (PyTorch, Kedro,
+MLflow APIs) goes stale in ~3 months; actuarial theory in ~18 months.
 
-## 3. Look for better material (per lesson)
+## 3. Per lesson
 
-Use the `exa-search` skill and restrict results to content published after the
-lesson's `Last reviewed` date:
+- Re-run its models at the reference setup and check every reconciliation table is
+  still PASS. Update the results slide and figures (`scripts/export_figures.py`) from
+  the new run; never edit numbers by hand.
+- Search Exa for papers published after `_Last reviewed:` that improve the model or
+  publish a better benchmark. Verify DOIs with Crossref before citing.
+- Keep theory to one or two equations; cut rather than add.
+- Set `_Last reviewed: <today>` on every lesson you reviewed.
 
-```bash
-curl -sS -X POST "https://api.exa.ai/search" \
-  -H "Content-Type: application/json" -H "x-api-key: $EXA_API_KEY" \
-  -d '{"query": "<lesson objective> tutorial", "type": "auto", "numResults": 10,
-       "includeDomains": ["youtube.com"], "startPublishedDate": "<last reviewed>",
-       "contents": {"highlights": true}}' \
-  | jq -r '.results[] | "\(.publishedDate[:10])  \(.title)  \(.url)"'
-```
+## 4. Report
 
-Also check for each lesson:
-- Is there a new major version of the tool (e.g. a new PyTorch or Keras
-  release, a renamed tutorial repo, a new package for actuarial deep learning)? Use `exa-contents` on the
-  official changelog or docs.
-- Does the follow-along repo still exist, and do its steps still match it?
-  Check with `gh repo view` and by reading the files.
-- Swap a video only when the new one is clearly better: more current, official,
-  shorter or more hands-on. Move what it replaces under `## Older content`.
-  Keep 3 to 6 videos in the main section.
-
-Generate every new video block with `python3 scripts/yt_block.py <ids...>`.
-
-## 4. Update and verify
-
-- Set `_Last reviewed: <today>_` on every lesson you reviewed, even when
-  nothing changed.
-- `python3 scripts/check_links.py` must report `0 broken`.
-- Summarise per lesson what changed and why, which candidates you rejected, and
-  what to look at next time. When running in CI, put this summary in the PR body.
+Per lesson: what changed, benchmark status, papers considered and rejected. In CI,
+put this in the PR body.

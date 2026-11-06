@@ -1,0 +1,23 @@
+# kedro-mlflow: one MLflow run per `kedro run`, all parameters logged automatically.
+# Browse runs with `mlflow ui --backend-store-uri sqlite:///mlflow.db` (or the `mlflow` compose service).
+server:
+  mlflow_tracking_uri: ${oc.env:MLFLOW_TRACKING_URI, "sqlite:///mlflow.db"}
+
+tracking:
+  disable_tracking:
+    disable_autologging: true
+  experiment:
+    name: deep-actuarial-science
+  run:
+    name: ${oc.env:MLFLOW_RUN_NAME, null}
+    nested: true
+  params:
+    dict_params:
+      flatten: true
+      recursive: true
+      sep: "."
+    long_params_strategy: truncate
+
+ui:
+  port: "5000"
+  host: "127.0.0.1"

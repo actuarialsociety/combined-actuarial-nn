@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deep-actuarial-science"
+version = "0.1.0"
+description = "Deep learning models in actuarial science: lessons, Kedro pipelines and benchmarks"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "kedro~=1.7",
+    "kedro-datasets[pandas-parquetdataset,pandas-csvdataset,matplotlib-matplotlibdataset,pickle-pickledataset,json-jsondataset]>=10",
+    "kedro-mlflow~=2.0",
+    "mlflow>=3",
+    "numpy",
+    "pandas>=2.2",
+    "pyarrow",
+    "scikit-learn>=1.5",
+    "statsmodels>=0.14",
+    "lightgbm>=4",
+    "torch>=2.4",
+    "matplotlib>=3.8",
+    "chainladder>=0.10",
+    "ipykernel",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "nbformat", "nbclient", "jupyterlab", "kedro-viz", "kedro-skills==0.2.0"]
+
+[project.scripts]
+deep-actuarial-science = "deep_actuarial_science.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.kedro]
+package_name = "deep_actuarial_science"
+project_name = "deep-actuarial-science"
+kedro_init_version = "1.7.0"
+source_dir = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["B905"]  # zip() pairs equal-length model lists by construction
+
+[tool.ruff.lint.per-file-ignores]
+"src/deep_actuarial_science/settings.py" = ["E402"]  # hook import after loader config
+"scripts/make_notebooks.py" = ["E501"]  # notebook text strings
+
+# CPU wheels of torch keep the container small; on a GPU machine or Colab the
+# preinstalled torch is used instead.
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

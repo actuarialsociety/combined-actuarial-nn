@@ -1,0 +1,12 @@
+# `kedro run --env scale_up`: broader experiments beyond the reference setup.
+# Benchmarks are skipped (they only apply to the reference setup in conf/base).
+reference_setup: false
+
+mortality:
+  data:
+    sexes: [Male, Female]     # each sex fitted separately
+
+reserving:
+  data:
+    lines: [ppauto, wkcomp, comauto, medmal, prodliab, othliab]
+    max_companies: null       # every company that passes the data checks (~260)

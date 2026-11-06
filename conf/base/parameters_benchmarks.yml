@@ -1,0 +1,58 @@
+# Published reference results each model must reconcile to (at the reference setup).
+# Closed-form fits (homogeneous, GLM, Lee-Carter, chain-ladder) must match to rounding;
+# networks to a tolerance that covers seed and hardware variation.
+_aitools: &aitools "Wüthrich et al. (2025), AI Tools for Actuaries, notebook outputs"
+
+benchmarks:
+  frequency:
+    homogeneous:
+      source: *aitools
+      tolerance: 0.001
+      expected: {deviance_learn: 47.722, deviance_test: 47.967}
+    glm:
+      source: *aitools
+      tolerance: 0.001
+      expected: {deviance_learn: 46.954, deviance_test: 47.179}
+    gbm: null   # no like-for-like published configuration; compared on the leaderboard only
+    fnn:
+      source: *aitools
+      tolerance: 0.15
+      expected: {deviance_learn: 44.973, deviance_test: 44.928}
+    cann:
+      source: *aitools
+      tolerance: 0.15
+      expected: {deviance_learn: 44.989, deviance_test: 44.976}
+    localglmnet:
+      source: *aitools
+      tolerance: 0.15
+      expected: {deviance_learn: 44.995, deviance_test: 45.034}
+
+  mortality:
+    lee_carter:
+      source: *aitools
+      tolerance: 0.0005
+      expected: {rmse_in: 0.1555, rmse_out: 0.3425}
+    cnn:
+      source: *aitools
+      tolerance: 0.05
+      expected: {rmse_in: 0.1808, rmse_out: 0.4281}
+    cnn_tanh:
+      source: *aitools
+      tolerance: 0.05
+      expected: {rmse_in: 0.1570, rmse_out: 0.3533}
+    lstm:
+      source: *aitools
+      tolerance: 0.05
+      expected: {rmse_in: 0.1595, rmse_out: 0.3428}
+    transformer:
+      source: *aitools
+      tolerance: 0.05
+      expected: {rmse_in: 0.1819, rmse_out: 0.3831}
+
+  reserving:
+    # Our chain-ladder must equal the `chainladder` package (Bogaardt et al.) exactly.
+    chain_ladder:
+      source: "chainladder Python package, Chainladder() on the same triangles"
+      tolerance: 0.000001
+      expected: {max_rel_diff_vs_package: 0.0}
+    neural_odp: null  # back-tested against realised outcomes instead

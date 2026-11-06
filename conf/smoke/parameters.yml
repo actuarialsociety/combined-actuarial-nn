@@ -1,0 +1,20 @@
+# `kedro run --env smoke`: 2% of the data and a few epochs. Used by CI and for a
+# first end-to-end check (about a minute on a laptop). Benchmarks are skipped.
+reference_setup: false
+
+frequency:
+  data:
+    scale: 0.02
+  models:
+    gbm: {num_boost_round: 50}
+    fnn: {epochs: 3}
+    cann: {epochs: 3}
+    localglmnet: {epochs: 3}
+
+mortality:
+  training: {epochs: 20}
+
+reserving:
+  data: {max_companies: 15}
+  models:
+    neural_odp: {epochs: 30}
