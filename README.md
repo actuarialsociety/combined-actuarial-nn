@@ -4,6 +4,8 @@
 > * *Realistic public data at switchable scale: 678k French motor policies, Swiss HMD mortality, US Schedule P triangles with realised outcomes. See [Open Actuarial Data](./Open%20Actuarial%20Data.md) for more sources.*
 > * *New to Python, VS Code or Git? Start with [ds-training](https://github.com/actuarialsociety/ds-training).*
 
+📖 **Read the lessons as a [wiki](https://github.com/actuarialsociety/deep-actuarial-science/wiki)**: every page and the sidebar link straight to the lesson's notebook in Colab.
+
 ## Lessons
 
 | Lesson | Model | Data | Reconciles to | Notebook |

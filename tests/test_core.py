@@ -91,3 +91,25 @@ def test_odp_fitted_values_preserve_row_sums():
     up = tri[tri.upper]
     mu = rm.chain_ladder_fitted_upper(tri)
     np.testing.assert_allclose(mu.groupby(up.ay).sum(), up.groupby("ay").incr_paid.sum(), rtol=1e-9)
+
+
+def test_wiki_has_colab_link_for_every_lesson(tmp_path):
+    import importlib.util
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("build_wiki", root / "scripts" / "build_wiki.py")
+    bw = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(bw)
+    assert bw.main(str(tmp_path)) == 0
+
+    sidebar = (tmp_path / "_Sidebar.md").read_text()
+    notebooks = (tmp_path / "Notebooks.md").read_text()
+    for lesson in sorted((root / "lessons").glob("*.md")):
+        url = bw.colab_url(lesson.read_text())
+        assert url, f"{lesson.name} has no Colab badge"
+        assert (root / url.split("/blob/main/")[1]).exists(), f"{url} points at a missing notebook"
+        page = (tmp_path / lesson.name).read_text()
+        assert page.count(f"[▶ Open in Colab]({url})") == 2  # nav bar top and bottom
+        assert url in sidebar and url in notebooks
+        assert "_class:" not in page
