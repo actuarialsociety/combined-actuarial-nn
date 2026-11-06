@@ -8,6 +8,7 @@ style: |
   details { border: 1px solid rgba(140,149,159,.45); border-radius: 8px; padding: .25em .8em; margin: .35em 0; font-size: .72em; }
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
+  section:has(details[open]) details:not([open]) { display: none; }
 ---
 
 <!-- _class: lead -->
@@ -20,10 +21,10 @@ style: |
 
 ## Theory
 
-$$
+```math
 \lambda^{\mathrm{FNN}}(\boldsymbol{x}) = \exp\big\lbrace w_0 + \langle \boldsymbol{w}, \boldsymbol{z}^{(d:1)}(\boldsymbol{x})\rangle\big\rbrace,
 \qquad \boldsymbol{z}^{(m)} = \tanh\big(W^{(m)}\boldsymbol{z}^{(m-1)} + \boldsymbol{b}^{(m)}\big)
-$$
+```
 
 - **Entity embeddings** [1]: `VehBrand` and `Region` map to learned vectors in $\mathbb{R}^2$
 - **Start at the homogeneous model:** $\boldsymbol{w}=0$, $w_0=\log\bar\lambda$
@@ -39,10 +40,7 @@ _Click a panel to open it; work through them in order._
 <details>
 <summary><b>① A network is a stack of learned features</b></summary>
 
-$$
-\boldsymbol{z}^{(m)} = \tanh\big(W^{(m)}\boldsymbol{z}^{(m-1)} + \boldsymbol{b}^{(m)}\big),\quad m = 1,\dots,d,
-\qquad \mu(\boldsymbol{x}) = v\exp\big(w_0 + \langle\boldsymbol{w}, \boldsymbol{z}^{(d)}\rangle\big)
-$$
+$\displaystyle \boldsymbol{z}^{(m)} = \tanh\big(W^{(m)}\boldsymbol{z}^{(m-1)} + \boldsymbol{b}^{(m)}\big),\quad m = 1,\dots,d, \qquad \mu(\boldsymbol{x}) = v\exp\big(w_0 + \langle\boldsymbol{w}, \boldsymbol{z}^{(d)}\rangle\big)$
 
 - Here $d = 3$ hidden layers of 20, 15 and 10 units (<!--r:fnn.n_params-->792<!--/r--> parameters in total)
 - The last layer is a Poisson GLM on the learned features $\boldsymbol{z}^{(d)}$, so the network is a GLM whose features are learned rather than hand-made
@@ -67,9 +65,7 @@ $$
 
 A categorical covariate with $K$ levels is mapped to a learned vector:
 
-$$
-e: \lbrace 1,\dots,K\rbrace \to \mathbb{R}^{b}, \qquad b = 2 .
-$$
+$\displaystyle e: \lbrace 1,\dots,K\rbrace \to \mathbb{R}^{b}, \qquad b = 2 .$
 
 - One-hot encoding needs $K-1$ inputs per covariate; an embedding needs $b$
 - The vectors are trained together with the rest of the network, so levels with similar claim behaviour end up close together, which you can plot and interpret
@@ -80,9 +76,7 @@ $$
 <details>
 <summary><b>④ Training: Poisson loss, NAdam, mini-batches</b></summary>
 
-$$
-L(\theta) = \sum_i \big(\mu_i(\theta) - N_i\log\mu_i(\theta)\big)
-$$
+$\displaystyle L(\theta) = \sum_i \big(\mu_i(\theta) - N_i\log\mu_i(\theta)\big)$
 
 - This is the negative Poisson log-likelihood (`PoissonNLLLoss`), the same objective as the GLM
 - Optimiser NAdam; mini-batches of 5,000 policies; up to 200 epochs; fixed seed
@@ -105,9 +99,7 @@ $$
 
 Gradient descent stopped early has not solved $\sum_i(N_i - \hat\mu_i) = 0$, so the total prediction drifts from the observed total (here <!--r:fnn.balance_learn-->1.0031<!--/r-->×). Because the output is $\exp(w_0 + \cdots)$, shifting the bias rescales every prediction by the same factor:
 
-$$
-w_0 \leftarrow w_0 + \log\frac{\sum_i N_i}{\sum_i \hat\mu_i} .
-$$
+$\displaystyle w_0 \leftarrow w_0 + \log\frac{\sum_i N_i}{\sum_i \hat\mu_i} .$
 
 `balance_correction: true` applies this after training. The relative ranking of policies is unchanged.
 

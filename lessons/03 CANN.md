@@ -8,6 +8,7 @@ style: |
   details { border: 1px solid rgba(140,149,159,.45); border-radius: 8px; padding: .25em .8em; margin: .35em 0; font-size: .72em; }
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
+  section:has(details[open]) details:not([open]) { display: none; }
 ---
 
 <!-- _class: lead -->
@@ -20,11 +21,11 @@ style: |
 
 ## Theory
 
-$$
+```math
 \lambda^{\mathrm{CANN}}(\boldsymbol{x}) =
 \underbrace{\lambda^{\mathrm{GLM}}(\boldsymbol{x})}_{\text{offset}}\medspace
 \exp\big\lbrace w_0 + \langle \boldsymbol{w}, \boldsymbol{z}^{(d:1)}(\boldsymbol{x})\rangle\big\rbrace
-$$
+```
 
 - **Zero initialisation:** $w_0 = 0,\ \boldsymbol{w} = \boldsymbol{0}$ ⇒ training starts *exactly* at the GLM [1, 2]
 - The network term is a **multiplicative correction**: it shows where the GLM is wrong
@@ -40,9 +41,7 @@ _Click a panel to open it; work through them in order._
 <details>
 <summary><b>① Learn the residual on the log scale</b></summary>
 
-$$
-\log\lambda^{\mathrm{CANN}}(\boldsymbol{x}) = \underbrace{\log\lambda^{\mathrm{GLM}}(\boldsymbol{x})}_{\text{fixed}} + \underbrace{w_0 + \langle\boldsymbol{w}, \boldsymbol{z}^{(d)}(\boldsymbol{x})\rangle}_{\text{learned correction}}
-$$
+$\displaystyle \log\lambda^{\mathrm{CANN}}(\boldsymbol{x}) = \underbrace{\log\lambda^{\mathrm{GLM}}(\boldsymbol{x})}_ {\text{fixed}} + \underbrace{w_0 + \langle\boldsymbol{w}, \boldsymbol{z}^{(d)}(\boldsymbol{x})\rangle}_ {\text{learned correction}}$
 
 The GLM is fitted first and then **frozen**: its expected counts, exposure included, enter the network as the offset. Only the correction term is trained.
 
@@ -53,9 +52,7 @@ The GLM is fitted first and then **frozen**: its expected counts, exposure inclu
 
 With $w_0 = 0$ and $\boldsymbol{w} = \boldsymbol{0}$ the correction is $\exp(0) = 1$, so before any training
 
-$$
-\lambda^{\mathrm{CANN}}(\boldsymbol{x}) = \lambda^{\mathrm{GLM}}(\boldsymbol{x}) .
-$$
+$\displaystyle \lambda^{\mathrm{CANN}}(\boldsymbol{x}) = \lambda^{\mathrm{GLM}}(\boldsymbol{x}) .$
 
 Training can therefore only move away from the GLM if that lowers the loss. `test_cann_starts_exactly_at_glm` checks this property on every CI run.
 

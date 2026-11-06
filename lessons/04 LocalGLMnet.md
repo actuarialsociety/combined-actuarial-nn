@@ -8,6 +8,7 @@ style: |
   details { border: 1px solid rgba(140,149,159,.45); border-radius: 8px; padding: .25em .8em; margin: .35em 0; font-size: .72em; }
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
+  section:has(details[open]) details:not([open]) { display: none; }
 ---
 
 <!-- _class: lead -->
@@ -20,10 +21,10 @@ style: |
 
 ## Theory
 
-$$
+```math
 \log \lambda(\boldsymbol{x}) = \beta_0 + \sum_{j=1}^{q} \beta_j(\boldsymbol{x})\thinspace x_j,
 \qquad \big(\beta_1(\boldsymbol{x}),\dots,\beta_q(\boldsymbol{x})\big) = \boldsymbol{z}^{(d:1)}(\boldsymbol{x})
-$$
+```
 
 - $\beta_j(\boldsymbol{x})\equiv\beta_j$: a GLM term · $\beta_j\equiv0$: drop $x_j$ · $\beta_j$ varies with $x_k$: interaction [1]
 - **Initialise at the GLM:** attention bias = GLM coefficients, weights = 0
@@ -39,10 +40,7 @@ _Click a panel to open it; work through them in order._
 <details>
 <summary><b>① A GLM whose coefficients depend on the policy</b></summary>
 
-$$
-\log\lambda(\boldsymbol{x}) = \beta_0 + \sum_{j=1}^{q}\beta_j(\boldsymbol{x})\thinspace x_j,
-\qquad \boldsymbol\beta(\boldsymbol{x}) = W\boldsymbol{z}^{(d)}(\boldsymbol{x}) + \boldsymbol{b} \in \mathbb{R}^q
-$$
+$\displaystyle \log\lambda(\boldsymbol{x}) = \beta_0 + \sum_{j=1}^{q}\beta_j(\boldsymbol{x})\thinspace x_j, \qquad \boldsymbol\beta(\boldsymbol{x}) = W\boldsymbol{z}^{(d)}(\boldsymbol{x}) + \boldsymbol{b} \in \mathbb{R}^q$
 
 The network (layers [20, 15, 10], tanh) outputs one coefficient per covariate. These **regression attentions** have the same role as GLM coefficients, but each policy gets its own.
 
@@ -84,9 +82,7 @@ So $\boldsymbol\beta(\boldsymbol{x}) \equiv \boldsymbol{b}$ before training: the
 
 `RandN` is pure noise, drawn independently of claims. Its attention $\beta_{\text{RandN}}(\boldsymbol{x})$ therefore shows how much a **useless** covariate's coefficient still varies. With $s$ its standard deviation across policies, the shaded band is
 
-$$
-\pm 2.576\thinspace s
-$$
+$\displaystyle \pm 2.576\thinspace s$
 
 (a 99% band if the attentions were normally distributed).
 
@@ -97,9 +93,7 @@ A covariate whose $\beta_j(\boldsymbol{x})$ stays inside the band is not disting
 <details>
 <summary><b>⑥ Variable importance</b></summary>
 
-$$
-\mathrm{VI}_j = \frac{1}{n}\sum_{i=1}^{n}\big|\beta_j(\boldsymbol{x}_i)\big|
-$$
+$\displaystyle \mathrm{VI}_ j = \frac{1}{n}\sum_{i=1}^{n}\big|\beta_j(\boldsymbol{x}_ i)\big|$
 
 Compare each covariate's importance with that of `RandN`: one that barely clears it adds little and is a candidate to remove before filing rating factors.
 

@@ -8,6 +8,7 @@ style: |
   details { border: 1px solid rgba(140,149,159,.45); border-radius: 8px; padding: .25em .8em; margin: .35em 0; font-size: .72em; }
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
+  section:has(details[open]) details:not([open]) { display: none; }
 ---
 
 <!-- _class: lead -->
@@ -20,15 +21,15 @@ style: |
 
 ## Theory
 
-$$
+```math
 \log m_{x,t} = a_x + b_x k_t, \qquad k_{t+1} = k_t + \delta + \varepsilon_{t+1}
 \qquad \text{(Lee–Carter [1])}
-$$
+```
 
-$$
+```math
 \log m_{\cdot,t} = f_\theta\big(\log m_{\cdot,t-10},\dots,\log m_{\cdot,t-1}\big)
 \qquad \text{(neural forecaster [2])}
-$$
+```
 
 - Inputs: 10-year windows of the whole age profile (ages 0–89)
 - CNN, CNN with tanh, LSTM and a one-block Transformer; forecasts are **recursive**
@@ -52,9 +53,7 @@ $m_{x,t}$ is the central death rate at age $x$ in year $t$: deaths over person-y
 <details>
 <summary><b>② Lee–Carter: one time index drives all ages</b></summary>
 
-$$
-\log m_{x,t} = a_x + b_x k_t, \qquad \sum_x b_x = 1,\quad \sum_t k_t = 0
-$$
+$\displaystyle \log m_{x,t} = a_x + b_x k_t, \qquad \sum_x b_x = 1,\quad \sum_t k_t = 0$
 
 1. $a_x$ = average of $\log m_{x,t}$ over the learning years (the age profile)
 2. A singular value decomposition of the centred matrix gives the best rank-1 fit $b_x k_t$
@@ -69,9 +68,7 @@ $b_x$ says how fast each age improves when the general level $k_t$ moves.
 
 $k_t$ is treated as a random walk with drift, $k_{t+1} = k_t + \delta + \varepsilon_{t+1}$. The point forecast is
 
-$$
-\hat k_{T+h} = k_T + h\thinspace\hat\delta ,
-$$
+$\displaystyle \hat k_{T+h} = k_T + h\thinspace\hat\delta ,$
 
 where $\hat\delta$ is the slope of a straight line fitted to $k_t$ over the learning years. Every age then improves at its own fixed rate $b_x\hat\delta$ per year.
 
@@ -101,9 +98,7 @@ where $\hat\delta$ is the slope of a straight line fitted to $k_t$ over the lear
 
 From 2000 on, each prediction is appended to the window and fed back in to predict the following year: 22 steps, each built on earlier predictions, so **errors compound** with horizon.
 
-$$
-\mathrm{RMSE} = \sqrt{\frac{1}{|S|}\sum_{(x,t)\in S}\big(\log m_{x,t} - \widehat{\log m}_{x,t}\big)^2}
-$$
+$\displaystyle \mathrm{RMSE} = \sqrt{\frac{1}{|S|}\sum_{(x,t)\in S}\big(\log m_{x,t} - \widehat{\log m}_ {x,t}\big)^2}$
 
 $S$ is every age and year in the test period (out-of-sample) or the learning period (in-sample).
 

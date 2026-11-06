@@ -8,6 +8,7 @@ style: |
   details { border: 1px solid rgba(140,149,159,.45); border-radius: 8px; padding: .25em .8em; margin: .35em 0; font-size: .72em; }
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
+  section:has(details[open]) details:not([open]) { display: none; }
 ---
 
 <!-- _class: lead -->

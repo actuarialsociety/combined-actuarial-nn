@@ -25,7 +25,7 @@ _Click a panel to open it. Each lesson opens with its own **Core ideas** panels 
 <details>
 <summary><b>00 · Same question, same score, reproducible answer</b></summary>
 
-Every model predicts expected claims $\mu_i = v_i\thinspace\lambda(\boldsymbol{x}_i)$ and is scored by out-of-sample Poisson deviance on one fixed test set. Each result is checked against a published number before anything is changed.
+Every model predicts expected claims $\mu_i = v_i\thinspace\lambda(\boldsymbol{x}_ i)$ and is scored by out-of-sample Poisson deviance on one fixed test set. Each result is checked against a published number before anything is changed.
 → [00 · Quickstart](./lessons/00%20Quickstart.md)
 
 </details>

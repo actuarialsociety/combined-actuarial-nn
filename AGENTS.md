@@ -31,8 +31,11 @@ the lessons and add models.
   `</details>`; no math inside `<summary>`; every number from a run uses a
   `<!--r:model.metric-->` marker; describe only what the code does or what a cited abstract says.
 - **GitHub-safe math:** GitHub strips Markdown escapes before rendering math, so write
-  `\lbrace \rbrace \thinspace \medspace \cr`, not `\{ \} \, \; \\`, and never `\%`.
-  `python3 scripts/fix_math.py` rewrites them; CI runs it with `--check`.
+  `\lbrace \rbrace \thinspace \medspace \cr`, not `\{ \} \, \; \\`, and never `\%`. Display math
+  is a ```` ```math ```` fence (`marp.config.mjs` turns it into `$$` for the slides); inside a
+  panel it is a one-line `$\displaystyle ...$`, because GitHub skips display math in a panel
+  that also has inline math. `python3 scripts/fix_math.py` applies all of this;
+  `--github` renders every file through GitHub's API and fails if any span is not math (CI).
 - **Visual:** every results slide shows figures produced by the pipeline (exported to
   `lessons/figures/`), never hand-drawn or invented numbers.
 - **Reconciled:** every model has an entry in `conf/base/parameters_benchmarks.yml`
@@ -70,7 +73,7 @@ pytest -q
 kedro run --env smoke                      # every pipeline, ~1-2 minutes
 python3 scripts/make_notebooks.py          # if notebooks changed
 python3 scripts/check_links.py             # must report 0 broken
-python3 scripts/fix_math.py --check        # math renders on GitHub and the wiki
+GITHUB_TOKEN=$(gh auth token) python3 scripts/fix_math.py --github   # math renders on GitHub and the wiki
 ```
 
 ### 5. Workflows

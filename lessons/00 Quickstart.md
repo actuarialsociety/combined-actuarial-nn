@@ -8,6 +8,7 @@ style: |
   details { border: 1px solid rgba(140,149,159,.45); border-radius: 8px; padding: .25em .8em; margin: .35em 0; font-size: .72em; }
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
+  section:has(details[open]) details:not([open]) { display: none; }
 ---
 
 <!-- _class: lead -->
@@ -26,7 +27,7 @@ _Click a panel to open it; work through them in order._
 <details>
 <summary><b>① Every model answers the same question</b></summary>
 
-Claim counts are modelled as $N_i \sim \mathrm{Poi}(\mu_i)$ with $\mu_i = v_i\thinspace\lambda(\boldsymbol{x}_i)$: exposure $v_i$ (policy years) times a frequency $\lambda(\boldsymbol{x})$ that depends on the covariates. The lessons differ only in how $\lambda(\boldsymbol{x})$ is built:
+Claim counts are modelled as $N_i \sim \mathrm{Poi}(\mu_i)$ with $\mu_i = v_i\thinspace\lambda(\boldsymbol{x}_ i)$: exposure $v_i$ (policy years) times a frequency $\lambda(\boldsymbol{x})$ that depends on the covariates. The lessons differ only in how $\lambda(\boldsymbol{x})$ is built:
 
 homogeneous (one number) → GLM (hand-made features) → GBM (trees) → FNN (learned features) → CANN (GLM + learned correction) → LocalGLMnet (learned, but readable as coefficients).
 
@@ -37,10 +38,7 @@ Mortality (lesson 05) and reserving (lesson 06) reuse the same pattern on time s
 <details>
 <summary><b>② One score for all: the Poisson deviance</b></summary>
 
-$$
-D = \frac{1}{\sum_i v_i}\sum_i v_i\thinspace d\Big(\frac{N_i}{v_i}, \frac{\mu_i}{v_i}\Big) \times 100,
-\qquad d(y,m) = 2\Big(m - y - y\log\frac{m}{y}\Big)
-$$
+$\displaystyle D = \frac{1}{\sum_i v_i}\sum_i v_i\thinspace d\Big(\frac{N_i}{v_i}, \frac{\mu_i}{v_i}\Big) \times 100, \qquad d(y,m) = 2\Big(m - y - y\log\frac{m}{y}\Big)$
 
 - $d$ is twice the log-likelihood gap to a model that fits every observation exactly, so **minimising deviance = maximum likelihood**
 - Lower is better. Values are reported in units of $10^{-2}$, as in the published benchmarks
@@ -64,9 +62,7 @@ Using the same split as the published notebooks is what makes the results compar
 
 `conf/base/parameters_benchmarks.yml` holds, per model, the published value, a tolerance and the source. After each run:
 
-$$
-\text{PASS} \iff |\text{this repo} - \text{published}| \le \text{tolerance}
-$$
+$\displaystyle \text{PASS} \iff |\text{this repo} - \text{published}| \le \text{tolerance}$
 
 Benchmarks apply only at the reference setup (e.g. `scale: 1.0`); smaller experiments report `SKIPPED`. A model that reproduces a published number is a trustworthy starting point for your own changes. Where no like-for-like number exists (reserving), the lesson back-tests against realised outcomes instead.
 

@@ -8,6 +8,7 @@ style: |
   details { border: 1px solid rgba(140,149,159,.45); border-radius: 8px; padding: .25em .8em; margin: .35em 0; font-size: .72em; }
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
+  section:has(details[open]) details:not([open]) { display: none; }
 ---
 
 <!-- _class: lead -->
@@ -20,14 +21,14 @@ style: |
 
 ## Theory
 
-$$
+```math
 N_i \sim \mathrm{Poi}\big(v_i\thinspace\lambda(\boldsymbol{x}_i)\big), \qquad
 \log \lambda^{\mathrm{GLM}}(\boldsymbol{x}) = \beta_0 + \langle \boldsymbol{\beta}, \boldsymbol{x}\rangle
-$$
+```
 
-$$
+```math
 D = \frac{2}{\sum_i v_i}\sum_i v_i \Big[\tfrac{\mu_i}{v_i} - \tfrac{N_i}{v_i} - \tfrac{N_i}{v_i}\log\tfrac{\mu_i}{N_i}\Big] \times 100
-$$
+```
 
 - **GLM** [1]: interpretable, but features are hand-engineered (age bands, log density)
 - **GBM** [2, 3]: learns interactions with trees; Poisson loss with $\log v_i$ as offset
@@ -44,9 +45,7 @@ _Click a panel to open it; work through them in order._
 
 With a log link, the expected count of policy $i$ is
 
-$$
-\log \mathbb{E}[N_i] = \log v_i + \eta(\boldsymbol{x}_i), \qquad \eta = \log\lambda .
-$$
+$\displaystyle \log \mathbb{E}[N_i] = \log v_i + \eta(\boldsymbol{x}_ i), \qquad \eta = \log\lambda .$
 
 $\log v_i$ has a fixed coefficient of 1 (an **offset**), so a policy on cover for half a year expects half the claims. Covariates act **multiplicatively** on frequency: $\exp(\beta_j)$ is a relativity, the familiar form of a rating table.
 
@@ -57,9 +56,7 @@ $\log v_i$ has a fixed coefficient of 1 (an **offset**), so a policy on cover fo
 
 Up to terms that do not depend on the model, the Poisson log-likelihood is
 
-$$
-\ell(\boldsymbol\beta) = \sum_i \big(N_i \log\mu_i - \mu_i\big), \qquad \mu_i = v_i\exp(\beta_0 + \langle\boldsymbol\beta, \boldsymbol{x}_i\rangle).
-$$
+$\displaystyle \ell(\boldsymbol\beta) = \sum_i \big(N_i \log\mu_i - \mu_i\big), \qquad \mu_i = v_i\exp(\beta_0 + \langle\boldsymbol\beta, \boldsymbol{x}_ i\rangle).$
 
 The deviance is $2(\ell_{\text{saturated}} - \ell)$, so the parameters that maximise $\ell$ also minimise the deviance on the learning data. statsmodels solves this with iteratively reweighted least squares.
 
@@ -83,9 +80,7 @@ Every band and transformation is a modelling decision. Deep models aim to learn 
 
 For a Poisson GLM with log link and an intercept, the likelihood equation for $\beta_0$ is
 
-$$
-\frac{\partial \ell}{\partial\beta_0} = \sum_i (N_i - \hat\mu_i) = 0 .
-$$
+$\displaystyle \frac{\partial \ell}{\partial\beta_0} = \sum_i (N_i - \hat\mu_i) = 0 .$
 
 The fitted GLM therefore reproduces the total observed claim count on the learning data exactly (balance = 1.0000). Models fitted another way, such as networks with early stopping, lose this property and must be checked for it.
 
@@ -94,9 +89,7 @@ The fitted GLM therefore reproduces the total observed claim count on the learni
 <details>
 <summary><b>⑤ Gradient boosting: many small trees</b></summary>
 
-$$
-\eta_M(\boldsymbol{x}) = \eta_0 + \sum_{m=1}^{M} \nu\thinspace h_m(\boldsymbol{x})
-$$
+$\displaystyle \eta_M(\boldsymbol{x}) = \eta_0 + \sum_{m=1}^{M} \nu\thinspace h_m(\boldsymbol{x})$
 
 - Each tree $h_m$ is fitted to the negative gradient of the Poisson loss, which on the log scale is $N_i - \mu_i$: the trees chase the remaining residuals
 - $\eta_0 = \log v_i + \log\bar\lambda$: exposure offset plus the portfolio frequency
