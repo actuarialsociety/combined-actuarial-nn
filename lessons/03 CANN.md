@@ -4,6 +4,10 @@ theme: default
 paginate: true
 math: katex
 title: "03 · CANN"
+style: |
+  details { border: 1px solid rgba(140,149,159,.45); border-radius: 8px; padding: .25em .8em; margin: .35em 0; font-size: .72em; }
+  summary { cursor: pointer; font-size: 1.15em; }
+  details[open] { background: rgba(140,149,159,.08); }
 ---
 
 <!-- _class: lead -->
@@ -18,13 +22,78 @@ title: "03 · CANN"
 
 $$
 \lambda^{\mathrm{CANN}}(\boldsymbol{x}) =
-\underbrace{\lambda^{\mathrm{GLM}}(\boldsymbol{x})}_{\text{offset}}\;
-\exp\big\{w_0 + \langle \boldsymbol{w}, \boldsymbol{z}^{(d:1)}(\boldsymbol{x})\rangle\big\}
+\underbrace{\lambda^{\mathrm{GLM}}(\boldsymbol{x})}_{\text{offset}}\medspace
+\exp\big\lbrace w_0 + \langle \boldsymbol{w}, \boldsymbol{z}^{(d:1)}(\boldsymbol{x})\rangle\big\rbrace
 $$
 
 - **Zero initialisation:** $w_0 = 0,\ \boldsymbol{w} = \boldsymbol{0}$ ⇒ training starts *exactly* at the GLM [1, 2]
 - The network term is a **multiplicative correction**: it shows where the GLM is wrong
 - If training barely moves it, the GLM was adequate
+
+
+---
+
+## Core ideas
+
+_Click a panel to open it; work through them in order._
+
+<details>
+<summary><b>① Learn the residual on the log scale</b></summary>
+
+$$
+\log\lambda^{\mathrm{CANN}}(\boldsymbol{x}) = \underbrace{\log\lambda^{\mathrm{GLM}}(\boldsymbol{x})}_{\text{fixed}} + \underbrace{w_0 + \langle\boldsymbol{w}, \boldsymbol{z}^{(d)}(\boldsymbol{x})\rangle}_{\text{learned correction}}
+$$
+
+The GLM is fitted first and then **frozen**: its expected counts, exposure included, enter the network as the offset. Only the correction term is trained.
+
+</details>
+
+<details>
+<summary><b>② Zero initialisation: start exactly at the GLM</b></summary>
+
+With $w_0 = 0$ and $\boldsymbol{w} = \boldsymbol{0}$ the correction is $\exp(0) = 1$, so before any training
+
+$$
+\lambda^{\mathrm{CANN}}(\boldsymbol{x}) = \lambda^{\mathrm{GLM}}(\boldsymbol{x}) .
+$$
+
+Training can therefore only move away from the GLM if that lowers the loss. `test_cann_starts_exactly_at_glm` checks this property on every CI run.
+
+</details>
+
+<details>
+<summary><b>③ Same network, different starting point</b></summary>
+
+The CANN reuses lesson 02's network exactly: same inputs and embeddings, layers [20, 15, 10], NAdam, batch 5,000, 200 epochs with early stopping. The only differences are the offset (GLM prediction instead of exposure) and the initial bias (0 instead of $\log\bar\lambda$).
+
+</details>
+
+<details>
+<summary><b>④ What the correction can pick up</b></summary>
+
+- **Missing covariates:** the reference GLM leaves out `BonusMalus`, `VehAge` and `VehPower`; the network sees all of them
+- **Shape inside bands:** the GLM's driver-age bands are flat; the network can bend within them
+- **Interactions** between any covariates, which the GLM formula does not contain
+
+</details>
+
+<details>
+<summary><b>⑤ Reading the correction</b></summary>
+
+For each policy, $c(\boldsymbol{x}) = \exp(w_0 + \langle\boldsymbol{w}, \boldsymbol{z}^{(d)}(\boldsymbol{x})\rangle)$ is the factor applied on top of the GLM price.
+
+- $c \approx 1$ everywhere: the GLM was already adequate
+- Segments with $c$ far from 1 show where the GLM is wrong, and are candidates for new GLM terms
+- Track the distribution of $c$ by segment over time as a monitoring signal
+
+</details>
+
+<details>
+<summary><b>⑥ Balance after early stopping</b></summary>
+
+The GLM is balanced, but the correction is not constrained to average to 1, so the CANN's total prediction drifts (here <!--r:cann.balance_learn-->0.9833<!--/r-->× observed on the learning data). Restore it with the same bias shift as lesson 02, $w_0 \leftarrow w_0 + \log(\sum_i N_i / \sum_i \hat\mu_i)$, before using the model for pricing.
+
+</details>
 
 ---
 
@@ -73,7 +142,7 @@ The CANN keeps the GLM's age bands as its starting point and corrects within and
 - **Governance:** the GLM stays filed and explainable; the CANN is a documented uplift
 - **Calibration:** here the CANN's predictions sum to <!--r:cann.balance_learn-->0.9833<!--/r--> × observed claims on the learning set; restore the balance property before pricing [3]
 - **Extensions:** telematics CANNs put new data in the network term only [4]
-- **Monitoring:** track the size of the correction $\exp\{\cdot\}$ by segment over time
+- **Monitoring:** track the size of the correction $\exp\lbrace\cdot\rbrace$ by segment over time
 
 ---
 

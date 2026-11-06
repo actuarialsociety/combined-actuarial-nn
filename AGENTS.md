@@ -11,7 +11,7 @@ the lessons and add models.
 | Path | What |
 | --- | --- |
 | `lessons/NN Title.md` | Marp slide decks (also render on GitHub and the wiki) |
-| `lessons/figures/` | Figures exported from pipeline runs (`scripts/export_figures.py`) |
+| `lessons/figures/` | Figures exported from pipeline runs (`scripts/export_figures.py`); transparent PNGs styled in `plots.py` to read on light and dark pages |
 | `src/deep_actuarial_science/models/` | Model code: `frequency.py`, `mortality.py`, `reserving.py` |
 | `src/deep_actuarial_science/pipelines/` | Kedro pipelines: `ingest`, `frequency`, `mortality`, `reserving` (one namespace per model) |
 | `conf/base/parameters_*.yml` | Data scale and model settings; `parameters_benchmarks.yml` holds published reference results |
@@ -22,8 +22,17 @@ the lessons and add models.
 
 ### 1. A lesson = succinct theory + a pipeline model + reconciled results
 
-- **Theory is super succinct:** one or two key equations in LaTeX (`$...$`, `$$...$$`)
+- **Theory slide is super succinct:** one or two key equations in LaTeX (`$...$`, `$$...$$`)
   and a few bullets. The code and the figures carry the lesson.
+- **Core ideas panels go deeper:** right after the Theory slide, a `## Core ideas` slide holds
+  5 to 7 click-through `<details>` panels (numbered ①, ②, …), each one idea with its equation
+  and the exact settings the code uses. They render as collapsible panels on GitHub, in the
+  wiki and in the slides (Marp `--html`). Rules: a blank line after `</summary>` and before
+  `</details>`; no math inside `<summary>`; every number from a run uses a
+  `<!--r:model.metric-->` marker; describe only what the code does or what a cited abstract says.
+- **GitHub-safe math:** GitHub strips Markdown escapes before rendering math, so write
+  `\lbrace \rbrace \thinspace \medspace \cr`, not `\{ \} \, \; \\`, and never `\%`.
+  `python3 scripts/fix_math.py` rewrites them; CI runs it with `--check`.
 - **Visual:** every results slide shows figures produced by the pipeline (exported to
   `lessons/figures/`), never hand-drawn or invented numbers.
 - **Reconciled:** every model has an entry in `conf/base/parameters_benchmarks.yml`
@@ -61,6 +70,7 @@ pytest -q
 kedro run --env smoke                      # every pipeline, ~1-2 minutes
 python3 scripts/make_notebooks.py          # if notebooks changed
 python3 scripts/check_links.py             # must report 0 broken
+python3 scripts/fix_math.py --check        # math renders on GitHub and the wiki
 ```
 
 ### 5. Workflows
@@ -73,7 +83,7 @@ python3 scripts/check_links.py             # must report 0 broken
 | Update agent skills | `scripts/update_exa_skills.sh`, `scripts/update_kedro_skills.sh` |
 | Track runs | MLflow: `mlflow ui --backend-store-uri sqlite:///mlflow.db` |
 | Container | `docker compose up lab mlflow` (JupyterLab :8888, MLflow :5000) |
-| Slides | `npx @marp-team/marp-cli@4.5.1 -s lessons` (published to Pages by `slides.yml`) |
+| Slides | `npx @marp-team/marp-cli@4.5.1 --html -s lessons` (published to Pages by `slides.yml`) |
 | Wiki | Generated from `README.md` + `lessons/` on push to `main` (`wiki-sync.yml`) |
 
 ### 6. Secrets
