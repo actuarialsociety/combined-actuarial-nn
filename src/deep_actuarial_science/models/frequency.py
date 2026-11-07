@@ -2,8 +2,17 @@
 
 Every model exposes `fit(learn, params, base=None) -> self` and
 `predict(df) -> expected claim counts` (already multiplied by exposure).
-The preprocessing and architectures follow Wüthrich et al., "AI Tools for
-Actuaries" (2025), so results reconcile to the published notebooks.
+Each model follows the paper it is benchmarked against (see
+conf/base/parameters_benchmarks.yml):
+
+- GLM1 / GLM3: Wüthrich & Merz (2023), Sect. 5.2.4 and Table 5.5 (formulas in config)
+- FNN with embeddings and CANN: Brauer (2024), Table 2 (f) and (g): 15 seeds, nadam,
+  batch 7,000, early stopping with patience 15 on an own 10% validation split per seed
+- LocalGLMnet: Richman & Wüthrich (2023), Sect. 3: one-hot categoricals, standardised
+  continuous features, RandU and RandN control variables (q = 42), layers (20, 15, 10)
+
+Networks fit `n_runs` seeds; `predict` returns their average and `predict_runs` each run,
+so metrics can be reported as mean ± sd over seeds, as in Brauer (2024).
 
 Add a model: subclass `FrequencyModel`, register it in `MODELS`, add a
 parameter block under `frequency.models` and (optionally) a benchmark.
@@ -19,10 +28,14 @@ import pandas as pd
 import statsmodels.api as sm
 import torch
 from sklearn.compose import ColumnTransformer
-from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer, OrdinalEncoder, StandardScaler
+from sklearn.preprocessing import (
+    FunctionTransformer,
+    OneHotEncoder,
+    OrdinalEncoder,
+    StandardScaler,
+)
 from statsmodels.formula.api import glm as smf_glm
 from torch import nn
 
@@ -72,55 +85,99 @@ class _Clip:
 
 
 def _clip_scale(upper):
-    return Pipeline([("clip", FunctionTransformer(_Clip(upper))), ("scale", StandardScaler())])
+    return Pipeline(
+        [
+            ("clip", FunctionTransformer(_Clip(upper), feature_names_out="one-to-one")),
+            ("scale", StandardScaler()),
+        ]
+    )
 
 
 NUMERIC = ["VehAge", "DrivAge", "BonusMalus", "VehPower"]
 CLIP_UPPER = [20, 90, 150, 15]
-# Output column order of nn_preprocessor(embed=False)
-DESIGN_COLUMNS = [
-    *NUMERIC,
-    "Area",
-    "Density",
-    "VehGas",
-    "VehBrandEmb1",
-    "VehBrandEmb2",
-    "RegionEmb1",
-    "RegionEmb2",
-    "RandN",
-]
 
 
-def nn_preprocessor(embed: bool) -> ColumnTransformer:
-    """Scaled continuous covariates; VehBrand/Region as integer codes (embed) or PCA'd
-    pre-trained embeddings (LocalGLMnet, which needs a numeric design matrix)."""
-    common = [
-        ("scale", _clip_scale(CLIP_UPPER), NUMERIC),
-        ("area", Pipeline([("enc", OrdinalEncoder()), ("scale", StandardScaler())]), ["Area"]),
-        (
-            "density",
-            Pipeline([("log", FunctionTransformer(_log_round)), ("scale", StandardScaler())]),
-            ["Density"],
-        ),
-        ("veh_gas", FunctionTransformer(_is_diesel), ["VehGas"]),
-    ]
-    if embed:
-        cats = [("cats", OrdinalEncoder(), ["VehBrand", "Region"])]
-    else:
-        cats = [
+def nn_preprocessor() -> ColumnTransformer:
+    """Capped and standardised continuous covariates (Wüthrich & Merz 2023, Sect. 7.3.2,
+    with a standard scaler as in Brauer 2024); VehBrand and Region as integer codes for
+    the embedding layers."""
+    return ColumnTransformer(
+        [
+            ("scale", _clip_scale(CLIP_UPPER), NUMERIC),
+            ("area", Pipeline([("enc", OrdinalEncoder()), ("scale", StandardScaler())]), ["Area"]),
             (
-                f"pca_{n}",
-                Pipeline([("pca", PCA(n_components=2)), ("scale", StandardScaler())]),
-                [f"{n}Emb1", f"{n}Emb2"],
-            )
-            for n in ("VehBrand", "Region")
-        ] + [("rand", "passthrough", ["RandN"])]
-    return ColumnTransformer(common + cats, verbose_feature_names_out=False)
+                "density",
+                Pipeline([("log", FunctionTransformer(_log_round)), ("scale", StandardScaler())]),
+                ["Density"],
+            ),
+            ("veh_gas", FunctionTransformer(_is_diesel), ["VehGas"]),
+            ("cats", OrdinalEncoder(), ["VehBrand", "Region"]),
+        ],
+        verbose_feature_names_out=False,
+    )
 
 
-def split_train_val(learn: pd.DataFrame, params: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
+LGN_SCALED = [*NUMERIC, "Area", "Density", "VehGas"]  # six continuous + binary VehGas
+LGN_CONTROLS = ["RandU", "RandN"]
+
+
+def localglmnet_preprocessor() -> ColumnTransformer:
+    """Richman & Wüthrich (2023), Sect. 3: centre and scale the six continuous and the
+    binary feature (after the caps of Wüthrich & Merz 2023, Sect. 7.3.2), one-hot encode
+    VehBrand and Region, and add the control variables RandU and RandN: q = 42."""
+    return ColumnTransformer(
+        [
+            ("scale", _clip_scale(CLIP_UPPER), NUMERIC),
+            ("area", Pipeline([("enc", OrdinalEncoder()), ("scale", StandardScaler())]), ["Area"]),
+            (
+                "density",
+                Pipeline(
+                    [
+                        ("log", FunctionTransformer(np.log, feature_names_out="one-to-one")),
+                        ("scale", StandardScaler()),
+                    ]
+                ),
+                ["Density"],
+            ),
+            (
+                "veh_gas",
+                Pipeline(
+                    [
+                        ("bin", FunctionTransformer(_is_diesel, feature_names_out="one-to-one")),
+                        ("scale", StandardScaler()),
+                    ]
+                ),
+                ["VehGas"],
+            ),
+            (
+                "onehot",
+                OneHotEncoder(sparse_output=False, dtype=np.float32),
+                ["VehBrand", "Region"],
+            ),
+            ("controls", "passthrough", LGN_CONTROLS),
+        ],
+        verbose_feature_names_out=False,
+    )
+
+
+def split_train_val(
+    learn: pd.DataFrame, params: dict, run: int = 0
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """10% validation split; each seeded run gets its own split (Brauer 2024)."""
     return train_test_split(
-        learn, test_size=params.get("val_size", 0.1), random_state=params.get("split_seed", 125548)
+        learn,
+        test_size=params.get("val_size", 0.1),
+        random_state=params.get("split_seed", 125548) + run,
+    )
+
+
+def _train_args(params: dict) -> dict:
+    return dict(
+        epochs=params["epochs"],
+        batch_size=params.get("batch_size", 5000),
+        lr=params.get("lr"),
+        shuffle=params.get("shuffle", False),
+        patience=params.get("patience"),
     )
 
 
@@ -275,6 +332,8 @@ class EmbeddingFNN(nn.Module):
 
 
 class FNN(FrequencyModel):
+    """Embedding FNN (Brauer 2024, Table 2 (f)); `n_runs` seeds, each with its own split."""
+
     name = "fnn"
     uses_base = False
 
@@ -282,31 +341,30 @@ class FNN(FrequencyModel):
         return base.predict(df) if self.uses_base else df.Exposure.to_numpy()
 
     def _fit(self, learn, params, base):
-        seed_everything(params.get("seed", 21456783))
         self.base = base
-        self.pre = nn_preprocessor(embed=True).fit(learn)
-        train, val = split_train_val(learn, params)
+        self.pre = nn_preprocessor().fit(learn)
         n_levels = [learn.VehBrand.nunique(), learn.Region.nunique()]
         bias0 = 0.0 if self.uses_base else float(np.log(learn.ClaimNb.sum() / learn.Exposure.sum()))
-        torch.manual_seed(params.get("seed", 21456783))
-        self.net = EmbeddingFNN(
-            len(NUMERIC) + 3,
-            n_levels,
-            params.get("embedding_dims", [2, 2]),
-            params.get("hidden", [20, 15, 10]),
-            bias0,
-        )
-        self.history = train_poisson(
-            self.net,
-            self._tensors(train),
-            self._tensors(val),
-            epochs=params["epochs"],
-            batch_size=params.get("batch_size", 5000),
-            lr=params.get("lr"),
-            shuffle=params.get("shuffle", False),
-        )
-        if params.get("balance_correction", False):
-            self._balance(learn)
+        seed0 = params.get("seed", 21456783)
+        self.nets, self.histories = [], []
+        for run in range(params.get("n_runs", 1)):
+            seed_everything(seed0 + run)
+            train, val = split_train_val(learn, params, run)
+            net = EmbeddingFNN(
+                len(NUMERIC) + 3,
+                n_levels,
+                params.get("embedding_dims", [2, 2]),
+                params.get("hidden", [20, 15, 10]),
+                bias0,
+            )
+            hist = train_poisson(
+                net, self._tensors(train), self._tensors(val), **_train_args(params)
+            )
+            if params.get("balance_correction", False):
+                self._balance(net, learn)
+            self.nets.append(net)
+            self.histories.append(hist)
+        self.net, self.history = self.nets[0], self.histories[0]
 
     def _tensors(self, df):
         return (
@@ -316,17 +374,25 @@ class FNN(FrequencyModel):
             tensor(df.Exposure),
         )
 
-    def _balance(self, learn):
+    def _balance(self, net, learn):
         """Restore the balance property by shifting the output bias (Wüthrich 2020)."""
-        ratio = learn.ClaimNb.sum() / self.predict(learn).sum()
+        X, _, off, _ = self._tensors(learn)
+        net.eval()
         with torch.no_grad():
-            self.net.out.bias += float(np.log(ratio))
+            ratio = learn.ClaimNb.sum() / net(X, off).sum().item()
+            net.out.bias += float(np.log(ratio))
+
+    def predict_runs(self, df) -> list[np.ndarray]:
+        X, _, off, _ = self._tensors(df)
+        out = []
+        for net in self.nets:
+            net.eval()
+            with torch.no_grad():
+                out.append(net(X, off).numpy().astype(float))
+        return out
 
     def predict(self, df):
-        self.net.eval()
-        X, _, off, _ = self._tensors(df)
-        with torch.no_grad():
-            return self.net(X, off).numpy().astype(float)
+        return np.mean(self.predict_runs(df), axis=0)
 
     def n_params(self):
         return n_params(self.net)
@@ -362,44 +428,64 @@ class LocalGLMnetNet(nn.Module):
 
 
 class LocalGLMnet(FrequencyModel):
+    """LocalGLMnet of Richman & Wüthrich (2023), Sect. 3: q = 42 inputs (one-hot
+    categoricals, RandU and RandN), layers (20, 15, 10), attention initialised at a
+    Poisson GLM on the same design; `n_runs` seeds."""
+
     name = "localglmnet"
 
     def design(self, df) -> pd.DataFrame:
-        X = pd.DataFrame(self.pre.transform(df), columns=DESIGN_COLUMNS, index=df.index)
-        return X[self.features].astype(np.float32)
+        X = self.pre.transform(df).astype(np.float32)
+        return pd.DataFrame(X, columns=self.features, index=df.index)
 
     def _design(self, df):
         return self.design(df).to_numpy()
 
     def _fit(self, learn, params, base):
-        self.pre = nn_preprocessor(embed=False).fit(learn)
-        self.features = params["features"]
-        X = pd.DataFrame(self._design(learn), columns=self.features)
-        glm0 = sm.GLM(
-            learn.ClaimNb.to_numpy(),
-            sm.add_constant(X),
-            offset=np.log(learn.Exposure),
-            family=sm.families.Poisson(),
-        ).fit()
-        self.glm_baseline = glm0
-        seed_everything(params.get("seed", 21456783))
-        torch.manual_seed(params.get("seed", 21456783))
-        self.net = LocalGLMnetNet(
-            len(self.features),
-            params.get("hidden", [20, 15, 10]),
-            glm0.params.iloc[0],
-            glm0.params.to_numpy()[1:],
+        self.pre = localglmnet_preprocessor().fit(learn)
+        self.features = list(self.pre.get_feature_names_out())
+        glm0 = self._start_glm(learn)
+        seed0 = params.get("seed", 21456783)
+        self.nets, self.histories = [], []
+        for run in range(params.get("n_runs", 1)):
+            seed_everything(seed0 + run)
+            net = LocalGLMnetNet(
+                len(self.features),
+                params.get("hidden", [20, 15, 10]),
+                glm0["const"],
+                glm0[self.features].to_numpy(),
+            )
+            train, val = split_train_val(learn, params, run)
+            hist = train_poisson(
+                net, self._tensors(train), self._tensors(val), **_train_args(params)
+            )
+            self.nets.append(net)
+            self.histories.append(hist)
+        self.net, self.history = self.nets[0], self.histories[0]
+
+    def _start_glm(self, learn) -> pd.Series:
+        """Poisson GLM on the same design, used to initialise the attention bias.
+
+        One-hot columns plus an intercept are rank-deficient, so the first level of each
+        categorical is the reference (coefficient 0): the same fitted means as any other
+        solution. If a small sample makes the fit diverge (e.g. a region without claims),
+        a tiny ridge penalty keeps the starting values finite."""
+        X = self.design(learn).astype(np.float64)
+        ref = [
+            next(c for c in self.features if c.startswith(f"{v}_")) for v in ("VehBrand", "Region")
+        ]
+        Z = sm.add_constant(X.drop(columns=ref), has_constant="add")
+        model = sm.GLM(
+            learn.ClaimNb.to_numpy(), Z, offset=np.log(learn.Exposure), family=sm.families.Poisson()
         )
-        train, val = split_train_val(learn, params)
-        self.history = train_poisson(
-            self.net,
-            self._tensors(train),
-            self._tensors(val),
-            epochs=params["epochs"],
-            batch_size=params.get("batch_size", 5000),
-            lr=params.get("lr"),
-            shuffle=params.get("shuffle", False),
-        )
+        try:
+            coef = model.fit().params
+            if not np.isfinite(coef).all():
+                raise ValueError("non-finite GLM coefficients")
+        except ValueError:
+            coef = pd.Series(model.fit_regularized(alpha=1e-6, L1_wt=0.0).params, index=Z.columns)
+        self.glm_baseline = coef
+        return coef.reindex(["const", *self.features], fill_value=0.0)
 
     def _tensors(self, df):
         return (
@@ -409,12 +495,20 @@ class LocalGLMnet(FrequencyModel):
             tensor(df.Exposure),
         )
 
+    def predict_runs(self, df) -> list[np.ndarray]:
+        X, e = tensor(self._design(df)), tensor(df.Exposure)
+        out = []
+        for net in self.nets:
+            net.eval()
+            with torch.no_grad():
+                out.append(net(X, e).numpy().astype(float))
+        return out
+
     def predict(self, df):
-        self.net.eval()
-        with torch.no_grad():
-            return self.net(tensor(self._design(df)), tensor(df.Exposure)).numpy().astype(float)
+        return np.mean(self.predict_runs(df), axis=0)
 
     def attentions(self, df) -> pd.DataFrame:
+        """Regression attentions beta_j(x) of the first run (one network, as in the paper)."""
         self.net.eval()
         with torch.no_grad():
             b = self.net.betas(tensor(self._design(df))).numpy()

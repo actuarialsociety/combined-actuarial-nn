@@ -9,8 +9,20 @@ import pandas as pd
 
 from deep_actuarial_science import plots
 from deep_actuarial_science.benchmarks import reconcile as _reconcile
-from deep_actuarial_science.metrics import balance_ratio, gini_index, poisson_deviance, to_mlflow
-from deep_actuarial_science.models.frequency import FrequencyModel, LocalGLMnet, build
+from deep_actuarial_science.metrics import (
+    balance_ratio,
+    gini_index,
+    poisson_deviance,
+    poisson_deviance_per_policy,
+    to_mlflow,
+)
+from deep_actuarial_science.models.frequency import (
+    LGN_CONTROLS,
+    LGN_SCALED,
+    FrequencyModel,
+    LocalGLMnet,
+    build,
+)
 
 log = logging.getLogger(__name__)
 KEEP = [
@@ -28,13 +40,17 @@ KEEP = [
 
 
 def prepare(raw: pd.DataFrame, params: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Fixed learn/test split of Wüthrich & Merz (2023) plus a pure-noise covariate.
+    """Fixed learn/test split of Wüthrich & Merz (2023), Table 5.2, plus the two
+    pure-noise control variables of Richman & Wüthrich (2023): RandU (uniform) and RandN
+    (normal), both centred with unit variance.
 
     `scale` < 1 subsamples both sets (same seed) for fast experiments; benchmarks
     only apply at scale 1.0.
     """
     df = raw.copy()
-    df["RandN"] = np.random.default_rng(params.get("noise_seed", 500)).normal(0, 1, len(df))
+    rng = np.random.default_rng(params.get("noise_seed", 500))
+    df["RandN"] = rng.normal(0, 1, len(df))
+    df["RandU"] = rng.uniform(-np.sqrt(3), np.sqrt(3), len(df))
     learn, test = df[df.LearnTest == "L"].copy(), df[df.LearnTest == "T"].copy()
     scale = params.get("scale", 1.0)
     if scale < 1.0:
@@ -53,20 +69,41 @@ def fit_model(learn: pd.DataFrame, params: dict, base: FrequencyModel | None = N
 
 
 def predict(model: FrequencyModel, learn: pd.DataFrame, test: pd.DataFrame) -> pd.DataFrame:
+    """Predictions per policy. Multi-seed networks also keep each run (`pred_run_k`);
+    `pred` is their average (the ensemble)."""
     out = []
     for split, d in (("learn", learn), ("test", test)):
-        out.append(d[KEEP].assign(split=split, pred=model.predict(d)))
+        runs = model.predict_runs(d) if hasattr(model, "predict_runs") else []
+        cols = {f"pred_run_{k}": r for k, r in enumerate(runs)} if len(runs) > 1 else {}
+        pred = np.mean(runs, axis=0) if runs else model.predict(d)
+        out.append(d[KEEP].assign(split=split, pred=pred, **cols))
     return pd.concat(out, ignore_index=True)
 
 
 def evaluate(model: FrequencyModel, pred: pd.DataFrame, params: dict):
+    """`deviance_*` is the Poisson deviance per policy in 10^-2, the scale of Wüthrich &
+    Merz (2023, eq. 5.28) and the papers benchmarked against; `deviance_exposure_*`
+    divides by total exposure instead (the AI Tools notebooks). With several seeds,
+    `deviance_*` is the mean over runs (with `_sd`), as in Brauer (2024), Table 2, and
+    `deviance_ensemble_*` scores the averaged prediction."""
     m = {}
+    run_cols = [c for c in pred.columns if c.startswith("pred_run_")]
     for split in ("learn", "test"):
         d = pred[pred.split == split]
-        m[f"deviance_{split}"] = poisson_deviance(d.ClaimNb, d.pred, d.Exposure)
+        if run_cols:
+            runs = [poisson_deviance_per_policy(d.ClaimNb, d[c], d.Exposure) for c in run_cols]
+            m[f"deviance_{split}"] = float(np.mean(runs))
+            m[f"deviance_{split}_sd"] = float(np.std(runs, ddof=1))
+            m[f"deviance_ensemble_{split}"] = poisson_deviance_per_policy(
+                d.ClaimNb, d.pred, d.Exposure
+            )
+        else:
+            m[f"deviance_{split}"] = poisson_deviance_per_policy(d.ClaimNb, d.pred, d.Exposure)
+        m[f"deviance_exposure_{split}"] = poisson_deviance(d.ClaimNb, d.pred, d.Exposure)
         m[f"balance_{split}"] = balance_ratio(d.ClaimNb, d.pred)
     t = pred[pred.split == "test"]
     m["gini_test"] = gini_index(t.ClaimNb, t.pred, t.Exposure)
+    m["n_runs"] = max(len(run_cols), 1)
     m["n_params"] = model.n_params()
     m["fit_seconds"] = model.fit_seconds
     if model.history:
@@ -94,10 +131,12 @@ def figures(model: FrequencyModel, pred: pd.DataFrame, test: pd.DataFrame, param
         "training": plots.training(model.history, title=f"{name}: training history"),
     }
     if isinstance(model, LocalGLMnet):
+        # the continuous/binary features and the controls, as in Richman & Wüthrich (2023), Fig. 5
+        shown = LGN_SCALED + LGN_CONTROLS
         att = model.attentions(test)
         X = model.design(test)
-        figs["attention"] = plots.attention(att, X, model.features)
-        figs["importance"] = plots.importance(att)
+        figs["attention"] = plots.attention(att, X, shown)
+        figs["importance"] = plots.importance(att[shown])
     return plots.named(figs)
 
 

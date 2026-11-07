@@ -12,13 +12,15 @@ from kedro.pipeline import Pipeline, node, pipeline
 from deep_actuarial_science.pipelines.frequency import nodes as n
 from deep_actuarial_science.pipelines.ingest import aitools_node
 
-# model namespace -> model it builds on (CANN uses the fitted GLM as its offset)
+# model namespace -> model it builds on (CANN uses the fitted GLM3 as its offset, as in
+# Wüthrich & Merz 2023, Table 7.7, and Brauer 2024)
 MODELS = {
     "homogeneous": None,
-    "glm": None,
+    "glm": None,  # Poisson GLM1, Wüthrich & Merz (2023), Table 5.5
+    "glm3": None,  # Poisson GLM3, same table
     "gbm": None,
     "fnn": None,
-    "cann": "glm",
+    "cann": "glm3",
     "localglmnet": None,
 }
 

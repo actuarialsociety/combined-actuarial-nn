@@ -1,10 +1,10 @@
 # Agent Guidelines
 
-`deep-actuarial-science` takes a deep learning model from **theory to a workable,
-benchmarked analysis fast**. Each lesson is a Marp markdown slide deck in `lessons/`,
-backed by a model in a Kedro pipeline, a Colab notebook, MLflow tracking and a published
-benchmark the results must reconcile to. Coding agents (Claude Code, Copilot) maintain
-the lessons and add models.
+`deep-actuarial-science` is a **research-paper benchmark toolkit** for deep learning in
+actuarial science: each model reproduces a **named paper's published result** in a Kedro
+pipeline and reports PASS/FAIL against it. Lessons (Marp slide decks in `lessons/`, also the
+wiki), Colab notebooks and MLflow tracking present each reproduction. Coding agents (Claude
+Code, Copilot) maintain the lessons and add models.
 
 ## Layout
 
@@ -45,14 +45,21 @@ the lessons and add models.
   (CI runs `--check`). Every model label cites its academic source.
 - **Visual:** every results slide shows figures produced by the pipeline (exported to
   `lessons/figures/`), never hand-drawn or invented numbers.
-- **Reconciled:** every model has an entry in `conf/base/parameters_benchmarks.yml`
-  with the published value, tolerance and source. Report PASS/FAIL honestly. If no
-  like-for-like benchmark exists, say so and back-test against realised outcomes.
+- **Reconciled to a named paper:** every model has an entry in
+  `conf/base/parameters_benchmarks.yml` with the published value, tolerance and source:
+  the paper (authors, year, DOI) and the **table or figure** the value comes from. Prefer an
+  original paper's table over companion notebooks or software packages, and say which one it
+  is. The results slide names that paper and table. Report PASS/FAIL honestly; if no
+  like-for-like published benchmark exists, say so and back-test against realised outcomes.
+- **Implemented as in the paper:** where possible, follow the benchmark paper's implementation
+  (data cleaning, preprocessing, architecture, loss, optimiser, training schedule, ensembling)
+  and document any deviation, with its reason, in the model's docstring and the lesson.
 - **Production-minded:** include the checks a pricing or reserving team needs
   (calibration, balance property, stability across seeds, look-ahead, monitoring).
 - **Learn more:** 3 to 6 academic references with DOIs verified via
-  `curl -s https://api.crossref.org/works/<DOI>`. Never cite from memory, and never
-  describe a paper beyond its abstract. Videos are optional extras.
+  `curl -s https://api.crossref.org/works/<DOI>`. Never cite from memory. Quote a paper's numbers only
+  with the table or figure they come from, and describe its methods only as far as its
+  abstract and those tables support. Videos are optional extras.
 - Follow [`.claude/skills/build-lesson/template.md`](.claude/skills/build-lesson/template.md).
 
 ### 2. Data

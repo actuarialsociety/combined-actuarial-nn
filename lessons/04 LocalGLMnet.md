@@ -11,6 +11,7 @@ style: |
   section:has(details[open]) details:not([open]) { display: none; }
   section.theory { font-size: 23px; }
   section.theory p { margin: .45em 0; }
+  table { font-size: .68em; }
 ---
 
 <!-- _class: lead -->
@@ -18,6 +19,8 @@ style: |
 ### A network that reads like a GLM, with built-in variable selection
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/04_localglmnet.ipynb) · `kedro run --pipeline frequency --namespaces localglmnet`
+
+**Reproduces:** Richman & Wüthrich (2023) [[1](https://doi.org/10.1080/03461238.2022.2081816)], Table 2 (c)
 
 ---
 
@@ -32,11 +35,10 @@ style: |
 \qquad \big(\beta_1(\boldsymbol{x}),\dots,\beta_q(\boldsymbol{x})\big) = \boldsymbol{z}^{(d:1)}(\boldsymbol{x})
 ```
 
-where $\lambda(\boldsymbol{x})$ = expected claims per year of cover; $x_j$ = covariate $j$, standardised; $q$ = number of covariates (12 here, including the noise covariate `RandN`); $\beta_0$ = intercept; $\beta_j(\boldsymbol{x})$ = the **regression attention**: covariate $j$'s coefficient for this policy; $\boldsymbol{z}^{(d:1)}$ = a network as in lesson 02, with $q$ outputs
+where $\lambda(\boldsymbol{x})$ = expected claims per year of cover; $x_j$ = feature $j$; $q = 42$ features (one-hot categoricals and two noise controls); $\beta_0$ = intercept; $\beta_j(\boldsymbol{x})$ = the **regression attention**: feature $j$'s coefficient for this policy; $\boldsymbol{z}^{(d:1)}$ = a network with layers (20, 15, 10) and $q$ outputs
 
-- $\beta_j(\boldsymbol{x})\equiv\beta_j$: a GLM term · $\beta_j\equiv0$: drop $x_j$ · $\beta_j$ varies with $x_k$: interaction [[1](https://doi.org/10.1080/03461238.2022.2081816)]
-- **Initialise at the GLM:** attention bias = GLM coefficients, weights = 0
-- **Significance:** add pure noise `RandN`; its $\beta$ spread sets a 99% band
+- $\beta_j(\boldsymbol{x})\equiv\beta_j$: a GLM term; $\beta_j\equiv0$: drop $x_j$; $\beta_j$ varies with $x_k$: interaction [[1](https://doi.org/10.1080/03461238.2022.2081816)]
+- **Significance:** pure-noise features `RandU` and `RandN` show how much a useless coefficient varies
 
 ---
 
@@ -47,70 +49,41 @@ _Click a panel to open it; work through them in order._
 <details>
 <summary><b>① A GLM whose coefficients depend on the policy</b></summary>
 
-**LocalGLMnet**: GLM form, with coefficients output by a network [[1](https://doi.org/10.1080/03461238.2022.2081816)]
+**Attention layer**: $\boldsymbol\beta(\boldsymbol{x}) = W\boldsymbol{z}^{(d)}(\boldsymbol{x}) + \boldsymbol{b} \in \mathbb{R}^q$
 
-$\displaystyle \log\lambda(\boldsymbol{x}) = \beta_0 + \sum_{j=1}^{q}\beta_j(\boldsymbol{x})\thinspace x_j, \qquad \boldsymbol\beta(\boldsymbol{x}) = W\boldsymbol{z}^{(d)}(\boldsymbol{x}) + \boldsymbol{b} \in \mathbb{R}^q$
-
-where $x_j$ = standardised covariate $j$ of $q$; $\beta_0$ = intercept; $\boldsymbol\beta(\boldsymbol{x})$ = vector of attentions $\beta_j(\boldsymbol{x})$; $\boldsymbol{z}^{(d)}(\boldsymbol{x})$ = last hidden layer; $W, \boldsymbol{b}$ = weights and bias of the attention layer
-
-The network (layers [20, 15, 10], tanh) outputs one coefficient per covariate. These **regression attentions** have the same role as GLM coefficients, but each policy gets its own.
+where $\boldsymbol{z}^{(d)}$ = last hidden layer (tanh); $W, \boldsymbol{b}$ = weights and bias of the linear attention layer. Each prediction decomposes into $\beta_j(\boldsymbol{x})\thinspace x_j$ terms.
 
 </details>
 
 <details>
-<summary><b>② How to read the attentions</b></summary>
+<summary><b>② The paper's 42 features</b></summary>
 
-- $\beta_j(\boldsymbol{x})$ roughly constant: $x_j$ enters **linearly**, as in a GLM
-- $\beta_j(\boldsymbol{x}) \approx 0$: $x_j$ has no effect, so it can be **dropped**
-- $\beta_j$ changes with $x_j$ itself: a **non-linear** effect
-- $\beta_j$ changes with another covariate $x_k$: an **interaction**, visible in $\partial\beta_j/\partial x_k$
-
-Because every covariate is standardised, the sizes of the $\beta_j$ can be compared with each other.
+Richman & Wüthrich [[1](https://doi.org/10.1080/03461238.2022.2081816)], Sect. 3: the six continuous features and binary `VehGas`, centred and scaled to unit variance (after the caps of [[3](https://doi.org/10.1007/978-3-031-12409-9)], Sect. 7.3.2); `VehBrand` and `Region` one-hot; plus `RandU` (uniform) and `RandN` (normal), centred with unit variance. Because inputs are standardised, attention sizes are comparable.
 
 </details>
 
 <details>
-<summary><b>③ Every input must be a number</b></summary>
+<summary><b>③ Start at a GLM on the same design</b></summary>
 
-$\beta_j(\boldsymbol{x})\thinspace x_j$ needs a numeric $x_j$, so categories cannot use learned embeddings directly. `VehBrand` and `Region` enter as 2-dimensional pre-computed embeddings, reduced with PCA and standardised (`VehBrandEmb1/2`, `RegionEmb1/2`). The other covariates are processed as in lesson 02.
-
-</details>
-
-<details>
-<summary><b>④ Start at the GLM on the same design</b></summary>
-
-A plain Poisson GLM is first fitted on the same 12 standardised inputs. Then:
-
-- attention-layer weights $W = 0$ and bias $\boldsymbol{b}$ = the GLM coefficients
-- intercept $\beta_0$ = the GLM intercept
-
-So $\boldsymbol\beta(\boldsymbol{x}) \equiv \boldsymbol{b}$ before training: the network starts as that GLM, and training lets the coefficients vary by policy.
+A Poisson GLM is fitted on the 42 features; attention weights $W = 0$, bias $\boldsymbol{b}$ = its coefficients, $\beta_0$ = its intercept. So $\boldsymbol\beta(\boldsymbol{x}) \equiv \boldsymbol{b}$ before training (`test_localglmnet_starts_exactly_at_its_glm`). Training as in [[1](https://doi.org/10.1080/03461238.2022.2081816)]: nadam, batch 5,000, 100 epochs, the weights of the lowest validation loss; 15 seeds.
 
 </details>
 
 <details>
-<summary><b>⑤ A noise covariate sets the significance band</b></summary>
+<summary><b>④ A noise band for significance</b></summary>
 
-`RandN` is pure noise, drawn independently of claims. Its attention $\beta_{\text{RandN}}(\boldsymbol{x})$ therefore shows how much a **useless** covariate's coefficient still varies. **Noise band** for the attentions, with $s$ = standard deviation of $\beta_{\text{RandN}}(\boldsymbol{x})$ across policies:
+**Interval of the paper** [[1](https://doi.org/10.1080/03461238.2022.2081816)], eq. (16), at significance level 0.1%: $\pm 3.291\thinspace s$
 
-$\displaystyle \pm 2.576\thinspace s$
-
-(a 99% band if the attentions were normally distributed).
-
-A covariate whose $\beta_j(\boldsymbol{x})$ stays inside the band is not distinguishable from noise.
+where $s$ = standard deviation of $\beta_{\text{RandN}}(\boldsymbol{x})$ across policies. A feature whose $\beta_j(\boldsymbol{x})$ stays inside the band is indistinguishable from noise; the paper drops `Area` and `VehPower` this way.
 
 </details>
 
 <details>
-<summary><b>⑥ Variable importance</b></summary>
+<summary><b>⑤ Variable importance</b></summary>
 
-**Variable importance** of covariate $j$
+**Variable importance** of feature $j$: $\mathrm{VI}_ j = \frac{1}{n}\sum_{i=1}^{n}|\beta_j(\boldsymbol{x}_ i)|$
 
-$\displaystyle \mathrm{VI}_ j = \frac{1}{n}\sum_{i=1}^{n}\big|\beta_j(\boldsymbol{x}_ i)\big|$
-
-where $n$ = number of policies; $\boldsymbol{x}_ i$ = covariates of policy $i$; $|\beta_j(\boldsymbol{x}_ i)|$ = size of covariate $j$'s coefficient for that policy
-
-Compare each covariate's importance with that of `RandN`: one that barely clears it adds little and is a candidate to remove before filing rating factors.
+where $n$ = number of policies. Compare with `RandU` and `RandN`; a feature near them adds little.
 
 </details>
 
@@ -120,26 +93,25 @@ Compare each covariate's importance with that of `RandN`: one that barely clears
 
 ```python
 class LocalGLMnetNet(nn.Module):
-    def betas(self, x):                         # one coefficient per covariate
+    def betas(self, x):                     # one coefficient per feature
         z = x
         for layer in self.hidden:
             z = torch.tanh(layer(z))
-        return self.attention(z)                # bias initialised to GLM coefficients
-
+        return self.attention(z)            # weights 0, bias = start-GLM coefficients
     def forward(self, x, offset):
         return torch.exp(self.intercept + (self.betas(x) * x).sum(1)) * offset
 ```
 
 ---
 
-## Results: reconciled to the benchmark
+## Results: reconciled to Richman & Wüthrich (2023) [[1](https://doi.org/10.1080/03461238.2022.2081816)], Table 2 (c)
 
-| Model | Learn | Test | Published test | Status |
-| --- | --- | --- | --- | --- |
-| LocalGLMnet | <!--r:localglmnet.deviance_learn-->44.995<!--/r--> | <!--r:localglmnet.deviance_test-->45.034<!--/r--> | 45.034 | <!--r:localglmnet.status-->PASS<!--/r--> |
-| CANN (lesson 03) | <!--r:cann.deviance_learn-->44.989<!--/r--> | <!--r:cann.deviance_test-->44.976<!--/r--> | 44.976 | <!--r:cann.status-->PASS<!--/r--> |
+Poisson deviance per policy, $\times 10^{-2}$. The paper reports one run; we report the mean (sd) over 15 seeds, with a tolerance of twice the seed sd Brauer [[2](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (h), reports for this model.
 
-Close to the black-box networks, while every prediction decomposes into $\beta_j(\boldsymbol{x})\thinspace x_j$.
+| Model | Published learn | Published test | This repo learn | This repo test | Status |
+| --- | --- | --- | --- | --- | --- |
+| LocalGLMnet | 23.728 | 23.945 | <!--r:localglmnet.deviance_learn-->pending<!--/r--> (<!--r:localglmnet.deviance_learn_sd-->pending<!--/r-->) | <!--r:localglmnet.deviance_test-->pending<!--/r--> (<!--r:localglmnet.deviance_test_sd-->pending<!--/r-->) | <!--r:localglmnet.status-->pending<!--/r--> |
+| CANN (lesson 03) | 23.742 | 23.810 | <!--r:cann.deviance_learn-->pending<!--/r--> | <!--r:cann.deviance_test-->pending<!--/r--> | <!--r:cann.status-->pending<!--/r--> |
 
 ---
 
@@ -153,23 +125,22 @@ Close to the black-box networks, while every prediction decomposes into $\beta_j
 
 ![w:520](figures/04-importance.png)
 
-Every covariate clears the noise covariate `RandN` (red) here; `BonusMalus` and `DrivAge` dominate. A covariate near `RandN` would be a candidate to drop.
-
 ---
 
 ## In production
 
 - **Explainability:** $\beta_j(\boldsymbol{x})x_j$ gives each policy's premium decomposition
-- **Variable selection:** test with a noise covariate before filing rating factors
-- **Regularisation:** add an L1 penalty on $\beta_j(\boldsymbol{x})$ to select variables [[1](https://doi.org/10.1080/03461238.2022.2081816)]
+- **Variable selection:** test against noise features before filing rating factors
 - **Same checks as any network:** balance property, seed stability, drift
+- **Beyond pricing:** the same architecture forecasts mortality accurately and explainably [[4](https://doi.org/10.1080/03461238.2024.2307620)]
 
 ---
 
 ## Learn more
 
 1. Richman, R., & Wüthrich, M. V. (2023). LocalGLMnet: interpretable deep learning for tabular data. *Scandinavian Actuarial Journal*, 2023(1), 71–95. [doi:10.1080/03461238.2022.2081816](https://doi.org/10.1080/03461238.2022.2081816)
-2. Wüthrich, M. V., Richman, R., Avanzi, B., Lindholm, M., Maggi, M., Mayer, M., Schelldorfer, J., & Scognamiglio, S. (2025). AI tools for actuaries. *SSRN 5162304*. [SSRN](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5162304)
-3. Richman, R. (2021). AI in actuarial science – a review of recent advances – part 2. *Annals of Actuarial Science*, 15(2), 230–258. [doi:10.1017/S174849952000024X](https://doi.org/10.1017/S174849952000024X)
+2. Brauer, A. (2024). Enhancing actuarial non-life pricing models via transformers. *European Actuarial Journal*, 14(3), 991–1012. [doi:10.1007/s13385-024-00388-2](https://doi.org/10.1007/s13385-024-00388-2)
+3. Wüthrich, M. V., & Merz, M. (2023). *Statistical Foundations of Actuarial Learning and its Applications*. Springer. [doi:10.1007/978-3-031-12409-9](https://doi.org/10.1007/978-3-031-12409-9)
+4. Perla, F., Richman, R., Scognamiglio, S., & Wüthrich, M. V. (2024). Accurate and explainable mortality forecasting with the LocalGLMnet. *Scandinavian Actuarial Journal*, 2024(7), 739–761. [doi:10.1080/03461238.2024.2307620](https://doi.org/10.1080/03461238.2024.2307620)
 
-_Last reviewed: 2026-11-06_
+_Last reviewed: 2026-11-07_

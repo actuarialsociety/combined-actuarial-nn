@@ -37,6 +37,8 @@ def _synthetic_policies(n=4000, seed=0):
             "Region": pd.Categorical(rng.choice(["R11", "R24", "R82"], n)),
         }
     )
+    df["RandN"] = rng.normal(0, 1, n)
+    df["RandU"] = rng.uniform(-np.sqrt(3), np.sqrt(3), n)
     lam = 0.08 * np.exp(0.01 * (df.BonusMalus - 80))
     df["ClaimNb"] = rng.poisson(lam * df.Exposure).astype(float)
     return df
@@ -47,6 +49,24 @@ def test_cann_starts_exactly_at_glm():
     glm = fm.GLM().fit(df, {"formula": "ClaimNb ~ BonusMalusGLM + VehGas + DensityGLM"})
     cann = fm.CANN().fit(df, {"epochs": 0, "hidden": [5], "embedding_dims": [1, 1]}, base=glm)
     np.testing.assert_allclose(cann.predict(df), glm.predict(df), rtol=1e-5)
+
+
+def test_localglmnet_starts_exactly_at_its_glm():
+    """Zero attention weights and GLM-coefficient biases: the network equals its start GLM."""
+    df = _synthetic_policies()
+    m = fm.LocalGLMnet().fit(df, {"epochs": 0, "hidden": [5]})
+    X = m.design(df)
+    eta = m.glm_baseline["const"] + X[m.glm_baseline.index[1:]].to_numpy() @ m.glm_baseline.iloc[1:]
+    np.testing.assert_allclose(m.predict(df), np.exp(eta) * df.Exposure, rtol=1e-4)
+    assert len(m.features) == 3 + 3 + 7 + 2  # one-hot brands and regions, 7 scaled, 2 controls
+
+
+def test_multi_seed_networks_report_each_run():
+    df = _synthetic_policies(n=2000)
+    m = fm.FNN().fit(df, {"epochs": 1, "hidden": [5], "embedding_dims": [1, 1], "n_runs": 3})
+    runs = m.predict_runs(df)
+    assert len(runs) == 3
+    np.testing.assert_allclose(m.predict(df), np.mean(runs, axis=0))
 
 
 def _triangles(n_comp=3, seed=1):

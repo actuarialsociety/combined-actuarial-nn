@@ -1,58 +1,75 @@
-# Published reference results each model must reconcile to (at the reference setup).
-# Closed-form fits (homogeneous, GLM, Lee-Carter, chain-ladder) must match to rounding;
-# networks to a tolerance that covers seed and hardware variation.
-_aitools: &aitools "Wüthrich et al. (2025), AI Tools for Actuaries, notebook outputs"
+# Published results each model must reproduce at the reference setup (conf/base).
+# Every entry names the paper and the table the values come from. Closed-form fits must match
+# to rounding; networks fitted over several seeds must match within a tolerance of twice the
+# published seed standard deviation (or the stated band where only a single run is published).
+# Frequency deviances are per policy in 10^-2 (Wüthrich & Merz 2023, eq. 5.28).
+_wm2023: &wm2023 "Wüthrich & Merz (2023), Statistical Foundations of Actuarial Learning and its Applications, Springer, doi:10.1007/978-3-031-12409-9"
+_brauer: &brauer "Brauer (2024), Enhancing actuarial non-life pricing models via transformers, European Actuarial Journal, doi:10.1007/s13385-024-00388-2"
+_ch8: &ch8 "Richman, Scognamiglio & Wüthrich (2026), AI Tools for Actuaries, Ch. 8: Example mortality rate forecasting with CNNs, RNNs and Transformers (2026-04-19), https://aitools4actuaries.com/Ch8E/mortality_forecasting.pdf"
 
 benchmarks:
   frequency:
     homogeneous:
-      source: *aitools
+      source: [*wm2023, "Table 5.3, Poisson null"]
       tolerance: 0.001
-      expected: {deviance_learn: 47.722, deviance_test: 47.967}
+      expected: {deviance_learn: 25.213, deviance_test: 25.445}
     glm:
-      source: *aitools
+      source: [*wm2023, "Table 5.3, Poisson GLM1"]
       tolerance: 0.001
-      expected: {deviance_learn: 46.954, deviance_test: 47.179}
-    gbm: null   # no like-for-like published configuration; compared on the leaderboard only
+      expected: {deviance_learn: 24.101, deviance_test: 24.146}
+    glm3:
+      source: [*wm2023, "Table 5.5, Poisson GLM3; same values in Richman & Wüthrich (2023), Table 2 (e)"]
+      tolerance: 0.001
+      expected: {deviance_learn: 24.084, deviance_test: 24.102}
+    gbm: null   # no published configuration on this split; compared on the leaderboard only
     fnn:
-      source: *aitools
-      tolerance: 0.15
-      expected: {deviance_learn: 44.973, deviance_test: 44.928}
+      source: [*brauer, "Table 2 (f) FNN_EMB, mean (sd) over 15 seeds: 23.768 (0.016), 23.827 (0.015)"]
+      tolerance: {deviance_learn: 0.032, deviance_test: 0.030}
+      expected: {deviance_learn: 23.768, deviance_test: 23.827}
     cann:
-      source: *aitools
-      tolerance: 0.15
-      expected: {deviance_learn: 44.989, deviance_test: 44.976}
+      source: [*brauer, "Table 2 (g) CANN on GLM3, mean (sd) over 15 seeds: 23.742 (0.061), 23.810 (0.033)"]
+      tolerance: {deviance_learn: 0.122, deviance_test: 0.066}
+      expected: {deviance_learn: 23.742, deviance_test: 23.810}
     localglmnet:
-      source: *aitools
-      tolerance: 0.15
-      expected: {deviance_learn: 44.995, deviance_test: 45.034}
+      source:
+        - "Richman & Wüthrich (2023), LocalGLMnet: interpretable deep learning for tabular data, Scandinavian Actuarial Journal, doi:10.1080/03461238.2022.2081816"
+        - "Table 2 (c), single run; tolerance = 2 x seed sd of LocalGLMnet in Brauer (2024), Table 2 (h)"
+      tolerance: {deviance_learn: 0.066, deviance_test: 0.044}
+      expected: {deviance_learn: 23.728, deviance_test: 23.945}
 
   mortality:
+    # Swiss males, ages 0-89, learn 1900-1999, forecast 2000-2021; RMSE of log m(x,t).
+    # Networks: a single published run each ("these results are not very robust"), so a band.
     lee_carter:
-      source: *aitools
+      source: [*ch8, "pp. 31, 50: LC in-sample 0.1555, out-of-sample 0.3416"]
       tolerance: 0.0005
-      expected: {rmse_in: 0.1555, rmse_out: 0.3425}
+      expected: {rmse_in: 0.1555, rmse_out: 0.3416}
     cnn:
-      source: *aitools
+      source: [*ch8, "p. 50: CNN 0.2108, 0.3531"]
       tolerance: 0.05
-      expected: {rmse_in: 0.1808, rmse_out: 0.4281}
+      expected: {rmse_in: 0.2108, rmse_out: 0.3531}
     cnn_tanh:
-      source: *aitools
+      source: [*ch8, "p. 56: non-linear CNN 0.1866, 0.3189"]
       tolerance: 0.05
-      expected: {rmse_in: 0.1570, rmse_out: 0.3533}
+      expected: {rmse_in: 0.1866, rmse_out: 0.3189}
     lstm:
-      source: *aitools
+      source: [*ch8, "p. 50: LSTM 0.1746, 0.3559"]
       tolerance: 0.05
-      expected: {rmse_in: 0.1595, rmse_out: 0.3428}
+      expected: {rmse_in: 0.1746, rmse_out: 0.3559}
     transformer:
-      source: *aitools
+      source: [*ch8, "p. 50: Transformer 0.2277, 0.3624"]
       tolerance: 0.05
-      expected: {rmse_in: 0.1819, rmse_out: 0.3831}
+      expected: {rmse_in: 0.2277, rmse_out: 0.3624}
 
   reserving:
-    # Our chain-ladder must equal the `chainladder` package (Bogaardt et al.) exactly.
+    # Meyers' 50 private passenger auto companies; ultimate-loss errors over companies.
     chain_ladder:
-      source: "chainladder Python package, Chainladder() on the same triangles"
-      tolerance: 0.000001
-      expected: {max_rel_diff_vs_package: 0.0}
-    neural_odp: null  # back-tested against realised outcomes instead
+      - source:
+          - "Kuo (2019), DeepTriangle: a deep learning approach to loss reserving, Risks 7(3) 97, doi:10.3390/risks7030097"
+          - "Table 1, Private Passenger Auto, Mack column (Mack point estimate = chain-ladder): MAPE 0.038, RMSPE 0.061"
+        tolerance: 0.0005
+        expected: {mape_ultimate: 0.038, rmspe_ultimate: 0.061}
+      - source: "Cross-check: chainladder Python package, Chainladder() on the same triangles"
+        tolerance: 0.000001
+        expected: {max_rel_diff_vs_package: 0.0}
+    neural_odp: null  # no published CANN result on Schedule P; compared with DeepTriangle (Kuo 2019, Table 1) in the lesson

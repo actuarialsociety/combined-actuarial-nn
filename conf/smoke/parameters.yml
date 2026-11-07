@@ -7,14 +7,14 @@ frequency:
     scale: 0.02
   models:
     gbm: {num_boost_round: 50}
-    fnn: {epochs: 3}
-    cann: {epochs: 3}
-    localglmnet: {epochs: 3}
+    fnn: {epochs: 3, n_runs: 1}
+    cann: {epochs: 3, n_runs: 1}
+    localglmnet: {epochs: 3, n_runs: 2}   # two runs exercise the mean ± sd path
 
 mortality:
   training: {epochs: 20}
 
 reserving:
-  data: {max_companies: 15}
+  data: {companies: null, max_companies: 15}
   models:
     neural_odp: {epochs: 30}

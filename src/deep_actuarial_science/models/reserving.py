@@ -34,6 +34,12 @@ def prepare(raw: pd.DataFrame, params: dict) -> pd.DataFrame:
         }
     )
     d = d[["lob", "company", "GRNAME", "ay", "dev", "cum_paid", "premium"]]
+    d["cum_paid"] = d.cum_paid.clip(lower=1)  # Meyers (2015): cpdloss = pmax(1, cpdloss)
+    listed = params.get("companies")
+    if listed:  # a published company list, e.g. Meyers (2015), Table 12
+        keep = pd.DataFrame([(lob, c) for lob, codes in listed.items() for c in codes], columns=KEY)
+        d = d.merge(keep).sort_values(KEY + ["ay", "dev"])
+        return _finish(d)
     g = d.groupby(KEY)
     ok = (
         (g.size() == 100)
@@ -53,6 +59,11 @@ def prepare(raw: pd.DataFrame, params: dict) -> pd.DataFrame:
     if params.get("max_companies"):
         size = size.groupby(level="lob", group_keys=False).head(params["max_companies"])
     d = d.merge(size.index.to_frame(index=False)).sort_values(KEY + ["ay", "dev"])
+    return _finish(d)
+
+
+def _finish(d: pd.DataFrame) -> pd.DataFrame:
+    d = d.copy()
     d["incr_paid"] = d.groupby(KEY + ["ay"]).cum_paid.diff().fillna(d.cum_paid)
     d["calendar"] = d.ay + d.dev - 1
     d["upper"] = d.calendar <= LAST_YEAR
@@ -107,6 +118,16 @@ def chain_ladder_fitted_upper(tri: pd.DataFrame) -> pd.Series:
         mu = up.ay.map(ult).to_numpy() * beta[up.dev.astype(int) - 1]
         out.append(pd.Series(mu, index=up.index))
     return pd.concat(out)
+
+
+def ultimates(pred: pd.DataFrame) -> pd.DataFrame:
+    """Predicted and actual total ultimate loss per company: all accident years at
+    development year 10, as in Kuo (2019) and Meyers (2015)."""
+    filled = pred.assign(paid=np.where(pred.upper, pred.incr_paid, pred["pred"]))
+    out = filled.groupby(KEY).agg(
+        predicted_ultimate=("paid", "sum"), actual_ultimate=("incr_paid", "sum")
+    )
+    return out.reset_index()
 
 
 def reserves(pred: pd.DataFrame) -> pd.DataFrame:

@@ -1,10 +1,17 @@
 # Paid-loss reserving on the CAS Loss Reserving Database (accident years 1988-1997).
-# Scale up from one line to all six: reserving.data.lines.
+# Reference setup: the 50 private passenger auto companies of Meyers (2015), Table 12,
+# as used by Kuo (2019), Table 1. Set `companies: null` to select by premium instead.
 reserving:
   data:
     lines: [ppauto]       # any of: ppauto, wkcomp, comauto, medmal, prodliab, othliab
-    max_companies: 50     # largest companies by premium per line; null = all that pass checks
-    min_monotone: 0.95    # share of non-negative incrementals a company needs to be kept
+    companies:            # Meyers (2015), CAS Monograph No. 1, Appendix A, Table 12 (PA group codes)
+      ppauto: [353, 388, 620, 692, 715, 1066, 1090, 1538, 1767, 2003, 2143, 3240, 4839, 5185,
+               6947, 7080, 8427, 8559, 10022, 13420, 13439, 13501, 13528, 13587, 13595, 13641,
+               13889, 14044, 14176, 14257, 14311, 14443, 15199, 15393, 15660, 16373, 16799,
+               18163, 18791, 23574, 25275, 27022, 27065, 27499, 27766, 29440, 31550, 34509,
+               34592, 34606]
+    max_companies: 50     # with companies: null, the largest companies by premium per line
+    min_monotone: 0.95    # with companies: null, share of non-negative incrementals required
 
   models:
     chain_ladder: {kind: chain_ladder}

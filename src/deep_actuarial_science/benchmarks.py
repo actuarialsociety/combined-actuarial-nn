@@ -14,12 +14,26 @@ import pandas as pd
 log = logging.getLogger(__name__)
 
 
-def reconcile(metrics: dict, benchmark: dict | None, applicable: bool, model: str) -> pd.DataFrame:
+def reconcile(
+    metrics: dict, benchmark: dict | list | None, applicable: bool, model: str
+) -> pd.DataFrame:
+    """One row per benchmarked metric. `benchmark` is one entry or a list of entries
+    (e.g. a published table plus a software cross-check), each with its own source."""
+    if isinstance(benchmark, list):
+        parts = [reconcile(metrics, b, applicable, model) for b in benchmark]
+        return (
+            pd.concat(parts, ignore_index=True)
+            if parts
+            else reconcile(metrics, None, applicable, model)
+        )
     rows = []
     expected = (benchmark or {}).get("expected", {})
-    tol = (benchmark or {}).get("tolerance", 0.0)
+    tolerance = (benchmark or {}).get("tolerance", 0.0)
     source = (benchmark or {}).get("source", "")
+    if isinstance(source, list):  # [paper, table]
+        source = ", ".join(source)
     for name, value in expected.items():
+        tol = tolerance.get(name, 0.0) if isinstance(tolerance, dict) else tolerance
         actual = metrics.get(name)
         if not applicable:
             status = "SKIPPED (not reference setup)"

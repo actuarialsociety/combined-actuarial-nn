@@ -41,7 +41,9 @@ def notebook(name: str, title: str, intro: str, cells: list[tuple[str, str]]) ->
     nb.metadata = {
         "kernelspec": {"name": "python3", "display_name": "Python 3"},
         "language_info": {"name": "python"},
-        "colab": {"provenance": []},
+        # Colab opens these on a GPU runtime (free T4); training uses it automatically.
+        "colab": {"provenance": [], "gpuType": "T4"},
+        "accelerator": "GPU",
     }
     nb.cells = [
         nbf.v4.new_markdown_cell(f"# {title}\n{badge(name)}\n\n{intro}"),
@@ -204,7 +206,7 @@ LESSONS = [
         [
             (
                 py,
-                'run("frequency", models=["glm", "cann"])\nleaderboard("frequency", ["glm", "cann"])',
+                'run("frequency", models=["glm3", "cann"])\nleaderboard("frequency", ["glm3", "cann"])',
             ),
             (py, 'load("cann.freq_reconciliation")'),
             (
@@ -332,9 +334,46 @@ LESSONS = [
 ]
 
 
+REFERENCE_RUN = (
+    "reference_run.ipynb",
+    "Reference run: reproduce every published benchmark",
+    "Runs every pipeline at the reference setup, reconciles each model to its paper's table"
+    " (`conf/base/parameters_benchmarks.yml`), refreshes the lesson figures and numbers and"
+    " zips the results. Use a **GPU runtime** (Runtime → Change runtime type → T4 GPU): the"
+    " frequency networks fit 15 seeds each. Results come back to the repo as a PR.",
+    [
+        (py, "import torch\nprint('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'none (CPU)')"),
+        (md, "## 1. Run every pipeline\nFrequency is the long one (15 seeds for each network)."),
+        (py, 'for p in ("frequency", "mortality", "reserving"):\n    run(p)'),
+        (md, "## 2. Reconciliation: every model against its paper"),
+        (
+            py,
+            "import glob, pandas as pd\n"
+            "rec = pd.concat(pd.read_csv(f) for f in sorted(glob.glob('data/08_reporting/*/*/reconciliation.csv')))\n"
+            "rec[['model', 'metric', 'expected', 'actual', 'tolerance', 'status', 'source']]",
+        ),
+        (md, "## 3. Refresh the lesson figures and numbers"),
+        (py, "!python scripts/export_figures.py\n!python scripts/fill_results.py"),
+        (
+            md,
+            "## 4. Download and open a PR\nUnzip `reference_run.zip` at the repo root, check"
+            " `git diff lessons/`, then commit on a branch and open a PR.",
+        ),
+        (
+            py,
+            "import shutil, sys\n"
+            "shutil.make_archive('reference_run', 'zip', '.', 'lessons')\n"
+            "if 'google.colab' in sys.modules:\n"
+            "    from google.colab import files\n"
+            "    files.download('reference_run.zip')",
+        ),
+    ],
+)
+
+
 def main() -> None:
     OUT.mkdir(exist_ok=True)
-    for name, title, intro, cells in LESSONS:
+    for name, title, intro, cells in [*LESSONS, REFERENCE_RUN]:
         notebook(name, title, intro, cells)
         print("wrote", OUT / name)
 

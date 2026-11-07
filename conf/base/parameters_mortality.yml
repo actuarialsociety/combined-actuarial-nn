@@ -20,6 +20,6 @@ mortality:
   models:
     lee_carter: {kind: lee_carter}
     cnn: {kind: cnn, seed: 100, arch: {filters: 3, kernel: 3}}
-    cnn_tanh: {kind: cnn_tanh, seed: 100, arch: {filters: 3, kernel: 3, qq: [20, 20]}}
+    cnn_tanh: {kind: cnn_tanh, seed: 100, arch: {filters: 3, kernel: 3, qq: [20, 50]}}  # Ch. 8 non-linear CNN
     lstm: {kind: lstm, seed: 100, arch: {q: 20, units: 20}}
     transformer: {kind: transformer, seed: 100, arch: {units: 3}}
