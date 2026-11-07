@@ -69,6 +69,33 @@ def test_multi_seed_networks_report_each_run():
     np.testing.assert_allclose(m.predict(df), np.mean(runs, axis=0))
 
 
+def test_mlflow_ui_in_colab_links_the_proxy_url(monkeypatch):
+    """In Colab the new-tab link is Colab's proxied URL, not a localhost address."""
+    import sys
+    import types
+
+    from deep_actuarial_science import notebook
+
+    calls, shown = [], []
+    output = types.SimpleNamespace(
+        eval_js=lambda js: calls.append(js) or "https://5000-abc.prod.colab.dev/",
+        serve_kernel_port_as_iframe=lambda port, height: calls.append(("iframe", port)),
+    )
+    colab = types.ModuleType("google.colab")
+    colab.output = output
+    monkeypatch.setitem(sys.modules, "google.colab", colab)
+    monkeypatch.setattr(notebook, "_port_open", lambda port: True)  # pretend MLflow runs
+    monkeypatch.setattr("os.path.exists", lambda p: False)
+    import IPython.display
+
+    monkeypatch.setattr(IPython.display, "display", lambda obj: shown.append(obj.data))
+    notebook.mlflow_ui(port=5000)
+    assert calls[0] == "google.colab.kernel.proxyPort(5000)"
+    assert 'href="https://5000-abc.prod.colab.dev/"' in shown[0]
+    assert "localhost" not in shown[0]
+    assert ("iframe", 5000) in calls
+
+
 def _triangles(n_comp=3, seed=1):
     rng = np.random.default_rng(seed)
     rows = []

@@ -92,12 +92,18 @@ def figure_dir(pipeline: str, model: str | None = None) -> Path:
     return base / "comparison" if model is None else base / model / "figures"
 
 
-# Colab serves kernel ports through its own proxy domains. MLflow (3.x) rejects unknown Host
-# headers and cross-origin writes, and forbids framing, so allow exactly those domains.
-COLAB_HOSTS = "*.colab.dev,*.colab.dev:*,*.googleusercontent.com,*.googleusercontent.com:*"
-COLAB_ORIGINS = (
-    "https://*.colab.dev,https://*.googleusercontent.com,https://colab.research.google.com"
-)
+# In Colab, MLflow listens on 127.0.0.1 of a disposable VM that only Colab's authenticated
+# proxy can reach, and the proxy's domain is Colab's to choose. MLflow 3 rejects unknown Host
+# headers, cross-origin writes and framing, so in Colab only those checks are opened up.
+# Local and container runs keep MLflow's defaults.
+COLAB_MLFLOW_FLAGS = [
+    "--allowed-hosts",
+    "*",
+    "--cors-allowed-origins",
+    "*",
+    "--x-frame-options",
+    "NONE",
+]
 
 
 def _port_open(port: int) -> bool:
@@ -113,7 +119,8 @@ def mlflow_ui(port: int = 5000, height: int = 720, timeout: float = 120) -> None
 
     - Colab: MLflow runs on the Colab machine, so a localhost link would point at *your*
       computer ("site can't be reached"). The UI is started there and opened through
-      Colab's proxy: inline, plus a link that opens it in a new tab.
+      Colab's proxy: a new-tab link to the URL from `google.colab.kernel.proxyPort`, plus
+      the UI inline.
     - Container (`docker compose up lab mlflow`): the `mlflow` service already serves it.
     - Local: starts `mlflow ui` in the background and links to it.
     """
@@ -148,14 +155,7 @@ def mlflow_ui(port: int = 5000, height: int = 720, timeout: float = 120) -> None
             str(port),
         ]
         if colab:
-            cmd += [
-                "--allowed-hosts",
-                f"{COLAB_HOSTS},localhost:*,127.0.0.1:*",
-                "--cors-allowed-origins",
-                COLAB_ORIGINS,
-                "--x-frame-options",
-                "NONE",
-            ]
+            cmd += COLAB_MLFLOW_FLAGS
         subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
@@ -171,7 +171,15 @@ def mlflow_ui(port: int = 5000, height: int = 720, timeout: float = 120) -> None
     if colab:
         from google.colab import output
 
-        output.serve_kernel_port_as_window(port, anchor_text="Open MLflow in a new tab")
+        # The proxied URL works in a normal tab; serve_kernel_port_as_window's link only
+        # resolves inside Colab's output frame.
+        url = output.eval_js(f"google.colab.kernel.proxyPort({port})")
+        display(
+            HTML(
+                f'<a href="{url}" target="_blank" rel="noopener">Open MLflow in a new tab</a>'
+                f" <small>({url})</small>"
+            )
+        )
         output.serve_kernel_port_as_iframe(port, height=height)
     else:
         display(
