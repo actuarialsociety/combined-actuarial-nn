@@ -183,3 +183,51 @@ def test_colab_notebooks_force_a_gpu_runtime():
         setup = "".join(next(c for c in nb["cells"] if c["cell_type"] == "code")["source"])
         guard, clone = setup.find("torch.cuda.is_available()"), setup.find("git clone")
         assert 0 <= guard < clone, f"{nb_path.name}: GPU check must run before cloning"
+
+
+def test_notebooks_launch_anywhere():
+    """Every notebook links Colab, Kaggle and SageMaker Studio Lab, asks Kaggle for a GPU and
+    internet, and its setup cell clones the repo only when it is not inside a checkout."""
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    for nb_path in sorted((root / "notebooks").glob("*.ipynb")):
+        nb = json.loads(nb_path.read_text())
+        assert nb["metadata"]["kaggle"]["isGpuEnabled"], nb_path.name
+        assert nb["metadata"]["kaggle"]["isInternetEnabled"], nb_path.name
+        header = "".join(nb["cells"][0]["source"])
+        gh = f"github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/{nb_path.name}"
+        assert f"https://colab.research.google.com/{gh}" in header
+        assert f"https://kaggle.com/kernels/welcome?src=https://github.com/{gh[7:]}" in header
+        assert f"https://studiolab.sagemaker.aws/import/{gh}" in header
+        setup = "".join(nb["cells"][1]["source"])
+        assert "if REPO_DIR is None:" in setup and setup.index("REPO_DIR is None") < setup.index(
+            "git clone"
+        )
+
+
+def test_platform_detection(monkeypatch):
+    import sys
+
+    from deep_actuarial_science import notebook
+
+    monkeypatch.delitem(sys.modules, "google.colab", raising=False)
+    monkeypatch.setenv("KAGGLE_KERNEL_RUN_TYPE", "Interactive")
+    assert notebook.platform() == "kaggle"
+    monkeypatch.delenv("KAGGLE_KERNEL_RUN_TYPE")
+    monkeypatch.setenv("SAGEMAKER_SPACE_NAME", "my-space")
+    assert notebook.platform() == "sagemaker"
+
+
+def test_mlflow_ui_on_kaggle_explains_instead_of_linking(monkeypatch):
+    import IPython.display
+
+    from deep_actuarial_science import notebook
+
+    shown = []
+    monkeypatch.setenv("KAGGLE_KERNEL_RUN_TYPE", "Interactive")
+    monkeypatch.setattr(IPython.display, "display", lambda obj: shown.append(obj.data))
+    monkeypatch.setattr(notebook, "_port_open", lambda port: pytest.fail("must not start MLflow"))
+    notebook.mlflow_ui()
+    assert "search_runs" in shown[0]
