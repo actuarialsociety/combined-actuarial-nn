@@ -27,7 +27,7 @@ SKIP_RE = re.compile(r"```.*?```|`[^`\n]*`|\$\$.*?\$\$|\$[^$\n]+\$|<!--.*?-->", 
 
 def references(text: str) -> dict[str, str]:
     m = re.search(r"^## Learn more\s*$", text, re.MULTILINE)
-    return dict(REF_RE.findall(text[m.end():])) if m else {}
+    return dict(REF_RE.findall(text[m.end() :])) if m else {}
 
 
 def link_body(body: str, refs: dict[str, str], found: list | None = None) -> str:
@@ -41,7 +41,7 @@ def link_body(body: str, refs: dict[str, str], found: list | None = None) -> str
 
     out, pos = [], 0
     for s in SKIP_RE.finditer(body):  # leave code, math and comments untouched
-        out.append(CITE_RE.sub(cite, body[pos:s.start()]))
+        out.append(CITE_RE.sub(cite, body[pos : s.start()]))
         out.append(s.group(0))
         pos = s.end()
     out.append(CITE_RE.sub(cite, body[pos:]))
@@ -53,7 +53,7 @@ def process(text: str, found: list | None = None) -> str:
     m = re.search(r"^## Learn more\s*$", text, re.MULTILINE)
     if not refs or not m:
         return text
-    return link_body(text[:m.start()], refs, found) + text[m.start():]
+    return link_body(text[: m.start()], refs, found) + text[m.start() :]
 
 
 def main(argv: list[str]) -> int:
@@ -66,7 +66,8 @@ def main(argv: list[str]) -> int:
         if "--list" in argv:
             refs = references(text)
             for c in found:
-                print(f"{f.name}: {c} -> {', '.join(refs[n.strip()] for n in c.strip('[]').split(','))}")
+                urls = ", ".join(refs[n.strip()] for n in c.strip("[]").split(","))
+                print(f"{f.name}: {c} -> {urls}")
         if new != text:
             bad.append(f.name)
             if "--check" not in argv and "--list" not in argv:

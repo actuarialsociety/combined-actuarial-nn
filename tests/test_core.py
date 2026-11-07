@@ -133,3 +133,10 @@ def test_wiki_has_colab_link_for_every_lesson(tmp_path):
         assert page.count(f"[▶ Open in Colab]({url})") == 2  # nav bar top and bottom
         assert url in sidebar and url in notebooks
         assert "_class:" not in page
+    # a [[Text|Page]] wiki link inside a table row splits the cell at its "|"
+    import re
+
+    for f in tmp_path.glob("*.md"):
+        for line in f.read_text().splitlines():
+            if line.startswith("|"):
+                assert not re.search(r"\[\[[^\]]*\|[^\]]*\]\]", line), f"wiki link in {f.name}"
