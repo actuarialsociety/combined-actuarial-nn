@@ -46,7 +46,7 @@ COLAB_RE = re.compile(r"https://colab\.research\.google\.com/github/[^)\s]+\.ipy
 TITLE_RE = re.compile(r"^# (.+)$", re.MULTILINE)
 COLAB_BADGE = "https://colab.research.google.com/assets/colab-badge.svg"
 KAGGLE_BADGE = "https://kaggle.com/static/images/open-in-kaggle.svg"
-STUDIOLAB_BADGE = "https://studiolab.sagemaker.aws/studiolab.svg"
+STUDIOLAB_BADGE = "https://img.shields.io/badge/Open%20in-SageMaker%20Studio%20Lab-FF9900"
 
 
 def colab_url(text: str) -> str | None:
