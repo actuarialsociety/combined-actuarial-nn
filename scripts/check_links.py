@@ -45,6 +45,7 @@ BOT_BLOCKERS = (
     "openai.com",
     "kaggle.com",
     "papers.ssrn.com",
+    "studiolab.sagemaker.aws",  # 403 to GitHub Actions runners, 200 in a browser
 )
 DOI_RE = re.compile(r"^https?://(?:dx\.)?doi\.org/(10\.\d{4,9}/\S+)$", re.IGNORECASE)
 UA = "Mozilla/5.0 (deep-actuarial-science link checker)"
@@ -117,7 +118,8 @@ def check(source: Path, link: str) -> dict:
         result.update(ok=target.exists(), detail="" if target.exists() else "missing local file")
         return result
     status, err = fetch(link)
-    if status in (403, 405, 429) or status == 0:
+    # Some servers mishandle HEAD (kaggle.com answers 404 to HEAD, 200 to GET): retry with GET.
+    if status in (403, 404, 405, 429) or status == 0:
         status, err = fetch(link, "GET")
     host = urllib.parse.urlparse(link).netloc
     if status == 403 and any(b in host for b in BOT_BLOCKERS):
