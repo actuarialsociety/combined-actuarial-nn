@@ -95,7 +95,8 @@ GITHUB_TOKEN=$(gh auth token) python3 scripts/fix_math.py --github   # math rend
 
 | Task | How |
 | --- | --- |
-| Add a lesson/model | `/build-lesson <model or paper>` ([skill](.claude/skills/build-lesson/SKILL.md)) |
+| Reproduce a paper as a benchmark wiki lesson | `/build-research-benchmark-wiki <paper, model or DOI>` ([skill](.claude/skills/build-research-benchmark-wiki/SKILL.md)): Exa research → table → implementation → PASS/FAIL → lesson, notebook, wiki |
+| Add a lesson/model (no paper to reproduce) | `/build-lesson <model>` ([skill](.claude/skills/build-lesson/SKILL.md)) |
 | Kedro guidance | Kedro skills in `.claude/skills/` (`catalog-config`, `parameters-and-config`, `explain-project`, `kedro-build-demo`); update with `scripts/update_kedro_skills.sh` |
 | Refresh lessons | `/refresh-lessons [file]` ([skill](.claude/skills/refresh-lessons/SKILL.md)) |
 | Update agent skills | `scripts/update_exa_skills.sh`, `scripts/update_kedro_skills.sh` |
