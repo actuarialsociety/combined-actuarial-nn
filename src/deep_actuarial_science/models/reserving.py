@@ -19,6 +19,8 @@ import pandas as pd
 import torch
 from torch import nn
 
+from deep_actuarial_science.models.torch_utils import device
+
 LAST_YEAR = 1997
 KEY = ["lob", "company"]
 
@@ -188,8 +190,11 @@ def neural_odp(tri: pd.DataFrame, params: dict) -> tuple[pd.DataFrame, dict]:
         params.get("embedding_dim", 2),
         params.get("hidden", [16, 8]),
     )
+    dev = device()
+    net.to(dev)
     opt = torch.optim.Adam(net.parameters(), lr=params.get("lr", 0.001))
-    tr, va = tensors(train_m), tensors(val_m)
+    tr = tuple(t.to(dev) for t in tensors(train_m))
+    va = tuple(t.to(dev) for t in tensors(val_m))
     loss_fn = nn.PoissonNLLLoss(log_input=False, reduction="mean")
     best, state, hist = float("inf"), copy.deepcopy(net.state_dict()), {"loss": [], "val_loss": []}
     for _ in range(params["epochs"]):
@@ -206,6 +211,7 @@ def neural_odp(tri: pd.DataFrame, params: dict) -> tuple[pd.DataFrame, dict]:
         if vl < best:
             best, state = vl, copy.deepcopy(net.state_dict())
     net.load_state_dict(state)
+    net.cpu()
     hist["best_epoch"] = int(np.argmin(hist["val_loss"]))
     low = (~d.upper).to_numpy()
     with torch.no_grad():

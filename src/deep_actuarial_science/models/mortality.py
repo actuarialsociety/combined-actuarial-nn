@@ -20,6 +20,8 @@ import torch
 from sklearn.preprocessing import MinMaxScaler
 from torch import nn, optim
 
+from deep_actuarial_science.models.torch_utils import device
+
 
 def prepare(raw: pd.DataFrame, params: dict) -> pd.DataFrame:
     d = raw[
@@ -144,7 +146,9 @@ def _windows(scaled: np.ndarray, lookback: int) -> tuple[np.ndarray, np.ndarray]
 def _train(net, X, y, t: dict) -> dict:
     rng = np.random.RandomState(t.get("shuffle_seed", 100))
     idx = rng.permutation(len(X))
-    X, y = torch.FloatTensor(X[idx]), torch.FloatTensor(y[idx])
+    dev = device()
+    net.to(dev)
+    X, y = torch.FloatTensor(X[idx]).to(dev), torch.FloatTensor(y[idx]).to(dev)
     cut = int(0.9 * len(X))
     Xt, yt, Xv, yv = X[:cut], y[:cut], X[cut:], y[cut:]
     opt = optim.Adam(net.parameters(), lr=t.get("lr", 0.001))
@@ -159,7 +163,8 @@ def _train(net, X, y, t: dict) -> dict:
     gen = torch.Generator().manual_seed(t.get("shuffle_seed", 100))
     for _ in range(t["epochs"]):
         net.train()
-        order = torch.randperm(len(Xt), generator=gen)  # Keras fit() reshuffles every epoch
+        # Keras fit() reshuffles every epoch; drawn on the CPU so every device sees one order
+        order = torch.randperm(len(Xt), generator=gen).to(dev)
         for i in range(0, len(Xt), bs):
             b = order[i : i + bs]
             opt.zero_grad()
@@ -175,6 +180,7 @@ def _train(net, X, y, t: dict) -> dict:
         if vl < best:
             best, best_state = vl, copy.deepcopy(net.state_dict())
     net.load_state_dict(best_state)
+    net.cpu()
     hist["best_epoch"] = int(np.argmin(hist["val_loss"]))
     return hist
 

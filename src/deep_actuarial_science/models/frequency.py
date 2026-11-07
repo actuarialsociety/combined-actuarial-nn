@@ -20,6 +20,7 @@ parameter block under `frequency.models` and (optionally) a benchmark.
 
 from __future__ import annotations
 
+import sys
 import time
 
 import lightgbm as lgb
@@ -238,6 +239,12 @@ class GLM(FrequencyModel):
         return len(self.result.params)
 
 
+# macOS: LightGBM links Homebrew's libomp and PyTorch bundles its own; two OpenMP runtimes
+# in one process crash (exit 139), so LightGBM trains and predicts single-threaded there.
+# Override with frequency.models.gbm.num_threads.
+LGB_THREADS = 1 if sys.platform == "darwin" else 0
+
+
 class GBM(FrequencyModel):
     """LightGBM with Poisson objective and log-exposure as init score (offset)."""
 
@@ -256,12 +263,13 @@ class GBM(FrequencyModel):
 
     def _fit(self, learn, params, base):
         train, val = split_train_val(learn, params)
+        self.num_threads = params.get("num_threads", LGB_THREADS)
         p = {
             "objective": "poisson",
             "verbose": -1,
             "seed": params.get("seed", 1),
             "deterministic": True,
-            "num_threads": params.get("num_threads", 0),
+            "num_threads": self.num_threads,
             **params.get("lgb", {}),
         }
         # LightGBM skips boost-from-average when an init_score is given: start the trees at
@@ -293,7 +301,10 @@ class GBM(FrequencyModel):
 
     def predict(self, df):
         raw = self.booster.predict(
-            df[self.features], num_iteration=self.booster.best_iteration, raw_score=True
+            df[self.features],
+            num_iteration=self.booster.best_iteration,
+            raw_score=True,
+            num_threads=getattr(self, "num_threads", LGB_THREADS),
         )
         return np.exp(raw + self.log_mu0) * df.Exposure.to_numpy()
 

@@ -101,6 +101,18 @@ kedro run --pipeline frequency --params frequency.data.scale=0.1
 mlflow ui --backend-store-uri sqlite:///mlflow.db        # browse runs
 ```
 
+**Apple silicon (M1/M2/M3):** the macOS PyTorch wheel includes the Metal (MPS) backend. Set
+`DAS_DEVICE=mps` to train the networks on the GPU (`cpu` and `cuda` work too; the default is CUDA
+when present, else the CPU):
+```bash
+DAS_DEVICE=mps kedro run --pipeline frequency --namespaces fnn,cann
+```
+MPS is opt-in because these networks are small (hundreds to a few thousand weights), so GPU
+kernel-launch overhead outweighs the speedup. On an M1, MPS was about as fast as the CPU for
+LocalGLMnet and 1.5 to 2.5 times slower for the FNN, the mortality networks and the neural ODP. Results
+match the CPU to about 0.002 Poisson deviance. On macOS, LightGBM trains single-threaded:
+its OpenMP runtime (Homebrew `libomp`) and PyTorch's own runtime crash when both run in one process.
+
 ## How it fits together
 
 | Piece | Where |

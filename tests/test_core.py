@@ -183,3 +183,20 @@ def test_colab_notebooks_force_a_gpu_runtime():
         setup = "".join(next(c for c in nb["cells"] if c["cell_type"] == "code")["source"])
         guard, clone = setup.find("torch.cuda.is_available()"), setup.find("git clone")
         assert 0 <= guard < clone, f"{nb_path.name}: GPU check must run before cloning"
+
+
+def test_device_honours_das_device(monkeypatch):
+    import torch
+
+    from deep_actuarial_science.models.torch_utils import device
+
+    monkeypatch.setenv("DAS_DEVICE", "cpu")
+    assert device().type == "cpu"
+    monkeypatch.setenv("DAS_DEVICE", "mps")
+    if torch.backends.mps.is_available():
+        assert device().type == "mps"
+    else:
+        with pytest.raises(RuntimeError, match="no MPS"):
+            device()
+    monkeypatch.delenv("DAS_DEVICE")
+    assert device().type == ("cuda" if torch.cuda.is_available() else "cpu")  # MPS is opt-in
