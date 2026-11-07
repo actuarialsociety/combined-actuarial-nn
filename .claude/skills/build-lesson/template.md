@@ -11,6 +11,7 @@ style: |
   section:has(details[open]) details:not([open]) { display: none; }
   section.theory { font-size: 23px; }
   section.theory p { margin: .45em 0; }
+  table { font-size: .68em; }
 ---
 
 <!-- _class: lead -->
@@ -18,6 +19,8 @@ style: |
 ### One line: what it does and why an actuary cares
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/NN_name.ipynb) · `kedro run --pipeline <domain> --namespaces <name>`
+
+**Reproduces:** Author (Year) [N], Table X (the paper and table the results reconcile to)
 
 ---
 
@@ -93,9 +96,9 @@ Config: `conf/base/parameters_<domain>.yml` → `<domain>.models.<name>`
 
 ---
 
-## Results: reconciled to the benchmark
+## Results: reconciled to Author (Year) [N], Table X
 
-| Model | Learn | Test | Published test | Status |
+| Model | Paper, table | Published | This repo | Status |
 | --- | --- | --- | --- | --- |
 | baseline | … | … | … | PASS |
 | **this model** | … | … | … | PASS |

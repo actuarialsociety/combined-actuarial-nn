@@ -9,14 +9,26 @@ style: |
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
   section:has(details[open]) details:not([open]) { display: none; }
+  section.theory { font-size: 23px; }
+  section.theory p { margin: .45em 0; }
+  table { font-size: .68em; }
 ---
 
 <!-- _class: lead -->
 # 00 · Quickstart
-### Theory → pipeline → reconciled result, in one command
+### Published paper → pipeline → reproduced result, PASS or FAIL
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/00_quickstart.ipynb) · `kedro run --env smoke`
 
+---
+
+## How every lesson works
+
+1. **Paper:** a published model and the table it reports
+2. **Model:** implemented as in the paper, in `src/deep_actuarial_science/models/`
+3. **Config:** `conf/base/parameters_<domain>.yml`; the paper's numbers in `parameters_benchmarks.yml`
+4. **Run:** `kedro run --pipeline <domain> --namespaces <model>`
+5. **Reconcile:** this repo vs the paper's table → PASS / FAIL, tracked in MLflow
 
 ---
 
@@ -25,101 +37,60 @@ style: |
 _Click a panel to open it; work through them in order._
 
 <details>
-<summary><b>① Every model answers the same question</b></summary>
+<summary><b>① One question, many models</b></summary>
 
-Claim counts are modelled as $N_i \sim \mathrm{Poi}(\mu_i)$ with $\mu_i = v_i\thinspace\lambda(\boldsymbol{x}_ i)$: exposure $v_i$ (policy years) times a frequency $\lambda(\boldsymbol{x})$ that depends on the covariates. The lessons differ only in how $\lambda(\boldsymbol{x})$ is built:
-
-homogeneous (one number) → GLM (hand-made features) → GBM (trees) → FNN (learned features) → CANN (GLM + learned correction) → LocalGLMnet (learned, but readable as coefficients).
-
-Mortality (lesson 05) and reserving (lesson 06) reuse the same pattern on time series and triangles.
+Claim counts $N_i \sim \mathrm{Poi}(\mu_i)$ with $\mu_i = v_i\thinspace\lambda(\boldsymbol{x}_ i)$; lessons differ only in how the frequency $\lambda(\boldsymbol{x})$ is built: homogeneous → GLM → GBM → FNN → CANN → LocalGLMnet. Mortality (05) and reserving (06) reuse the pattern on time series and triangles.
 
 </details>
 
 <details>
-<summary><b>② One score for all: the Poisson deviance</b></summary>
+<summary><b>② One score: the Poisson deviance</b></summary>
 
-**Poisson deviance**: the score every frequency model is ranked by [[2](https://doi.org/10.1007/978-3-031-12409-9)]
+**Poisson deviance per policy**, the scale of the published tables [[2](https://doi.org/10.1007/978-3-031-12409-9)]
 
-$\displaystyle D = \frac{1}{\sum_i v_i}\sum_i v_i\thinspace d\Big(\frac{N_i}{v_i}, \frac{\mu_i}{v_i}\Big) \times 100, \qquad d(y,m) = 2\Big(m - y - y\log\frac{m}{y}\Big)$
+$\displaystyle D = \frac{1}{n}\sum_{i=1}^n v_i\thinspace d\Big(\frac{N_i}{v_i}, \frac{\mu_i}{v_i}\Big) \times 100, \qquad d(y,m) = 2\Big(m - y - y\log\frac{m}{y}\Big)$
 
-where $N_i$ = claims of policy $i$; $v_i$ = its exposure; $\mu_i$ = its predicted claim count; $d(y, m)$ = the **unit deviance** of an observed frequency $y$ against a predicted frequency $m$
+where $n$ = number of policies; $N_i$ = claims of policy $i$; $v_i$ = its exposure; $\mu_i$ = its predicted claim count; $d(y, m)$ = unit deviance of observed frequency $y$ against predicted $m$
 
-- $d$ is twice the log-likelihood gap to a model that fits every observation exactly, so **minimising deviance = maximum likelihood**
-- Lower is better. Values are reported in units of $10^{-2}$, as in the published benchmarks
-- It rewards both ranking risks correctly and getting the level right. The other lessons separate the two with Lorenz curves (ranking) and calibration plots (level)
-
-</details>
-
-<details>
-<summary><b>③ Learn, validation and test sets</b></summary>
-
-- **Test** (67,801 policies): a fixed hold-out, used only to report results, never to choose anything
-- **Learn** (the rest): used to fit
-- **Validation**: 10% of *learn*, used by GBMs and networks to decide when to stop training
-
-Using the same split as the published notebooks is what makes the results comparable to their numbers.
+- Twice the log-likelihood gap to a perfect fit: **minimum deviance = maximum likelihood**; lower is better
+- Dividing by total exposure instead of $n$ multiplies $D$ by $n / \sum_i v_i \approx 1.89$ here; pipelines report both
 
 </details>
 
 <details>
-<summary><b>④ Reconciliation: proving the implementation first</b></summary>
+<summary><b>③ The papers' learn/test split</b></summary>
 
-`conf/base/parameters_benchmarks.yml` holds, per model, the published value, a tolerance and the source. After each run:
+Fixed split of Wüthrich & Merz [[2](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.2: 610,206 learning and 67,801 test policies. Networks validate on 10% of the learning data; the test set is only used to report results.
+
+</details>
+
+<details>
+<summary><b>④ Reconciliation to a named table</b></summary>
 
 **Reconciliation rule**, per benchmarked metric
 
-$\displaystyle \text{PASS} \iff |\text{this repo} - \text{published}| \le \text{tolerance}$
+$\displaystyle \text{PASS} \iff |\text{this repo} - \text{paper}| \le \text{tolerance}$
 
-Benchmarks apply only at the reference setup (e.g. `scale: 1.0`); smaller experiments report `SKIPPED`. A model that reproduces a published number is a trustworthy starting point for your own changes. Where no like-for-like number exists (reserving), the lesson back-tests against realised outcomes instead.
-
-</details>
-
-<details>
-<summary><b>⑤ Reproducible by construction</b></summary>
-
-- **Config, not code:** data scale, architectures and epochs live in `conf/base/parameters_*.yml`
-- **Seeds** are fixed per model, so a rerun gives the same numbers
-- **MLflow** logs parameters, metrics, figures and the reconciliation table for every run
-- **Same pipeline everywhere:** Colab, the container and a local clone all run `kedro run`
+where the tolerance is rounding for closed-form fits and twice the published seed standard deviation for networks. Benchmarks apply only at the reference setup; smaller runs report `SKIPPED`.
 
 </details>
 
 <details>
-<summary><b>⑥ What a pricing team checks beyond deviance</b></summary>
+<summary><b>⑤ Reproducible, on CPU or GPU</b></summary>
 
-- **Calibration:** actual vs expected by predicted-risk decile
-- **Balance:** total predicted claims = total observed claims on the learning data
-- **Ranking:** Lorenz curve and Gini index
-- **Stability:** refit with other seeds; average fits before pricing
-- **Look-ahead:** nothing from the test period may enter training or scaling
+Settings live in config, seeds are fixed, MLflow logs every run. Networks train on a GPU when one is present (`DAS_DEVICE`); `notebooks/reference_run.ipynb` runs everything on a free Colab GPU.
 
 </details>
-
----
-
-## The workflow every lesson follows
-
-1. **Theory:** one or two equations
-2. **Model:** a class in `src/deep_actuarial_science/models/`, registered in a pipeline
-3. **Config:** `conf/base/parameters_<domain>.yml` (model settings, data scale)
-4. **Run:** `kedro run --pipeline <domain> --namespaces <model>`
-5. **Reconcile:** results vs the published benchmark → `reconciliation.csv` (PASS / FAIL)
-6. **Track:** parameters, metrics, figures, model and benchmark table in MLflow
 
 ---
 
 ## Run it three ways
 
 ```bash
-# Colab: open a notebook from the README (clones, installs, runs the same pipeline)
-
-# Container: JupyterLab + MLflow UI
-docker compose up lab mlflow            # :8888 and :5000
-
-# Local
-kedro run --env smoke                                   # all pipelines, 2% data, ~2 min
-kedro run --pipeline frequency --namespaces glm,cann    # chosen models, full data
-kedro run --pipeline frequency --params frequency.data.scale=0.1
+# Colab: open a notebook from the README (GPU runtime); reference_run.ipynb reproduces everything
+docker compose up lab mlflow                            # container: JupyterLab :8888, MLflow :5000
+kedro run --env smoke                                   # local: all pipelines, 2% data, ~2 min
+kedro run --pipeline frequency --namespaces glm,glm3    # chosen models, full data
 ```
 
 ---
@@ -128,56 +99,40 @@ kedro run --pipeline frequency --params frequency.data.scale=0.1
 
 ![w:640](figures/00-leaderboard.png)
 
-Out-of-sample Poisson deviance on 67,801 test policies. Diamonds: published benchmark.
+Out-of-sample Poisson deviance per policy on 67,801 test policies. Diamonds: the published value.
 
 ---
 
-## Reconciliation: the result is reproducible
+## Reconciliation: every number has a paper
 
-| Model | Published test | This repo | Status |
-| --- | --- | --- | --- |
-| Homogeneous | 47.967 | <!--r:homogeneous.deviance_test-->47.967<!--/r--> | <!--r:homogeneous.status-->PASS<!--/r--> |
-| GLM | 47.179 | <!--r:glm.deviance_test-->47.179<!--/r--> | <!--r:glm.status-->PASS<!--/r--> |
-| FNN | 44.928 | <!--r:fnn.deviance_test-->44.928<!--/r--> | <!--r:fnn.status-->PASS<!--/r--> |
-| CANN | 44.976 | <!--r:cann.deviance_test-->44.976<!--/r--> | <!--r:cann.status-->PASS<!--/r--> |
-| LocalGLMnet | 45.034 | <!--r:localglmnet.deviance_test-->45.034<!--/r--> | <!--r:localglmnet.status-->PASS<!--/r--> |
+| Model | Paper, table | Published test | This repo | Status |
+| --- | --- | --- | --- | --- |
+| Homogeneous | Wüthrich & Merz [[2](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3 | 25.445 | <!--r:homogeneous.deviance_test-->pending<!--/r--> | <!--r:homogeneous.status-->pending<!--/r--> |
+| GLM1 | Wüthrich & Merz [[2](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3 | 24.146 | <!--r:glm.deviance_test-->pending<!--/r--> | <!--r:glm.status-->pending<!--/r--> |
+| GLM3 | Wüthrich & Merz [[2](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.5 | 24.102 | <!--r:glm3.deviance_test-->pending<!--/r--> | <!--r:glm3.status-->pending<!--/r--> |
+| FNN (15 seeds) | Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (f) | 23.827 | <!--r:fnn.deviance_test-->pending<!--/r--> | <!--r:fnn.status-->pending<!--/r--> |
+| CANN (15 seeds) | Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (g) | 23.810 | <!--r:cann.deviance_test-->pending<!--/r--> | <!--r:cann.status-->pending<!--/r--> |
+| LocalGLMnet | Richman & Wüthrich [[4](https://doi.org/10.1080/03461238.2022.2081816)], Table 2 (c) | 23.945 | <!--r:localglmnet.deviance_test-->pending<!--/r--> | <!--r:localglmnet.status-->pending<!--/r--> |
 
-Benchmarks: Wüthrich et al. (2025), *AI Tools for Actuaries*, notebook outputs [[1](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5162304)].
-
----
-
-## Change anything with config, never code
-
-```yaml
-# conf/base/parameters_frequency.yml
-frequency:
-  data:
-    scale: 1.0            # 0.01-0.5 for quick experiments; 1.0 = benchmark setup
-  models:
-    cann:
-      hidden: [20, 15, 10]
-      epochs: 200
-```
-
-`kedro run --params frequency.models.cann.hidden=[32,16]` overrides one key for one run.
+Mortality (lesson 05) and reserving (lesson 06) reconcile the same way.
 
 ---
 
-## Add a new model in four steps
+## Add a paper in four steps
 
-1. Subclass `FrequencyModel` (or the mortality/reserving equivalent) and register it
-2. Add `frequency.models.<name>` parameters
-3. Add the namespace to the pipeline's `MODELS`, and a published benchmark if one exists
-4. `kedro run --pipeline frequency --namespaces <name>`
-
-Or in Claude Code: `/build-lesson <paper or model>`.
+1. Implement the model as in the paper; register it in the domain's `MODELS`
+2. Add `<domain>.models.<name>` parameters
+3. Add the paper's value, table and tolerance under `benchmarks.<domain>.<name>`
+4. `kedro run --pipeline <domain> --namespaces <name>`, or `/build-lesson <paper>` in Claude Code
 
 ---
 
 ## Learn more
 
-1. Wüthrich, M. V., Richman, R., Avanzi, B., Lindholm, M., Maggi, M., Mayer, M., Schelldorfer, J., & Scognamiglio, S. (2025). AI tools for actuaries. *SSRN 5162304*. [SSRN](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5162304)
+1. Wüthrich, M. V., Richman, R., Avanzi, B., Lindholm, M., Mayer, M., Schelldorfer, J., & Scognamiglio, S. (2025). AI tools for actuaries. *SSRN 5162304*. [doi:10.2139/ssrn.5162304](https://doi.org/10.2139/ssrn.5162304)
 2. Wüthrich, M. V., & Merz, M. (2023). *Statistical Foundations of Actuarial Learning and its Applications*. Springer. [doi:10.1007/978-3-031-12409-9](https://doi.org/10.1007/978-3-031-12409-9) (open access)
-3. [Kedro documentation](https://docs.kedro.org/) · [MLflow documentation](https://mlflow.org/docs/latest/) · [Marp](https://marp.app/)
+3. Brauer, A. (2024). Enhancing actuarial non-life pricing models via transformers. *European Actuarial Journal*, 14(3), 991–1012. [doi:10.1007/s13385-024-00388-2](https://doi.org/10.1007/s13385-024-00388-2)
+4. Richman, R., & Wüthrich, M. V. (2023). LocalGLMnet: interpretable deep learning for tabular data. *Scandinavian Actuarial Journal*, 2023(1), 71–95. [doi:10.1080/03461238.2022.2081816](https://doi.org/10.1080/03461238.2022.2081816)
+5. [Kedro documentation](https://docs.kedro.org/) · [MLflow documentation](https://mlflow.org/docs/latest/) · [Marp](https://marp.app/)
 
-_Last reviewed: 2026-11-06_
+_Last reviewed: 2026-11-07_

@@ -1,8 +1,11 @@
 """Mortality forecasting: Lee-Carter (SVD + drift) and neural forecasters on log m(x,t).
 
-Neural models follow Perla et al. (2021) and the AI Tools for Actuaries notebook
-(2025): each sample is a `lookback`-year window of log-mortality across all ages;
-the network predicts the next year; forecasts are recursive. Every model exposes
+Everything follows Richman, Scognamiglio & Wüthrich (2026), AI Tools for Actuaries,
+Ch. 8 (the benchmark, see conf/base/parameters_benchmarks.yml): Lee-Carter with
+random-walk-with-drift extrapolation (R `rwf(kt, drift = TRUE)`), and networks on
+10-year windows of log-mortality across all ages that predict the next year,
+forecasting recursively. Keras layers are mirrored where PyTorch differs: an LSTM with
+linear activation and one bias per gate, and attention with a learned scale. Every model exposes
 `fit_forecast(data, params, training) -> (results, history)`, where `results` is
 the long table [Sex, Year, Age, logmx, split, pred].
 """
@@ -43,7 +46,7 @@ def lee_carter(d: pd.DataFrame, obs_year: int) -> tuple[np.ndarray, dict]:
     bx, kt = U[:, 0] * s[0], Vt[0]
     c1, c2 = kt.mean(), bx.sum()
     ax, bx, kt = ax + c1 * bx, bx / c2, (kt - c1) * c2  # identifiability: sum b = 1, sum k = 0
-    drift = np.polyfit(np.arange(len(kt)), kt, 1)[0]
+    drift = (kt[-1] - kt[0]) / (len(kt) - 1)  # random walk with drift: mean of k_t - k_{t-1}
     h = d[d.Year > obs_year].Year.nunique()
     k_all = np.r_[kt, kt[-1] + drift * np.arange(1, h + 1)]
     fitted = ax[:, None] + np.outer(bx, k_all)  # ages x years
@@ -76,33 +79,55 @@ class CNNTanh(nn.Module):
         return self.d3(torch.tanh(self.d2(self.conv(z).flatten(1))))
 
 
+class KerasLSTM(nn.Module):
+    """LSTM as Keras `layer_lstm(units, activation)`: sigmoid gates, one bias per gate,
+    and `activation` on the cell input and output (tanh in PyTorch's nn.LSTM)."""
+
+    def __init__(self, n_in, units, activation=None):
+        super().__init__()
+        self.units, self.act = units, activation or (lambda z: z)
+        self.gates = nn.Linear(n_in + units, 4 * units)
+
+    def forward(self, x):
+        h = x.new_zeros(x.shape[0], self.units)
+        c = x.new_zeros(x.shape[0], self.units)
+        for t in range(x.shape[1]):
+            i, f, g, o = self.gates(torch.cat([x[:, t], h], 1)).chunk(4, 1)
+            c = torch.sigmoid(f) * c + torch.sigmoid(i) * self.act(g)
+            h = torch.sigmoid(o) * self.act(c)
+        return h
+
+
 class LSTM(nn.Module):
+    """Ch. 8: time-distributed dense (q units), linear-activation LSTM, dense to all ages."""
+
     def __init__(self, lookback, n_age, q=20, units=20):
         super().__init__()
         self.time_dense = nn.Linear(n_age, q)
-        self.lstm = nn.LSTM(q, units, batch_first=True)
+        self.lstm = KerasLSTM(q, units)
         self.out = nn.Linear(units, n_age)
 
     def forward(self, x):
-        h, _ = self.lstm(self.time_dense(x))
-        return self.out(h[:, -1, :])
+        return self.out(self.lstm(self.time_dense(x)))
 
 
 class Transformer(nn.Module):
-    """One self-attention block with skip connections and layer norm."""
+    """Ch. 8: one attention block (Keras `layer_attention(use_scale = TRUE)`, i.e. dot-product
+    scores times a learned scalar), skip connections and layer normalisation."""
 
     def __init__(self, lookback, n_age, units=3):
         super().__init__()
         self.units = units
         self.rep = nn.Linear(n_age, units)
         self.q, self.k, self.v = (nn.Linear(units, units) for _ in range(3))
+        self.scale = nn.Parameter(torch.ones(()))
         self.norm = nn.LayerNorm(units)
         self.ff = nn.Linear(units, units)
         self.out = nn.Linear(units * lookback, n_age)
 
     def forward(self, x):
         r = self.rep(x)
-        att = torch.softmax(self.q(r) @ self.k(r).transpose(-2, -1) / self.units**0.5, dim=-1)
+        att = torch.softmax(self.scale * self.q(r) @ self.k(r).transpose(-2, -1), dim=-1)
         s1 = att @ self.v(r) + r
         return self.out((self.ff(self.norm(s1)) + s1).flatten(1))
 
@@ -131,11 +156,14 @@ def _train(net, X, y, t: dict) -> dict:
         {"loss": [], "val_loss": []},
     )
     bs = t.get("batch_size", 4)
+    gen = torch.Generator().manual_seed(t.get("shuffle_seed", 100))
     for _ in range(t["epochs"]):
         net.train()
+        order = torch.randperm(len(Xt), generator=gen)  # Keras fit() reshuffles every epoch
         for i in range(0, len(Xt), bs):
+            b = order[i : i + bs]
             opt.zero_grad()
-            loss = loss_fn(net(Xt[i : i + bs]), yt[i : i + bs])
+            loss = loss_fn(net(Xt[b]), yt[b])
             loss.backward()
             opt.step()
         net.eval()

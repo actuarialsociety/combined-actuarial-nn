@@ -176,10 +176,12 @@ def leaderboard(
 def attention(
     att: pd.DataFrame, X: pd.DataFrame, features: list[str], n: int = 5000, seed: int = 0
 ) -> plt.Figure:
-    """LocalGLMnet attention weights beta_j(x) against x_j; noise band from RandN."""
+    """LocalGLMnet attention weights beta_j(x) against x_j. Shaded: the interval
+    +/- 3.291 s of Richman & Wüthrich (2023), eq. (16), at significance level 0.1%, with
+    s the standard deviation of the RandN attention."""
     s = att.sample(min(n, len(att)), random_state=seed)
     xs = X.loc[s.index]
-    band = 2.576 * att["RandN"].std() if "RandN" in att else None  # 99% band
+    band = 3.291 * att["RandN"].std() if "RandN" in att else None  # alpha = 0.1%
     k = len(features)
     cols = 4
     rows = int(np.ceil(k / cols))
@@ -193,7 +195,8 @@ def attention(
     for ax in list(axes.flat)[k:]:
         ax.set_axis_off()
     fig.suptitle(
-        r"LocalGLMnet attention weights $\beta_j(x)$ (shaded: 99% noise band)", fontweight="bold"
+        r"LocalGLMnet attention weights $\beta_j(x)$ (shaded: 99.9% noise band from RandN)",
+        fontweight="bold",
     )
     fig.tight_layout()
     return fig

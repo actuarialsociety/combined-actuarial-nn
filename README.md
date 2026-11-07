@@ -1,22 +1,22 @@
 # deep-actuarial-science
-> *Deep learning models in actuarial science: from new theory to a workable, benchmarked analysis, fast.*
-> * *Each lesson is a short **slide deck** (Marp markdown, with LaTeX) backed by a model in a **Kedro pipeline**, a **Colab notebook**, **MLflow** tracking and a **published benchmark** the results reconcile to.*
-> * *Realistic public data at switchable scale: 678k French motor policies, Swiss HMD mortality, US Schedule P triangles with realised outcomes. See [Open Actuarial Data](./Open%20Actuarial%20Data.md) for more sources.*
+> *A research-paper benchmark toolkit for deep learning in actuarial science: each model reproduces a **named paper's published table** in a Kedro pipeline and reports PASS or FAIL.*
+> * *Each reproduction comes with a short **lesson** (Marp slides with LaTeX, also on the [wiki](https://github.com/actuarialsociety/deep-actuarial-science/wiki)), a **Colab notebook** (GPU runtime) and **MLflow** tracking.*
+> * *Public data at switchable scale: 678k French motor policies, Swiss HMD mortality, US Schedule P triangles with realised outcomes. See [Open Actuarial Data](./Open%20Actuarial%20Data.md).*
 > * *New to Python, VS Code or Git? Start with [ds-training](https://github.com/actuarialsociety/ds-training).*
 
-📖 **Read the lessons as a [wiki](https://github.com/actuarialsociety/deep-actuarial-science/wiki)**: every page and the sidebar link straight to the lesson's notebook in Colab.
+## Benchmarks: paper → table → reproduction
 
-## Lessons
+| Lesson | Model | Reproduces (paper, table) | Notebook |
+| --- | --- | --- | --- |
+| [00 · Quickstart](./lessons/00%20Quickstart.md) | Pipelines, configs, reconciliation | All of the below | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/00_quickstart.ipynb) |
+| [01 · Baselines: GLM and GBM](./lessons/01%20Baselines%20-%20GLM%20and%20GBM.md) | Poisson GLM1, GLM3; LightGBM | Wüthrich & Merz (2023), Tables 5.3, 5.5 (GBM: none published) | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/01_glm_gbm_baselines.ipynb) |
+| [02 · Neural networks and embeddings](./lessons/02%20Neural%20Networks%20-%20FNN%20and%20Embeddings.md) | FNN with entity embeddings | Brauer (2024), Table 2 (f), 15 seeds | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/02_fnn_embeddings.ipynb) |
+| [03 · CANN](./lessons/03%20CANN.md) | GLM3 nested in a network | Brauer (2024), Table 2 (g), 15 seeds | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/03_cann.ipynb) |
+| [04 · LocalGLMnet](./lessons/04%20LocalGLMnet.md) | Interpretable network, variable selection | Richman & Wüthrich (2023), Table 2 (c) | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/04_localglmnet.ipynb) |
+| [05 · Mortality: Lee–Carter to deep learning](./lessons/05%20Mortality%20-%20Lee-Carter%20to%20Deep%20Learning.md) | Lee–Carter, CNNs, LSTM, Transformer | Richman, Scognamiglio & Wüthrich (2026), *AI Tools for Actuaries* Ch. 8, pp. 50, 56 | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/05_mortality.ipynb) |
+| [06 · Reserving: chain-ladder to neural ODP](./lessons/06%20Reserving%20-%20Chain-Ladder%20to%20Neural%20ODP.md) | Chain-ladder, neural ODP (CANN) | Kuo (2019), Table 1, on Meyers' (2015) companies (neural ODP: none published) | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/06_reserving.ipynb) |
 
-| Lesson | Model | Data | Reconciles to | Notebook |
-| --- | --- | --- | --- | --- |
-| [00 · Quickstart](./lessons/00%20Quickstart.md) | Pipelines, configs, tracking | freMTPL2 | AI Tools for Actuaries | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/00_quickstart.ipynb) |
-| [01 · Baselines: GLM and GBM](./lessons/01%20Baselines%20-%20GLM%20and%20GBM.md) | Poisson GLM, LightGBM | freMTPL2 | GLM deviance (exact) | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/01_glm_gbm_baselines.ipynb) |
-| [02 · Neural networks and embeddings](./lessons/02%20Neural%20Networks%20-%20FNN%20and%20Embeddings.md) | FNN with entity embeddings | freMTPL2 | FNN deviance | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/02_fnn_embeddings.ipynb) |
-| [03 · CANN](./lessons/03%20CANN.md) | GLM nested in a network | freMTPL2 | CANN deviance | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/03_cann.ipynb) |
-| [04 · LocalGLMnet](./lessons/04%20LocalGLMnet.md) | Interpretable network, variable selection | freMTPL2 | LocalGLMnet deviance | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/04_localglmnet.ipynb) |
-| [05 · Mortality: Lee–Carter to deep learning](./lessons/05%20Mortality%20-%20Lee-Carter%20to%20Deep%20Learning.md) | Lee–Carter, CNN, LSTM, Transformer | HMD Switzerland | Lee–Carter RMSE (exact) | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/05_mortality.ipynb) |
-| [06 · Reserving: chain-ladder to neural ODP](./lessons/06%20Reserving%20-%20Chain-Ladder%20to%20Neural%20ODP.md) | Chain-ladder, neural ODP (CANN) | CAS Schedule P | `chainladder` package; realised outcomes | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/06_reserving.ipynb) |
+Values, tolerances and full citations: [`conf/base/parameters_benchmarks.yml`](./conf/base/parameters_benchmarks.yml). Reproduce everything on a free GPU: [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/reference_run.ipynb)
 
 ## The course in seven ideas
 
@@ -83,7 +83,7 @@ The chain-ladder is an over-dispersed Poisson GLM. A neural correction on top st
 
 ## Run it
 
-**Colab:** open any notebook in the lessons table. It clones this repo, installs it and runs the same pipeline.
+**Colab:** open any notebook in the benchmarks table (they request a GPU runtime); `reference_run.ipynb` reproduces every benchmark. It clones this repo, installs it and runs the same pipeline.
 
 **Container** (recommended locally; also a VS Code dev container):
 ```bash

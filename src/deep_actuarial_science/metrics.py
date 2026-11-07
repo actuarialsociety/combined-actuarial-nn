@@ -16,6 +16,14 @@ def poisson_deviance(y, mu, v) -> float:
     return 100 * mean_poisson_deviance(y / v, mu / v, sample_weight=v)
 
 
+def poisson_deviance_per_policy(y, mu, v) -> float:
+    """Poisson deviance divided by the number of policies n (not total exposure), in 10^-2:
+    the scale of Wüthrich & Merz (2023), eq. (5.28), Tables 5.5 and 7.x, and of the papers
+    built on it (Richman & Wüthrich 2023; Brauer 2024)."""
+    v = np.asarray(v, dtype=float)
+    return poisson_deviance(y, mu, v) * v.sum() / len(v)
+
+
 def balance_ratio(y, mu) -> float:
     """Sum of predicted / sum of observed claims. 1.0 = balance property holds."""
     return float(np.sum(mu) / np.sum(y))

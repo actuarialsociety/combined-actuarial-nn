@@ -1,20 +1,33 @@
-# Claim frequency on freMTPL2 (678,007 French motor TPL policies).
+# Claim frequency on freMTPL2 (678,007 French motor TPL policies, Wüthrich & Merz 2023 cleaning).
+# Each model follows the paper it is benchmarked against (conf/base/parameters_benchmarks.yml).
 # Change the data scale or a model's settings here, or on the command line:
 #   kedro run --pipeline frequency --params frequency.data.scale=0.1
 frequency:
   data:
     scale: 1.0          # 1.0 = reference setup (benchmarks apply); 0.01-0.5 for quick experiments
     sample_seed: 1
-    noise_seed: 500     # RandN: pure-noise covariate for LocalGLMnet variable selection
+    noise_seed: 500     # RandU, RandN: pure-noise control variables (Richman & Wüthrich 2023)
 
   models:
     homogeneous:
       kind: homogeneous
 
+    # Wüthrich & Merz (2023), Sect. 5.2.4: Poisson GLM1 (q+1 = 49) ...
     glm:
       kind: glm
-      formula: "ClaimNb ~ DrivAgeGLM + VehBrand + VehGas + DensityGLM + AreaGLM"
+      formula: >-
+        ClaimNb ~ AreaGLM + VehPowerGLM + VehAgeGLM + DrivAgeGLM + BonusMalusGLM
+        + VehBrand + VehGas + DensityGLM + Region
 
+    # ... and Poisson GLM3 (q+1 = 50): polynomial driver age plus BonusMalus x DrivAge terms
+    glm3:
+      kind: glm
+      formula: >-
+        ClaimNb ~ AreaGLM + VehPowerGLM + VehAgeGLM + BonusMalusGLM + VehBrand + VehGas
+        + DensityGLM + Region + DrivAge + np.log(DrivAge) + I(DrivAge**2) + I(DrivAge**3)
+        + I(DrivAge**4) + BonusMalusGLM:DrivAge + BonusMalusGLM:I(DrivAge**2)
+
+    # No published configuration on this split: leaderboard only.
     gbm:
       kind: gbm
       seed: 1
@@ -26,28 +39,44 @@ frequency:
         min_data_in_leaf: 1000
         feature_fraction: 0.8
 
+    # Brauer (2024), Sect. 4 and Table 2 (f): FNN_EMB, 15 seeds, each with its own 10%
+    # validation split; nadam (Keras default learning rate 0.001), batch 7,000, up to 500
+    # epochs, early stopping with patience 15; zero-initialised output weights.
     fnn:
       kind: fnn
       seed: 21456783
+      n_runs: 15
       hidden: [20, 15, 10]
       embedding_dims: [2, 2]
-      epochs: 200
-      batch_size: 5000
+      epochs: 500
+      batch_size: 7000
+      patience: 15
+      lr: 0.001
+      shuffle: true
       balance_correction: false
 
+    # Brauer (2024), Table 2 (g): same network and training, GLM3 offset, zero-initialised.
     cann:
       kind: cann
       seed: 21456783
+      n_runs: 15
       hidden: [20, 15, 10]
       embedding_dims: [2, 2]
-      epochs: 200
-      batch_size: 5000
+      epochs: 500
+      batch_size: 7000
+      patience: 15
+      lr: 0.001
+      shuffle: true
 
+    # Richman & Wüthrich (2023), Sect. 3: q = 42 (one-hot categoricals, RandU, RandN),
+    # layers (20, 15, 10), nadam, batch 5,000, 100 epochs, weights of the lowest validation
+    # loss. 15 seeds, so the result has a seed spread to compare with.
     localglmnet:
       kind: localglmnet
       seed: 21456783
+      n_runs: 15
       hidden: [20, 15, 10]
       epochs: 100
       batch_size: 5000
-      features: [Area, VehPower, VehAge, DrivAge, BonusMalus, VehGas, Density,
-                 VehBrandEmb1, VehBrandEmb2, RegionEmb1, RegionEmb2, RandN]
+      lr: 0.001
+      shuffle: true

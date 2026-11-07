@@ -51,6 +51,11 @@ def evaluate(pred: pd.DataFrame, params: dict, history: dict | None = None):
         ),
         "n_companies": len(r),
     }
+    # Kuo (2019), Table 1: unweighted percentage errors of total ultimate loss over companies
+    u = rm.ultimates(pred)
+    pe = (u.predicted_ultimate - u.actual_ultimate) / u.actual_ultimate
+    m["mape_ultimate"] = float(np.mean(np.abs(pe)))
+    m["rmspe_ultimate"] = float(np.sqrt(np.mean(pe**2)))
     if history and "best_epoch" in history:
         m["best_epoch"] = history["best_epoch"]
     log.info(

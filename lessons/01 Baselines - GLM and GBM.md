@@ -11,13 +11,16 @@ style: |
   section:has(details[open]) details:not([open]) { display: none; }
   section.theory { font-size: 23px; }
   section.theory p { margin: .45em 0; }
+  table { font-size: .68em; }
 ---
 
 <!-- _class: lead -->
 # 01 · Baselines: GLM and GBM
 ### What every deep model has to beat
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/01_glm_gbm_baselines.ipynb) · `kedro run --pipeline frequency --namespaces homogeneous,glm,gbm`
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/01_glm_gbm_baselines.ipynb) · `kedro run --pipeline frequency --namespaces homogeneous,glm,glm3,gbm`
+
+**Reproduces:** Wüthrich & Merz (2023) [[4](https://doi.org/10.1007/978-3-031-12409-9)], Tables 5.3 and 5.5
 
 ---
 
@@ -32,18 +35,10 @@ N_i \sim \mathrm{Poi}\big(v_i\thinspace\lambda(\boldsymbol{x}_i)\big), \qquad
 \log \lambda^{\mathrm{GLM}}(\boldsymbol{x}) = \beta_0 + \langle \boldsymbol{\beta}, \boldsymbol{x}\rangle
 ```
 
-where $N_i$ = number of claims of policy $i$; $v_i$ = exposure (years on cover); $\boldsymbol{x}_ i$ = its covariates (driver age, vehicle, region, …); $\lambda(\boldsymbol{x})$ = expected claims per year of cover; $\beta_0$ = intercept; $\boldsymbol{\beta}$ = coefficients, with $\langle \boldsymbol{\beta}, \boldsymbol{x}\rangle = \sum_j \beta_j x_j$
+where $N_i$ = number of claims of policy $i$; $v_i$ = exposure (years on cover); $\boldsymbol{x}_ i$ = its pre-processed covariates; $\lambda(\boldsymbol{x})$ = expected claims per year of cover; $\beta_0$ = intercept; $\boldsymbol{\beta}$ = coefficients, with $\langle \boldsymbol{\beta}, \boldsymbol{x}\rangle = \sum_j \beta_j x_j$
 
-**Score: Poisson deviance**, out of sample (lower is better) [[4](https://doi.org/10.1007/978-3-031-12409-9)]
-
-```math
-D = \frac{2}{\sum_i v_i}\sum_i v_i \Big[\tfrac{\mu_i}{v_i} - \tfrac{N_i}{v_i} - \tfrac{N_i}{v_i}\log\tfrac{\mu_i}{N_i}\Big] \times 100
-```
-
-where $\mu_i = v_i\thinspace\lambda(\boldsymbol{x}_ i)$ = predicted claim count of policy $i$; $N_i / v_i$ and $\mu_i / v_i$ = observed and predicted frequency; × 100 reports $D$ in units of $10^{-2}$
-
-- **GLM** [[1](https://doi.org/10.2307/2344614)]: interpretable, but features are hand-engineered (age bands, log density)
-- **GBM** (gradient boosting machine) [[2](https://doi.org/10.1214/aos/1013203451), [3](https://proceedings.neurips.cc/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html)]: learns interactions with trees; Poisson loss with $\log v_i$ as offset
+- **GLM1 / GLM3** [[4](https://doi.org/10.1007/978-3-031-12409-9)]: hand-engineered features; GLM3 adds polynomial driver age and bonus-malus interactions
+- **GBM** (gradient boosting machine) [[2](https://doi.org/10.1214/aos/1013203451), [3](https://proceedings.neurips.cc/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html)]: trees learn the shapes and interactions themselves
 
 ---
 
@@ -52,79 +47,58 @@ where $\mu_i = v_i\thinspace\lambda(\boldsymbol{x}_ i)$ = predicted claim count 
 _Click a panel to open it; work through them in order._
 
 <details>
-<summary><b>① Exposure enters as an offset</b></summary>
+<summary><b>① Exposure is an offset</b></summary>
 
-**Poisson GLM with exposure offset** (log link): the expected count of policy $i$ is
+**Poisson GLM with log link**: $\log \mathbb{E}[N_i] = \log v_i + \eta(\boldsymbol{x}_ i)$
 
-$\displaystyle \log \mathbb{E}[N_i] = \log v_i + \eta(\boldsymbol{x}_ i), \qquad \eta = \log\lambda .$
-
-where $\mathbb{E}[N_i]$ = expected number of claims of policy $i$; $v_i$ = exposure; $\eta(\boldsymbol{x}_ i) = \beta_0 + \langle\boldsymbol\beta, \boldsymbol{x}_ i\rangle$ = the **linear predictor**; $\lambda$ = frequency
-
-$\log v_i$ has a fixed coefficient of 1 (an **offset**), so a policy on cover for half a year expects half the claims. Covariates act **multiplicatively** on frequency: $\exp(\beta_j)$ is a relativity, the familiar form of a rating table.
+where $\eta(\boldsymbol{x}_ i) = \beta_0 + \langle\boldsymbol\beta, \boldsymbol{x}_ i\rangle$ = the linear predictor. $\log v_i$ has coefficient 1, so half a year on cover expects half the claims; $\exp(\beta_j)$ is a rating-table relativity.
 
 </details>
 
 <details>
-<summary><b>② Fitting = maximum likelihood = minimum deviance</b></summary>
+<summary><b>② GLM1: the book's feature engineering</b></summary>
 
-**Poisson log-likelihood** of the GLM, up to terms that do not depend on the parameters:
-
-$\displaystyle \ell(\boldsymbol\beta) = \sum_i \big(N_i \log\mu_i - \mu_i\big), \qquad \mu_i = v_i\exp(\beta_0 + \langle\boldsymbol\beta, \boldsymbol{x}_ i\rangle).$
-
-where $\boldsymbol\beta$ = all GLM coefficients, intercept included; $\mu_i$ = predicted claim count of policy $i$; $N_i$ = observed claims; $\ell_{\text{saturated}}$ = the log-likelihood of a model with $\mu_i = N_i$ for every policy
-
-The deviance is $2(\ell_{\text{saturated}} - \ell)$, so the parameters that maximise $\ell$ also minimise the deviance on the learning data. statsmodels solves this with iteratively reweighted least squares.
+Wüthrich & Merz [[4](https://doi.org/10.1007/978-3-031-12409-9)], Sect. 5.2.4, $q + 1 = 49$ parameters: `Area` as a linear code 1–6; `VehPower` in 6 classes (≥ 9 merged); `VehAge` in [0, 6), [6, 13), [13, ∞); `DrivAge` in 7 bands, 31–40 the reference; `BonusMalus` linear, capped at 150; log `Density`; `VehBrand`, `Region`, `VehGas` dummy coded.
 
 </details>
 
 <details>
-<summary><b>③ The GLM's features are made by hand</b></summary>
+<summary><b>③ GLM3: smooth age, one interaction</b></summary>
 
-`add_glm_features` builds the design the GLM can use:
+**GLM3 driver-age terms** [[4](https://doi.org/10.1007/978-3-031-12409-9)], replacing the age bands ($q + 1 = 50$)
 
-- `DrivAge` in 7 bands (18–20, …, 71+), with 31–40 as the reference level
-- `log(Density)`; `Area` as an ordinal code 1–6; `VehBrand` and `VehGas` as categories
-- The reference formula `DrivAgeGLM + VehBrand + VehGas + DensityGLM + AreaGLM` reproduces the published deviance. It leaves out `BonusMalus`, `VehAge` and `VehPower`, which the GBM and the networks do use
+$\displaystyle \beta_1 a + \beta_2 \log a + \sum_{j=2}^{4} \beta_{j+1} a^j + \gamma_1\thinspace b\thinspace a + \gamma_2\thinspace b\thinspace a^2$
 
-Every band and transformation is a modelling decision. Deep models aim to learn these from the data.
+where $a$ = driver age; $b$ = bonus-malus level (capped at 150); $\gamma_1, \gamma_2$ = interaction coefficients
 
 </details>
 
 <details>
-<summary><b>④ The balance property</b></summary>
+<summary><b>④ Maximum likelihood and the balance property</b></summary>
 
-**Score equation for the intercept** of a Poisson GLM with log link:
+**Score equation for the intercept** of a Poisson GLM with log link
 
-$\displaystyle \frac{\partial \ell}{\partial\beta_0} = \sum_i (N_i - \hat\mu_i) = 0 .$
+$\displaystyle \frac{\partial \ell}{\partial\beta_0} = \sum_i (N_i - \hat\mu_i) = 0$
 
-where $\hat\mu_i$ = fitted claim count of policy $i$; the sum runs over the learning data
-
-The fitted GLM therefore reproduces the total observed claim count on the learning data exactly (balance = 1.0000). Models fitted another way, such as networks with early stopping, lose this property and must be checked for it.
+where $\ell$ = Poisson log-likelihood; $\hat\mu_i$ = fitted claim count. The fitted GLM reproduces the total claim count on the learning data exactly; early-stopped networks do not.
 
 </details>
 
 <details>
 <summary><b>⑤ Gradient boosting: many small trees</b></summary>
 
-**Gradient boosting machine (GBM)**: an additive model on the log scale [[2](https://doi.org/10.1214/aos/1013203451)]
+**GBM, additive on the log scale** [[2](https://doi.org/10.1214/aos/1013203451)]: $\eta_M(\boldsymbol{x}) = \eta_0 + \sum_{m=1}^{M} \nu\thinspace h_m(\boldsymbol{x})$
 
-$\displaystyle \eta_M(\boldsymbol{x}) = \eta_0 + \sum_{m=1}^{M} \nu\thinspace h_m(\boldsymbol{x})$
-
-where $\eta_M(\boldsymbol{x})$ = log of the expected claim count after $M$ trees; $\eta_0$ = starting value; $h_m$ = the $m$-th regression tree; $\nu$ = learning rate (shrinkage); $M$ = number of trees, chosen by early stopping
-
-- Each tree $h_m$ is fitted to the negative gradient of the Poisson loss, which on the log scale is $N_i - \mu_i$: the trees chase the remaining residuals
-- $\eta_0 = \log v_i + \log\bar\lambda$: exposure offset plus the portfolio frequency
-- Here: learning rate $\nu = 0.05$, 31 leaves, at least 1,000 policies per leaf, 80% of features per tree; stop after 50 rounds without improvement on the validation set
-- Trees find thresholds and interactions themselves, which is why the GBM beats the GLM
+where $\eta_0$ = log exposure plus log portfolio frequency; $h_m$ = $m$-th regression tree, fitted to the Poisson gradient $N_i - \mu_i$; $\nu = 0.05$ = learning rate; $M$ = trees, chosen by early stopping (50 rounds) on 10% validation data. No published configuration exists on this split, so the GBM is on the leaderboard only.
 
 </details>
 
 <details>
 <summary><b>⑥ Ranking vs level</b></summary>
 
-- **Lorenz curve / Gini:** sort policies from highest to lowest predicted frequency and plot the cumulative share of claims against the cumulative share of exposure. A higher Gini means better **ranking** of risks
-- **Calibration by decile:** within each predicted-risk decile, compare observed and predicted frequency. This checks the **level**
-- A model can rank well and still be mis-priced, or the reverse. Deviance mixes both, so look at both
+- **Lorenz curve / Gini:** how well the model **ranks** risks
+- **Calibration by decile:** whether the **level** is right in each risk band
+- Deviance mixes both, so check both
 
 </details>
 
@@ -135,27 +109,27 @@ where $\eta_M(\boldsymbol{x})$ = log of the expected claim count after $M$ trees
 ```python
 class GLM(FrequencyModel):
     def _fit(self, learn, params, base):
-        d = add_glm_features(learn)           # bands, log(Density), capped BonusMalus
+        d = add_glm_features(learn)        # bands, caps and log(Density) of [4], Sect. 5.2.4
         self.result = smf_glm(params["formula"], data=d, offset=np.log(d.Exposure),
                               family=sm.families.Poisson()).fit()
-
-class GBM(FrequencyModel):                    # LightGBM, objective="poisson"
-    ...  init_score = np.log(exposure) + log(mean frequency)   # offset
 ```
 
-`frequency.models.glm.formula: "ClaimNb ~ DrivAgeGLM + VehBrand + VehGas + DensityGLM + AreaGLM"`
+`frequency.models.glm.formula`: `ClaimNb ~ AreaGLM + VehPowerGLM + VehAgeGLM + DrivAgeGLM + BonusMalusGLM + VehBrand + VehGas + DensityGLM + Region`
 
 ---
 
-## Results: reconciled to the benchmark
+## Results: reconciled to Wüthrich & Merz (2023) [[4](https://doi.org/10.1007/978-3-031-12409-9)]
 
-| Model | Learn | Test | Published test | Gini (test) | Status |
+Poisson deviance per policy, $\times 10^{-2}$.
+
+| Model | Paper, table | Published learn / test | This repo learn / test | Gini (test) | Status |
 | --- | --- | --- | --- | --- | --- |
-| Homogeneous | <!--r:homogeneous.deviance_learn-->47.722<!--/r--> | <!--r:homogeneous.deviance_test-->47.967<!--/r--> | 47.967 | <!--r:homogeneous.gini_test-->0.082<!--/r--> | <!--r:homogeneous.status-->PASS<!--/r--> |
-| GLM | <!--r:glm.deviance_learn-->46.954<!--/r--> | <!--r:glm.deviance_test-->47.179<!--/r--> | 47.179 | <!--r:glm.gini_test-->0.172<!--/r--> | <!--r:glm.status-->PASS<!--/r--> |
-| GBM | <!--r:gbm.deviance_learn-->44.144<!--/r--> | <!--r:gbm.deviance_test-->44.394<!--/r--> | n/a | <!--r:gbm.gini_test-->0.353<!--/r--> | leaderboard only |
+| Homogeneous | [[4](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3 | 25.213 / 25.445 | <!--r:homogeneous.deviance_learn-->pending<!--/r--> / <!--r:homogeneous.deviance_test-->pending<!--/r--> | <!--r:homogeneous.gini_test-->pending<!--/r--> | <!--r:homogeneous.status-->pending<!--/r--> |
+| GLM1 | [[4](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3 | 24.101 / 24.146 | <!--r:glm.deviance_learn-->pending<!--/r--> / <!--r:glm.deviance_test-->pending<!--/r--> | <!--r:glm.gini_test-->pending<!--/r--> | <!--r:glm.status-->pending<!--/r--> |
+| GLM3 | [[4](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.5 | 24.084 / 24.102 | <!--r:glm3.deviance_learn-->pending<!--/r--> / <!--r:glm3.deviance_test-->pending<!--/r--> | <!--r:glm3.gini_test-->pending<!--/r--> | <!--r:glm3.status-->pending<!--/r--> |
+| GBM | none published | n/a | <!--r:gbm.deviance_learn-->pending<!--/r--> / <!--r:gbm.deviance_test-->pending<!--/r--> | <!--r:gbm.gini_test-->pending<!--/r--> | leaderboard only |
 
-Closed-form fits reproduce the published deviances to three decimals [[4](https://doi.org/10.1007/978-3-031-12409-9)].
+Brauer [[5](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (b)–(d), reproduces the same GLM numbers in Python.
 
 ---
 
@@ -163,7 +137,7 @@ Closed-form fits reproduce the published deviances to three decimals [[4](https:
 
 ![w:470](figures/01-glm-drivage.png) ![w:470](figures/01-gbm-drivage.png)
 
-The GLM's age bands are step functions; the GBM finds the young-driver shape itself.
+GLM1's age bands are step functions; the GBM finds the young-driver shape itself.
 
 ---
 
@@ -175,10 +149,10 @@ The GLM's age bands are step functions; the GBM finds the young-driver shape its
 
 ## In production
 
-- **Calibration:** check actual vs expected by decile on the test set, not just deviance
-- **Balance:** the GLM with intercept satisfies $\sum_i \hat\mu_i = \sum_i N_i$ on learn data
+- **Calibration:** actual vs expected by decile on the test set, not just deviance
+- **Balance:** a GLM with intercept satisfies $\sum_i \hat\mu_i = \sum_i N_i$ on the learning data
 - **GBM:** tune with early stopping on a validation split; monitor feature drift
-- **Baseline first:** a network that cannot beat a tuned GLM/GBM is not worth deploying
+- **Baseline first:** a network that cannot beat GLM3 and a tuned GBM is not worth deploying
 
 ---
 
@@ -187,7 +161,7 @@ The GLM's age bands are step functions; the GBM finds the young-driver shape its
 1. Nelder, J. A., & Wedderburn, R. W. M. (1972). Generalized linear models. *JRSS A*, 135(3), 370–384. [doi:10.2307/2344614](https://doi.org/10.2307/2344614)
 2. Friedman, J. H. (2001). Greedy function approximation: a gradient boosting machine. *Annals of Statistics*, 29(5), 1189–1232. [doi:10.1214/aos/1013203451](https://doi.org/10.1214/aos/1013203451)
 3. Ke, G., et al. (2017). LightGBM: a highly efficient gradient boosting decision tree. *NeurIPS 30*. [paper](https://proceedings.neurips.cc/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html)
-4. Wüthrich, M. V., & Merz, M. (2023). *Statistical Foundations of Actuarial Learning and its Applications*. Springer. [doi:10.1007/978-3-031-12409-9](https://doi.org/10.1007/978-3-031-12409-9)
-5. Noll, A., Salzmann, R., & Wüthrich, M. V. (2018). Case study: French motor third-party liability claims. *SSRN 3164764*. [doi:10.2139/ssrn.3164764](https://doi.org/10.2139/ssrn.3164764)
+4. Wüthrich, M. V., & Merz, M. (2023). *Statistical Foundations of Actuarial Learning and its Applications*. Springer. [doi:10.1007/978-3-031-12409-9](https://doi.org/10.1007/978-3-031-12409-9) (open access)
+5. Brauer, A. (2024). Enhancing actuarial non-life pricing models via transformers. *European Actuarial Journal*, 14(3), 991–1012. [doi:10.1007/s13385-024-00388-2](https://doi.org/10.1007/s13385-024-00388-2)
 
-_Last reviewed: 2026-11-06_
+_Last reviewed: 2026-11-07_

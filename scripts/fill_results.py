@@ -35,8 +35,9 @@ def collect() -> dict[str, str]:
             if len(r):
                 s = sorted(set(r.status.str.split(" ").str[0]))
                 values[f"{model}.status"] = "**FAIL**" if "FAIL" in s else " / ".join(s)
-                if "max_rel_diff_vs_package" in set(r.metric):
-                    values[f"{model}.package_diff"] = f"{r.actual.iloc[0]:.1e}"
+                pkg = r[r.metric == "max_rel_diff_vs_package"]
+                if len(pkg):
+                    values[f"{model}.package_diff"] = f"{pkg.actual.iloc[0]:.1e}"
             else:
                 values[f"{model}.status"] = "n/a"
     return values

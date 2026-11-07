@@ -9,4 +9,5 @@ mortality:
 reserving:
   data:
     lines: [ppauto, wkcomp, comauto, medmal, prodliab, othliab]
+    companies: null           # select by data checks instead of Meyers' list
     max_companies: null       # every company that passes the data checks (~260)
