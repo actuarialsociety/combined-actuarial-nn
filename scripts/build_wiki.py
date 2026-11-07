@@ -6,7 +6,8 @@ generated copy, so never edit it by hand:
 
 - README.md becomes Home.md, and every lesson keeps its file name
 - Marp front matter is stripped; lessons/figures/ is copied to the wiki
-- links between lessons become wiki links ([[Text|Page Name]])
+- links between lessons become links to the wiki page ([Text](Page-Name)); not
+  [[Text|Page Name]], whose "|" would split a Markdown table cell
 - links to other repo files (AGENTS.md, .github/..., .claude/...) become
   absolute GitHub URLs
 - every lesson with a notebook gets a direct "Open in Colab" link: in the
@@ -82,7 +83,8 @@ def notebooks_page(lesson_files: list[Path]) -> str:
             continue
         m = TITLE_RE.search(FRONT_MATTER_RE.sub("", text))
         title = (m.group(1).strip() if m else page_name(f.name)).replace("|", "/")
-        rows.append(f"| [[{title}|{page_name(f.name)}]] | [![Open In Colab]({COLAB_BADGE})]({url}) |")
+        link = f"[{title}]({wiki_slug(page_name(f.name))})"
+        rows.append(f"| {link} | [![Open In Colab]({COLAB_BADGE})]({url}) |")
     return "\n".join(rows) + "\n"
 
 
@@ -105,11 +107,9 @@ def rewrite_links(text: str, pages: set[str], src_dir: Path = ROOT) -> str:
         if Path(path).name in pages:
             path = Path(path).name
         if path in pages:
-            # Image links ([![..](..)](page)) can't use [[..]] syntax.
-            if label.startswith("!["):
-                slug = wiki_slug(page_name(path))
-                return f"[{label}]({slug}{'#' + anchor if anchor else ''})"
-            return f"[[{label.replace('|', '/')}|{page_name(path)}]]"
+            # Plain links to the page slug work everywhere, including table cells and
+            # image links, where [[Text|Page]] breaks.
+            return f"[{label}]({wiki_slug(page_name(path))}{'#' + anchor if anchor else ''})"
         kind = "tree" if (ROOT / path).is_dir() else "blob"
         url = f"https://github.com/{REPO}/{kind}/{BRANCH}/{urllib.parse.quote(path)}"
         return f"[{label}]({url}{'#' + anchor if anchor else ''})"

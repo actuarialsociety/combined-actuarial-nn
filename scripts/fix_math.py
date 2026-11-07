@@ -122,7 +122,8 @@ def check_github(files: list[Path]) -> int:
         exp, got = expected_math(text), github_rendered(text, token)
         ok = exp == got
         bad += not ok
-        print(f"{'ok  ' if ok else 'FAIL'} {f.relative_to(ROOT)}: display {got[0]}/{exp[0]}, inline {got[1]}/{exp[1]}")
+        counts = f"display {got[0]}/{exp[0]}, inline {got[1]}/{exp[1]}"
+        print(f"{'ok  ' if ok else 'FAIL'} {f.relative_to(ROOT)}: {counts}")
     return 1 if bad else 0
 
 
