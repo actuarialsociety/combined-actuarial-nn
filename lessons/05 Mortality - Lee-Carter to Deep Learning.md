@@ -18,7 +18,7 @@ style: |
 # 05 · Mortality: Lee–Carter to deep learning
 ### Forecast 22 years of Swiss mortality with Lee–Carter, CNNs, an LSTM and a Transformer
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/05_mortality.ipynb) · `kedro run --pipeline mortality`
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/05_mortality.ipynb) [![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/actuarialsociety/deep-actuarial-science/blob/main/notebooks/05_mortality.ipynb) [![Open In SageMaker Studio Lab](https://studiolab.sagemaker.aws/studiolab.svg)](https://studiolab.sagemaker.aws/import/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/05_mortality.ipynb) · `kedro run --pipeline mortality`
 
 **Reproduces:** Richman, Scognamiglio & Wüthrich (2026) [[2](https://aitools4actuaries.com/Ch8E/mortality_forecasting.pdf)], *AI Tools for Actuaries*, Ch. 8, pp. 50 and 56
 

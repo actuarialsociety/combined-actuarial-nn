@@ -18,7 +18,7 @@ style: |
 # 06 · Reserving: chain-ladder to neural ODP
 ### A CANN for triangles, back-tested on what was actually paid
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/06_reserving.ipynb) · `kedro run --pipeline reserving`
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/06_reserving.ipynb) [![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/actuarialsociety/deep-actuarial-science/blob/main/notebooks/06_reserving.ipynb) [![Open In SageMaker Studio Lab](https://studiolab.sagemaker.aws/studiolab.svg)](https://studiolab.sagemaker.aws/import/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/06_reserving.ipynb) · `kedro run --pipeline reserving`
 
 **Reproduces:** Kuo (2019) [[4](https://doi.org/10.3390/risks7030097)], Table 1, Mack / chain-ladder on Meyers' (2015) [[3](https://www.casact.org/sites/default/files/2021-03/7_Meyers_2015.PDF)] private passenger auto companies
 
