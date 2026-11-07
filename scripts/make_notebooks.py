@@ -15,8 +15,21 @@ import nbformat as nbf
 REPO = "actuarialsociety/deep-actuarial-science"
 OUT = Path(__file__).resolve().parent.parent / "notebooks"
 
-SETUP = f"""# Setup: works in Colab, the dev container and a local clone.
+GPU_GUARD = """# Colab must run on a GPU runtime: stop here otherwise (set DAS_ALLOW_CPU=1 to override).
+if "google.colab" in sys.modules and os.environ.get("DAS_ALLOW_CPU") != "1":
+    import torch
+    if not torch.cuda.is_available():
+        raise RuntimeError(
+            "This notebook needs a GPU runtime. In Colab: Runtime > Change runtime type > "
+            "T4 GPU > Save, then Runtime > Run all. (To run on CPU anyway: "
+            "import os; os.environ['DAS_ALLOW_CPU'] = '1')"
+        )
+    print("GPU:", torch.cuda.get_device_name(0))
+"""
+
+SETUP = f"""# Setup: works in Colab (GPU runtime), the dev container and a local clone.
 import os, sys
+{GPU_GUARD}
 if "google.colab" in sys.modules and not os.path.exists("/content/deep-actuarial-science"):
     !git clone -q https://github.com/{REPO} /content/deep-actuarial-science
     !pip install -q -e /content/deep-actuarial-science
@@ -46,7 +59,11 @@ def notebook(name: str, title: str, intro: str, cells: list[tuple[str, str]]) ->
         "accelerator": "GPU",
     }
     nb.cells = [
-        nbf.v4.new_markdown_cell(f"# {title}\n{badge(name)}\n\n{intro}"),
+        nbf.v4.new_markdown_cell(
+            f"# {title}\n{badge(name)}\n\n{intro}\n\n"
+            "_Runs on a Colab **GPU runtime** (T4), selected automatically when you open it;"
+            " if Colab gives you a CPU runtime, the first cell stops and says how to switch._"
+        ),
         nbf.v4.new_code_cell(SETUP),
     ]
     for kind, src in cells:

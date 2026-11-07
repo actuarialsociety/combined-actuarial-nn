@@ -140,3 +140,19 @@ def test_wiki_has_colab_link_for_every_lesson(tmp_path):
         for line in f.read_text().splitlines():
             if line.startswith("|"):
                 assert not re.search(r"\[\[[^\]]*\|[^\]]*\]\]", line), f"wiki link in {f.name}"
+
+
+def test_colab_notebooks_force_a_gpu_runtime():
+    """Every notebook requests a T4 GPU in its Colab metadata and stops on a CPU runtime."""
+    import json
+    from pathlib import Path
+
+    notebooks = sorted((Path(__file__).resolve().parent.parent / "notebooks").glob("*.ipynb"))
+    assert notebooks
+    for nb_path in notebooks:
+        nb = json.loads(nb_path.read_text())
+        assert nb["metadata"]["accelerator"] == "GPU", nb_path.name
+        assert nb["metadata"]["colab"]["gpuType"] == "T4", nb_path.name
+        setup = "".join(next(c for c in nb["cells"] if c["cell_type"] == "code")["source"])
+        guard, clone = setup.find("torch.cuda.is_available()"), setup.find("git clone")
+        assert 0 <= guard < clone, f"{nb_path.name}: GPU check must run before cloning"
