@@ -9,6 +9,8 @@ style: |
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
   section:has(details[open]) details:not([open]) { display: none; }
+  section.theory { font-size: 23px; }
+  section.theory p { margin: .45em 0; }
 ---
 
 <!-- _class: lead -->
@@ -19,17 +21,22 @@ style: |
 
 ---
 
+<!-- _class: theory -->
+
 ## Theory
+
+**Model: LocalGLMnet** [[1](https://doi.org/10.1080/03461238.2022.2081816)]
 
 ```math
 \log \lambda(\boldsymbol{x}) = \beta_0 + \sum_{j=1}^{q} \beta_j(\boldsymbol{x})\thinspace x_j,
 \qquad \big(\beta_1(\boldsymbol{x}),\dots,\beta_q(\boldsymbol{x})\big) = \boldsymbol{z}^{(d:1)}(\boldsymbol{x})
 ```
 
-- $\beta_j(\boldsymbol{x})\equiv\beta_j$: a GLM term · $\beta_j\equiv0$: drop $x_j$ · $\beta_j$ varies with $x_k$: interaction [1]
+where $\lambda(\boldsymbol{x})$ = expected claims per year of cover; $x_j$ = covariate $j$, standardised; $q$ = number of covariates (12 here, including the noise covariate `RandN`); $\beta_0$ = intercept; $\beta_j(\boldsymbol{x})$ = the **regression attention**: covariate $j$'s coefficient for this policy; $\boldsymbol{z}^{(d:1)}$ = a network as in lesson 02, with $q$ outputs
+
+- $\beta_j(\boldsymbol{x})\equiv\beta_j$: a GLM term · $\beta_j\equiv0$: drop $x_j$ · $\beta_j$ varies with $x_k$: interaction [[1](https://doi.org/10.1080/03461238.2022.2081816)]
 - **Initialise at the GLM:** attention bias = GLM coefficients, weights = 0
 - **Significance:** add pure noise `RandN`; its $\beta$ spread sets a 99% band
-
 
 ---
 
@@ -40,7 +47,11 @@ _Click a panel to open it; work through them in order._
 <details>
 <summary><b>① A GLM whose coefficients depend on the policy</b></summary>
 
+**LocalGLMnet**: GLM form, with coefficients output by a network [[1](https://doi.org/10.1080/03461238.2022.2081816)]
+
 $\displaystyle \log\lambda(\boldsymbol{x}) = \beta_0 + \sum_{j=1}^{q}\beta_j(\boldsymbol{x})\thinspace x_j, \qquad \boldsymbol\beta(\boldsymbol{x}) = W\boldsymbol{z}^{(d)}(\boldsymbol{x}) + \boldsymbol{b} \in \mathbb{R}^q$
+
+where $x_j$ = standardised covariate $j$ of $q$; $\beta_0$ = intercept; $\boldsymbol\beta(\boldsymbol{x})$ = vector of attentions $\beta_j(\boldsymbol{x})$; $\boldsymbol{z}^{(d)}(\boldsymbol{x})$ = last hidden layer; $W, \boldsymbol{b}$ = weights and bias of the attention layer
 
 The network (layers [20, 15, 10], tanh) outputs one coefficient per covariate. These **regression attentions** have the same role as GLM coefficients, but each policy gets its own.
 
@@ -80,7 +91,7 @@ So $\boldsymbol\beta(\boldsymbol{x}) \equiv \boldsymbol{b}$ before training: the
 <details>
 <summary><b>⑤ A noise covariate sets the significance band</b></summary>
 
-`RandN` is pure noise, drawn independently of claims. Its attention $\beta_{\text{RandN}}(\boldsymbol{x})$ therefore shows how much a **useless** covariate's coefficient still varies. With $s$ its standard deviation across policies, the shaded band is
+`RandN` is pure noise, drawn independently of claims. Its attention $\beta_{\text{RandN}}(\boldsymbol{x})$ therefore shows how much a **useless** covariate's coefficient still varies. **Noise band** for the attentions, with $s$ = standard deviation of $\beta_{\text{RandN}}(\boldsymbol{x})$ across policies:
 
 $\displaystyle \pm 2.576\thinspace s$
 
@@ -93,7 +104,11 @@ A covariate whose $\beta_j(\boldsymbol{x})$ stays inside the band is not disting
 <details>
 <summary><b>⑥ Variable importance</b></summary>
 
+**Variable importance** of covariate $j$
+
 $\displaystyle \mathrm{VI}_ j = \frac{1}{n}\sum_{i=1}^{n}\big|\beta_j(\boldsymbol{x}_ i)\big|$
+
+where $n$ = number of policies; $\boldsymbol{x}_ i$ = covariates of policy $i$; $|\beta_j(\boldsymbol{x}_ i)|$ = size of covariate $j$'s coefficient for that policy
 
 Compare each covariate's importance with that of `RandN`: one that barely clears it adds little and is a candidate to remove before filing rating factors.
 
@@ -146,7 +161,7 @@ Every covariate clears the noise covariate `RandN` (red) here; `BonusMalus` and 
 
 - **Explainability:** $\beta_j(\boldsymbol{x})x_j$ gives each policy's premium decomposition
 - **Variable selection:** test with a noise covariate before filing rating factors
-- **Regularisation:** add an L1 penalty on $\beta_j(\boldsymbol{x})$ to select variables [1]
+- **Regularisation:** add an L1 penalty on $\beta_j(\boldsymbol{x})$ to select variables [[1](https://doi.org/10.1080/03461238.2022.2081816)]
 - **Same checks as any network:** balance property, seed stability, drift
 
 ---

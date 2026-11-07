@@ -38,7 +38,11 @@ Mortality (lesson 05) and reserving (lesson 06) reuse the same pattern on time s
 <details>
 <summary><b>② One score for all: the Poisson deviance</b></summary>
 
+**Poisson deviance**: the score every frequency model is ranked by [[2](https://doi.org/10.1007/978-3-031-12409-9)]
+
 $\displaystyle D = \frac{1}{\sum_i v_i}\sum_i v_i\thinspace d\Big(\frac{N_i}{v_i}, \frac{\mu_i}{v_i}\Big) \times 100, \qquad d(y,m) = 2\Big(m - y - y\log\frac{m}{y}\Big)$
+
+where $N_i$ = claims of policy $i$; $v_i$ = its exposure; $\mu_i$ = its predicted claim count; $d(y, m)$ = the **unit deviance** of an observed frequency $y$ against a predicted frequency $m$
 
 - $d$ is twice the log-likelihood gap to a model that fits every observation exactly, so **minimising deviance = maximum likelihood**
 - Lower is better. Values are reported in units of $10^{-2}$, as in the published benchmarks
@@ -61,6 +65,8 @@ Using the same split as the published notebooks is what makes the results compar
 <summary><b>④ Reconciliation: proving the implementation first</b></summary>
 
 `conf/base/parameters_benchmarks.yml` holds, per model, the published value, a tolerance and the source. After each run:
+
+**Reconciliation rule**, per benchmarked metric
 
 $\displaystyle \text{PASS} \iff |\text{this repo} - \text{published}| \le \text{tolerance}$
 
@@ -136,7 +142,7 @@ Out-of-sample Poisson deviance on 67,801 test policies. Diamonds: published benc
 | CANN | 44.976 | <!--r:cann.deviance_test-->44.976<!--/r--> | <!--r:cann.status-->PASS<!--/r--> |
 | LocalGLMnet | 45.034 | <!--r:localglmnet.deviance_test-->45.034<!--/r--> | <!--r:localglmnet.status-->PASS<!--/r--> |
 
-Benchmarks: Wüthrich et al. (2025), *AI Tools for Actuaries*, notebook outputs [1].
+Benchmarks: Wüthrich et al. (2025), *AI Tools for Actuaries*, notebook outputs [[1](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5162304)].
 
 ---
 

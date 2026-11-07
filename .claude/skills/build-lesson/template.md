@@ -9,6 +9,8 @@ style: |
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
   section:has(details[open]) details:not([open]) { display: none; }
+  section.theory { font-size: 23px; }
+  section.theory p { margin: .45em 0; }
 ---
 
 <!-- _class: lead -->
@@ -19,11 +21,17 @@ style: |
 
 ---
 
+<!-- _class: theory -->
+
 ## Theory
 
-$$
+**Model: Full model name** [1]
+
+```math
 \text{one key equation}
-$$
+```
+
+where $y$ = what the response is; $x$ = what the inputs are; $\theta$ = what each parameter means (every symbol, in words)
 
 - What is new versus the previous lesson's model (one bullet)
 - The trick that makes it work (one bullet)
@@ -37,7 +45,11 @@ _Click a panel to open it; work through them in order._
 <details>
 <summary><b>① The problem the model solves</b></summary>
 
-The setting, notation and the equation that defines the model.
+**Name of the equation** [N]
+
+$\displaystyle \text{the equation, on one line}$
+
+where each new symbol is defined in words; separated by semicolons
 
 </details>
 

@@ -9,6 +9,8 @@ style: |
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
   section:has(details[open]) details:not([open]) { display: none; }
+  section.theory { font-size: 23px; }
+  section.theory p { margin: .45em 0; }
 ---
 
 <!-- _class: lead -->
@@ -19,20 +21,29 @@ style: |
 
 ---
 
+<!-- _class: theory -->
+
 ## Theory
+
+**Model: Poisson GLM for claim frequency** [[1](https://doi.org/10.2307/2344614)]
 
 ```math
 N_i \sim \mathrm{Poi}\big(v_i\thinspace\lambda(\boldsymbol{x}_i)\big), \qquad
 \log \lambda^{\mathrm{GLM}}(\boldsymbol{x}) = \beta_0 + \langle \boldsymbol{\beta}, \boldsymbol{x}\rangle
 ```
 
+where $N_i$ = number of claims of policy $i$; $v_i$ = exposure (years on cover); $\boldsymbol{x}_ i$ = its covariates (driver age, vehicle, region, …); $\lambda(\boldsymbol{x})$ = expected claims per year of cover; $\beta_0$ = intercept; $\boldsymbol{\beta}$ = coefficients, with $\langle \boldsymbol{\beta}, \boldsymbol{x}\rangle = \sum_j \beta_j x_j$
+
+**Score: Poisson deviance**, out of sample (lower is better) [[4](https://doi.org/10.1007/978-3-031-12409-9)]
+
 ```math
 D = \frac{2}{\sum_i v_i}\sum_i v_i \Big[\tfrac{\mu_i}{v_i} - \tfrac{N_i}{v_i} - \tfrac{N_i}{v_i}\log\tfrac{\mu_i}{N_i}\Big] \times 100
 ```
 
-- **GLM** [1]: interpretable, but features are hand-engineered (age bands, log density)
-- **GBM** [2, 3]: learns interactions with trees; Poisson loss with $\log v_i$ as offset
+where $\mu_i = v_i\thinspace\lambda(\boldsymbol{x}_ i)$ = predicted claim count of policy $i$; $N_i / v_i$ and $\mu_i / v_i$ = observed and predicted frequency; × 100 reports $D$ in units of $10^{-2}$
 
+- **GLM** [[1](https://doi.org/10.2307/2344614)]: interpretable, but features are hand-engineered (age bands, log density)
+- **GBM** (gradient boosting machine) [[2](https://doi.org/10.1214/aos/1013203451), [3](https://proceedings.neurips.cc/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html)]: learns interactions with trees; Poisson loss with $\log v_i$ as offset
 
 ---
 
@@ -43,9 +54,11 @@ _Click a panel to open it; work through them in order._
 <details>
 <summary><b>① Exposure enters as an offset</b></summary>
 
-With a log link, the expected count of policy $i$ is
+**Poisson GLM with exposure offset** (log link): the expected count of policy $i$ is
 
 $\displaystyle \log \mathbb{E}[N_i] = \log v_i + \eta(\boldsymbol{x}_ i), \qquad \eta = \log\lambda .$
+
+where $\mathbb{E}[N_i]$ = expected number of claims of policy $i$; $v_i$ = exposure; $\eta(\boldsymbol{x}_ i) = \beta_0 + \langle\boldsymbol\beta, \boldsymbol{x}_ i\rangle$ = the **linear predictor**; $\lambda$ = frequency
 
 $\log v_i$ has a fixed coefficient of 1 (an **offset**), so a policy on cover for half a year expects half the claims. Covariates act **multiplicatively** on frequency: $\exp(\beta_j)$ is a relativity, the familiar form of a rating table.
 
@@ -54,9 +67,11 @@ $\log v_i$ has a fixed coefficient of 1 (an **offset**), so a policy on cover fo
 <details>
 <summary><b>② Fitting = maximum likelihood = minimum deviance</b></summary>
 
-Up to terms that do not depend on the model, the Poisson log-likelihood is
+**Poisson log-likelihood** of the GLM, up to terms that do not depend on the parameters:
 
 $\displaystyle \ell(\boldsymbol\beta) = \sum_i \big(N_i \log\mu_i - \mu_i\big), \qquad \mu_i = v_i\exp(\beta_0 + \langle\boldsymbol\beta, \boldsymbol{x}_ i\rangle).$
+
+where $\boldsymbol\beta$ = all GLM coefficients, intercept included; $\mu_i$ = predicted claim count of policy $i$; $N_i$ = observed claims; $\ell_{\text{saturated}}$ = the log-likelihood of a model with $\mu_i = N_i$ for every policy
 
 The deviance is $2(\ell_{\text{saturated}} - \ell)$, so the parameters that maximise $\ell$ also minimise the deviance on the learning data. statsmodels solves this with iteratively reweighted least squares.
 
@@ -78,9 +93,11 @@ Every band and transformation is a modelling decision. Deep models aim to learn 
 <details>
 <summary><b>④ The balance property</b></summary>
 
-For a Poisson GLM with log link and an intercept, the likelihood equation for $\beta_0$ is
+**Score equation for the intercept** of a Poisson GLM with log link:
 
 $\displaystyle \frac{\partial \ell}{\partial\beta_0} = \sum_i (N_i - \hat\mu_i) = 0 .$
+
+where $\hat\mu_i$ = fitted claim count of policy $i$; the sum runs over the learning data
 
 The fitted GLM therefore reproduces the total observed claim count on the learning data exactly (balance = 1.0000). Models fitted another way, such as networks with early stopping, lose this property and must be checked for it.
 
@@ -89,7 +106,11 @@ The fitted GLM therefore reproduces the total observed claim count on the learni
 <details>
 <summary><b>⑤ Gradient boosting: many small trees</b></summary>
 
+**Gradient boosting machine (GBM)**: an additive model on the log scale [[2](https://doi.org/10.1214/aos/1013203451)]
+
 $\displaystyle \eta_M(\boldsymbol{x}) = \eta_0 + \sum_{m=1}^{M} \nu\thinspace h_m(\boldsymbol{x})$
+
+where $\eta_M(\boldsymbol{x})$ = log of the expected claim count after $M$ trees; $\eta_0$ = starting value; $h_m$ = the $m$-th regression tree; $\nu$ = learning rate (shrinkage); $M$ = number of trees, chosen by early stopping
 
 - Each tree $h_m$ is fitted to the negative gradient of the Poisson loss, which on the log scale is $N_i - \mu_i$: the trees chase the remaining residuals
 - $\eta_0 = \log v_i + \log\bar\lambda$: exposure offset plus the portfolio frequency
@@ -134,7 +155,7 @@ class GBM(FrequencyModel):                    # LightGBM, objective="poisson"
 | GLM | <!--r:glm.deviance_learn-->46.954<!--/r--> | <!--r:glm.deviance_test-->47.179<!--/r--> | 47.179 | <!--r:glm.gini_test-->0.172<!--/r--> | <!--r:glm.status-->PASS<!--/r--> |
 | GBM | <!--r:gbm.deviance_learn-->44.144<!--/r--> | <!--r:gbm.deviance_test-->44.394<!--/r--> | n/a | <!--r:gbm.gini_test-->0.353<!--/r--> | leaderboard only |
 
-Closed-form fits reproduce the published deviances to three decimals [4].
+Closed-form fits reproduce the published deviances to three decimals [[4](https://doi.org/10.1007/978-3-031-12409-9)].
 
 ---
 

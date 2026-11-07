@@ -32,7 +32,7 @@ MLflow APIs) goes stale in ~3 months; actuarial theory in ~18 months.
   publish a better benchmark. Verify DOIs with Crossref before citing.
 - Keep the Theory slide to one or two equations; cut rather than add. Depth belongs in the
   `## Core ideas` panels: check they still match the code and config, and run
-  `python3 scripts/fix_math.py --check`.
+  `python3 scripts/fix_math.py --check`. Every equation keeps its label and `where …` line; run `python3 scripts/link_citations.py` after changing references.
 - Set `_Last reviewed: <today>` on every lesson you reviewed.
 
 ## 4. Report

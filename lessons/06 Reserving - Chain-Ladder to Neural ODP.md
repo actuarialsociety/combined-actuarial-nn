@@ -9,6 +9,8 @@ style: |
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
   section:has(details[open]) details:not([open]) { display: none; }
+  section.theory { font-size: 23px; }
+  section.theory p { margin: .45em 0; }
 ---
 
 <!-- _class: lead -->
@@ -19,22 +21,30 @@ style: |
 
 ---
 
+<!-- _class: theory -->
+
 ## Theory
+
+**Model 1: over-dispersed Poisson (ODP) model**, which reproduces the chain-ladder [[1](https://doi.org/10.1017/S1357321700000222), [2](https://doi.org/10.2143/AST.23.2.2005092)]
 
 ```math
 \mathbb{E}[X_{i,j}] = \mu_{i,j} = \exp(\alpha_i + \beta_j), \quad
 \mathrm{Var}(X_{i,j}) = \varphi\thinspace\mu_{i,j}
-\qquad \text{(ODP = chain-ladder [1, 2])}
 ```
+
+where $X_{i,j}$ = claims paid for accident year $i$ in development year $j$; $\mu_{i,j}$ = their expected value; $\alpha_i$ = accident-year level; $\beta_j$ = development-year (payment pattern) effect; $\varphi$ = dispersion: variance as a multiple of the mean
+
+**Model 2: neural ODP**, a CANN for triangles [[3](https://doi.org/10.1080/03461238.2019.1633394)]
 
 ```math
 \log \mu^{(c)}_{i,j} = \log \mu^{\mathrm{CL},(c)}_{i,j} + \mathrm{NN}\big(e_c,\thinspace e_{\ell},\thinspace e_j,\thinspace i\big),
 \qquad \mathrm{NN}\equiv 0 \text{ at initialisation}
 ```
 
-- A CANN in the spirit of [3]: one network across **all companies** $c$ and lines $\ell$
-- Payments scaled by company premium; early stopping on the **latest diagonal**
+where $c$ = company; $\ell$ = line of business; $\mu^{\mathrm{CL},(c)}_ {i,j}$ = company $c$'s chain-ladder (ODP) mean, used as offset; $e_c, e_\ell, e_j$ = learned 2-dimensional embeddings of company, line and development year; $\mathrm{NN}$ = a network with two tanh layers
 
+- One network across **all companies** and lines; payments scaled by company premium
+- Early stopping on the **latest diagonal**
 
 ---
 
@@ -56,9 +66,11 @@ $X_{i,j}$ is the amount paid for accident year $i$ in development year $j = 1,\d
 <details>
 <summary><b>② Chain-ladder</b></summary>
 
-Volume-weighted development factors, over the accident years where both columns are known:
+**Chain-ladder**: volume-weighted development factors and the projection they drive
 
 $\displaystyle \hat f_j = \frac{\sum_i C_{i,j+1}}{\sum_i C_{i,j}}, \qquad \hat C_{i,j+1} = \hat C_{i,j}\thinspace\hat f_j .$
+
+where $C_{i,j}$ = cumulative paid for accident year $i$ up to development year $j$; $\hat f_j$ = development factor from year $j$ to $j+1$, summed over the accident years where both are known; $\hat C_{i,j}$ = projected cumulative, starting from the latest known value
 
 Each accident year is projected from its latest known diagonal to development year 10. The predicted incremental payments are the differences of the projected cumulatives.
 
@@ -67,7 +79,11 @@ Each accident year is projected from its latest known diagonal to development ye
 <details>
 <summary><b>③ The stochastic model behind it: ODP</b></summary>
 
+**Over-dispersed Poisson (ODP) model** [[1](https://doi.org/10.1017/S1357321700000222)]
+
 $\displaystyle \mathbb{E}[X_{i,j}] = \exp(\alpha_i + \beta_j), \qquad \mathrm{Var}(X_{i,j}) = \varphi\thinspace\mathbb{E}[X_{i,j}]$
+
+where $X_{i,j}$ = incremental paid; $\alpha_i$ = accident-year level; $\beta_j$ = development pattern; $\varphi$ = dispersion
 
 Fitting this over-dispersed Poisson (ODP) GLM to the upper triangle by quasi-likelihood gives the same reserves as the chain-ladder. Its fitted means reproduce every row total and column total of the upper triangle. The pipeline builds them directly from the chain-ladder as ultimate × payment pattern.
 
@@ -76,7 +92,11 @@ Fitting this over-dispersed Poisson (ODP) GLM to the upper triangle by quasi-lik
 <details>
 <summary><b>④ Neural ODP: a CANN for triangles</b></summary>
 
+**Neural ODP**: chain-ladder offset plus a learned correction [[3](https://doi.org/10.1080/03461238.2019.1633394)]
+
 $\displaystyle \log\mu^{(c)}_ {i,j} = \log\mu^{\mathrm{CL},(c)}_ {i,j} + \mathrm{NN}\big(e_c, e_\ell, e_j, \tilde\imath\big)$
+
+where $\mu^{(c)}_ {i,j}$ = expected payment of company $c$; $\mu^{\mathrm{CL},(c)}_ {i,j}$ = its chain-ladder mean (offset); $\mathrm{NN}$ = the correction network, with inputs:
 
 - 2-dimensional embeddings for company $c$, line $\ell$ and development year $j$, plus a scaled accident year $\tilde\imath$; two tanh layers [16, 8]
 - Output layer initialised at zero, so training starts **exactly at the chain-ladder**
@@ -140,10 +160,10 @@ A positive error means over-reserving.
 
 - **Back-test before trusting:** hold out diagonals; compare to realised development
 - **The chain-ladder anchor** keeps results explainable to a reserving committee
-- **Uncertainty:** Mack [2] or bootstrap for the chain-ladder; ensembles for the network
+- **Uncertainty:** Mack [[2](https://doi.org/10.2143/AST.23.2.2005092)] or bootstrap for the chain-ladder; ensembles for the network
 - **Give the network something to learn:** use a pooled, line-level chain-ladder as the
-  offset so company deviations are learned (closer to [3]); that is this lesson's exercise
-- **Fully neural alternatives** (e.g. DeepTriangle [5]) drop the anchor: benchmark both
+  offset so company deviations are learned (closer to [[3](https://doi.org/10.1080/03461238.2019.1633394)]); that is this lesson's exercise
+- **Fully neural alternatives** (e.g. DeepTriangle [[5](https://doi.org/10.3390/risks7030097)]) drop the anchor: benchmark both
 
 ---
 

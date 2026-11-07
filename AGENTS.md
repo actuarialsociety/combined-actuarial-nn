@@ -36,6 +36,13 @@ the lessons and add models.
   panel it is a one-line `$\displaystyle ...$`, because GitHub skips display math in a panel
   that also has inline math. `python3 scripts/fix_math.py` applies all of this;
   `--github` renders every file through GitHub's API and fails if any span is not math (CI).
+- **Every equation is labelled and explained:** a bold line above it names the model or
+  quantity (`**Model: Poisson GLM for claim frequency** [1]`), and a `where …` line below it
+  defines every symbol in words, separated by semicolons. The Theory slide uses
+  `<!-- _class: theory -->` (smaller type) so the definitions fit.
+- **Click-through citations:** cite with `[N]` against the numbered "Learn more" list;
+  `python3 scripts/link_citations.py` links each `[N]` to that reference's DOI or paper page
+  (CI runs `--check`). Every model label cites its academic source.
 - **Visual:** every results slide shows figures produced by the pipeline (exported to
   `lessons/figures/`), never hand-drawn or invented numbers.
 - **Reconciled:** every model has an entry in `conf/base/parameters_benchmarks.yml`
@@ -73,6 +80,7 @@ pytest -q
 kedro run --env smoke                      # every pipeline, ~1-2 minutes
 python3 scripts/make_notebooks.py          # if notebooks changed
 python3 scripts/check_links.py             # must report 0 broken
+python3 scripts/link_citations.py --check  # citations click through to the papers
 GITHUB_TOKEN=$(gh auth token) python3 scripts/fix_math.py --github   # math renders on GitHub and the wiki
 ```
 
