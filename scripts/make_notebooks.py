@@ -57,8 +57,9 @@ FAST = os.environ.get("DAS_ENV") == "smoke"   # CI runs every notebook in smoke 
 
 
 GITHUB_PATH = f"github/{REPO}/blob/main/notebooks"
-# One-click launchers. Azure ML and full SageMaker Studio have no open-from-GitHub link:
-# clone the repo there (or upload the notebook) and the setup cell does the rest.
+# Launchers. Azure ML and SageMaker Studio have no open-from-GitHub link: the SageMaker badge
+# opens the Studio console; clone the repo there (or upload the notebook) and the setup cell
+# does the rest. (SageMaker Studio Lab, which had one, is closed to new customers.)
 LAUNCHERS = {
     "Colab": (
         "https://colab.research.google.com/assets/colab-badge.svg",
@@ -68,11 +69,9 @@ LAUNCHERS = {
         "https://kaggle.com/static/images/open-in-kaggle.svg",
         "https://kaggle.com/kernels/welcome?src=https://{path_gh}/{name}",
     ),
-    # studiolab.sagemaker.aws/studiolab.svg 403s GitHub's image proxy, so it shows broken on
-    # GitHub: a shields.io badge renders everywhere.
-    "SageMaker Studio Lab": (
-        "https://img.shields.io/badge/Open%20in-SageMaker%20Studio%20Lab-FF9900",
-        "https://studiolab.sagemaker.aws/import/{path}/{name}",
+    "SageMaker Studio": (
+        "https://img.shields.io/badge/Open%20in-SageMaker%20Studio-FF9900",
+        "https://console.aws.amazon.com/sagemaker/home#/studio-landing",
     ),
 }
 
@@ -92,10 +91,10 @@ def badges(name: str) -> str:
 
 RUN_ANYWHERE = (
     "_Runs anywhere: **Colab** opens on a GPU runtime (T4) and the first cell stops on a CPU"
-    " runtime; on **Kaggle** turn on *GPU T4* and *Internet* in the notebook settings; on"
-    " **SageMaker Studio Lab** start a GPU runtime. In Azure ML, SageMaker Studio or any other"
-    " Jupyter, clone the repo (or upload this notebook) and run all: the first cell installs"
-    " what it needs._"
+    " runtime; on **Kaggle** turn on *GPU T4* and *Internet* in the notebook settings; in"
+    " **SageMaker Studio** (the badge opens the console) or **Azure ML**, pick a GPU instance,"
+    " clone the repo (Git → Clone) or upload this notebook, and run all: the first cell installs"
+    " what it needs. Any other Jupyter works the same way._"
 )
 
 

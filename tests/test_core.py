@@ -186,7 +186,7 @@ def test_colab_notebooks_force_a_gpu_runtime():
 
 
 def test_notebooks_launch_anywhere():
-    """Every notebook links Colab, Kaggle and SageMaker Studio Lab, asks Kaggle for a GPU and
+    """Every notebook links Colab, Kaggle and SageMaker Studio, asks Kaggle for a GPU and
     internet, and its setup cell clones the repo only when it is not inside a checkout."""
     import json
     from pathlib import Path
@@ -200,7 +200,8 @@ def test_notebooks_launch_anywhere():
         gh = f"github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/{nb_path.name}"
         assert f"https://colab.research.google.com/{gh}" in header
         assert f"https://kaggle.com/kernels/welcome?src=https://github.com/{gh[7:]}" in header
-        assert f"https://studiolab.sagemaker.aws/import/{gh}" in header
+        assert "https://console.aws.amazon.com/sagemaker/home#/studio-landing" in header
+        assert "studiolab" not in header  # Studio Lab is closed to new customers
         setup = "".join(nb["cells"][1]["source"])
         assert "if REPO_DIR is None:" in setup and setup.index("REPO_DIR is None") < setup.index(
             "git clone"
