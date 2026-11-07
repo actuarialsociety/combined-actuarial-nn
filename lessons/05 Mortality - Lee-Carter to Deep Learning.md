@@ -9,6 +9,8 @@ style: |
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
   section:has(details[open]) details:not([open]) { display: none; }
+  section.theory { font-size: 23px; }
+  section.theory p { margin: .45em 0; }
 ---
 
 <!-- _class: lead -->
@@ -19,21 +21,27 @@ style: |
 
 ---
 
+<!-- _class: theory -->
+
 ## Theory
+
+**Model 1: Lee–Carter** [[1](https://doi.org/10.1080/01621459.1992.10475265)]
 
 ```math
 \log m_{x,t} = a_x + b_x k_t, \qquad k_{t+1} = k_t + \delta + \varepsilon_{t+1}
-\qquad \text{(Lee–Carter [1])}
 ```
+
+where $m_{x,t}$ = central death rate at age $x$ in calendar year $t$ (deaths ÷ person-years lived); $a_x$ = average log death rate at age $x$; $k_t$ = period index: the general mortality level in year $t$; $b_x$ = how strongly age $x$ follows $k_t$; $\delta$ = drift, the average yearly change in $k_t$; $\varepsilon_{t+1}$ = random error
+
+**Model 2: neural forecaster** [[2](https://doi.org/10.1080/03461238.2020.1867232)]
 
 ```math
 \log m_{\cdot,t} = f_\theta\big(\log m_{\cdot,t-10},\dots,\log m_{\cdot,t-1}\big)
-\qquad \text{(neural forecaster [2])}
 ```
 
-- Inputs: 10-year windows of the whole age profile (ages 0–89)
-- CNN, CNN with tanh, LSTM and a one-block Transformer; forecasts are **recursive**
+where $\log m_{\cdot,t}$ = the vector of log death rates for all ages 0–89 in year $t$; $f_\theta$ = a network with weights $\theta$ (CNN, CNN with tanh, LSTM or Transformer) that maps the previous 10 years to the next one
 
+- Forecasts are **recursive**: each predicted year feeds the next prediction
 
 ---
 
@@ -53,7 +61,11 @@ $m_{x,t}$ is the central death rate at age $x$ in year $t$: deaths over person-y
 <details>
 <summary><b>② Lee–Carter: one time index drives all ages</b></summary>
 
+**Lee–Carter model with its identifiability constraints** [[1](https://doi.org/10.1080/01621459.1992.10475265)]
+
 $\displaystyle \log m_{x,t} = a_x + b_x k_t, \qquad \sum_x b_x = 1,\quad \sum_t k_t = 0$
+
+where $m_{x,t}$ = death rate at age $x$, year $t$; $a_x$ = age profile; $b_x$ = age sensitivity; $k_t$ = period index. It is fitted in three steps:
 
 1. $a_x$ = average of $\log m_{x,t}$ over the learning years (the age profile)
 2. A singular value decomposition of the centred matrix gives the best rank-1 fit $b_x k_t$
@@ -66,18 +78,18 @@ $b_x$ says how fast each age improves when the general level $k_t$ moves.
 <details>
 <summary><b>③ Lee–Carter forecast: extend the trend</b></summary>
 
-$k_t$ is treated as a random walk with drift, $k_{t+1} = k_t + \delta + \varepsilon_{t+1}$. The point forecast is
+$k_t$ is treated as a random walk with drift, $k_{t+1} = k_t + \delta + \varepsilon_{t+1}$. The point forecast (**Lee–Carter forecast**) is
 
 $\displaystyle \hat k_{T+h} = k_T + h\thinspace\hat\delta ,$
 
-where $\hat\delta$ is the slope of a straight line fitted to $k_t$ over the learning years. Every age then improves at its own fixed rate $b_x\hat\delta$ per year.
+where $T$ = last learning year (1999); $h$ = years ahead (1 to 22); $\hat\delta$ is the slope of a straight line fitted to $k_t$ over the learning years. Every age then improves at its own fixed rate $b_x\hat\delta$ per year.
 
 </details>
 
 <details>
 <summary><b>④ The neural forecasters: next year from the last ten</b></summary>
 
-- Each training sample is a **window**: 10 consecutive years × 90 ages as input, the next year's 90 rates as target
+- Each training sample is a **window**: 10 consecutive years × 90 ages as input, the next year's 90 rates as target [[2](https://doi.org/10.1080/03461238.2020.1867232)]
 - $\log m$ is min–max scaled to $[0, 1]$; loss = mean squared error
 - Windows are shuffled; 90% train, 10% validation. Adam, learning rate 0.001, batch size 4, up to 1,000 epochs; the rate is cut when validation stalls and the best epoch is kept
 
@@ -98,9 +110,11 @@ where $\hat\delta$ is the slope of a straight line fitted to $k_t$ over the lear
 
 From 2000 on, each prediction is appended to the window and fed back in to predict the following year: 22 steps, each built on earlier predictions, so **errors compound** with horizon.
 
+**Root mean squared error (RMSE)** of log death rates
+
 $\displaystyle \mathrm{RMSE} = \sqrt{\frac{1}{|S|}\sum_{(x,t)\in S}\big(\log m_{x,t} - \widehat{\log m}_ {x,t}\big)^2}$
 
-$S$ is every age and year in the test period (out-of-sample) or the learning period (in-sample).
+where $\widehat{\log m}_ {x,t}$ = predicted log death rate; $S$ = the set of (age, year) cells scored, $|S|$ = how many. $S$ is every age and year in the test period (out-of-sample) or the learning period (in-sample).
 
 </details>
 
@@ -124,7 +138,7 @@ Learn 1900–1999, forecast 2000–2021 (dashed line).
 | LSTM | <!--r:lstm.rmse_in-->0.1595<!--/r--> | <!--r:lstm.rmse_out-->0.3428<!--/r--> | 0.3428 | <!--r:lstm.status-->PASS<!--/r--> |
 | Transformer | <!--r:transformer.rmse_in-->0.1819<!--/r--> | <!--r:transformer.rmse_out-->0.3831<!--/r--> | 0.3831 | <!--r:transformer.status-->PASS<!--/r--> |
 
-RMSE of $\log m_{x,t}$. Lee–Carter is closed-form and reproduces the benchmark exactly [3].
+RMSE of $\log m_{x,t}$. Lee–Carter is closed-form and reproduces the benchmark exactly [[3](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5162304)].
 
 ---
 
@@ -147,8 +161,8 @@ Right of the dashed line: the LSTM forecasts too high at ages 15–40 (blue) and
 - **Look-ahead:** the reference scales $\log m$ with all years, test included. Set
   `mortality.training.scaler_fit: learn` for an honest forecast
 - **Recursive error growth:** errors compound with horizon; report by horizon, not one number
-- **Uncertainty:** point forecasts are not enough for reserving; bootstrap intervals [4]
-- **Many populations:** jointly trained networks with embeddings beat per-country Lee–Carter fits [5, 6]
+- **Uncertainty:** point forecasts are not enough for reserving; bootstrap intervals [[4](https://doi.org/10.1017/asb.2021.34)]
+- **Many populations:** jointly trained networks with embeddings beat per-country Lee–Carter fits [[5](https://doi.org/10.1017/S1748499519000071), [6](https://doi.org/10.1017/asb.2022.5)]
 
 ---
 

@@ -46,7 +46,7 @@ curl -s "https://api.crossref.org/works/<DOI>" | jq '.message | {author: [.autho
 - Copy `.claude/skills/build-lesson/template.md` to `lessons/NN Title.md`. Theory: one or
   two equations. Then a `## Core ideas` slide of 5 to 7 click-through `<details>` panels
   that explain each idea in depth with its equation and the settings the code uses (rules
-  in `AGENTS.md`; run `python3 scripts/fix_math.py`). Results: real numbers from the run and figures exported with
+  in `AGENTS.md`; run `python3 scripts/fix_math.py`). Label every equation with the model's name and its citation, define every symbol in a `where …` line, and run `python3 scripts/link_citations.py` so citations click through to the papers. Results: real numbers from the run and figures exported with
   `python3 scripts/export_figures.py`.
 - Add the notebook entry to `scripts/make_notebooks.py` and regenerate.
 - Add the lesson to the README table.

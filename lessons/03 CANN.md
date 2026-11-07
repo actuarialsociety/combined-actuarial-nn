@@ -9,6 +9,8 @@ style: |
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
   section:has(details[open]) details:not([open]) { display: none; }
+  section.theory { font-size: 23px; }
+  section.theory p { margin: .45em 0; }
 ---
 
 <!-- _class: lead -->
@@ -19,7 +21,11 @@ style: |
 
 ---
 
+<!-- _class: theory -->
+
 ## Theory
+
+**Model: Combined Actuarial Neural Network (CANN)** [[1](https://doi.org/10.1017/asb.2018.42), [2](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3320525)]
 
 ```math
 \lambda^{\mathrm{CANN}}(\boldsymbol{x}) =
@@ -27,10 +33,11 @@ style: |
 \exp\big\lbrace w_0 + \langle \boldsymbol{w}, \boldsymbol{z}^{(d:1)}(\boldsymbol{x})\rangle\big\rbrace
 ```
 
-- **Zero initialisation:** $w_0 = 0,\ \boldsymbol{w} = \boldsymbol{0}$ ⇒ training starts *exactly* at the GLM [1, 2]
+where $\lambda^{\mathrm{CANN}}(\boldsymbol{x})$ = expected claims per year of cover for covariates $\boldsymbol{x}$; $\lambda^{\mathrm{GLM}}$ = the fitted GLM of lesson 01, kept fixed; $\boldsymbol{z}^{(d:1)}(\boldsymbol{x})$ = last hidden layer of the lesson 02 network; $w_0, \boldsymbol{w}$ = output bias and weights; $\exp\lbrace\cdot\rbrace$ = the network's multiplicative correction to the GLM
+
+- **Zero initialisation:** $w_0 = 0,\ \boldsymbol{w} = \boldsymbol{0}$ ⇒ training starts *exactly* at the GLM [[1](https://doi.org/10.1017/asb.2018.42), [2](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3320525)]
 - The network term is a **multiplicative correction**: it shows where the GLM is wrong
 - If training barely moves it, the GLM was adequate
-
 
 ---
 
@@ -41,7 +48,11 @@ _Click a panel to open it; work through them in order._
 <details>
 <summary><b>① Learn the residual on the log scale</b></summary>
 
+**CANN on the log scale**: fixed GLM plus a learned correction
+
 $\displaystyle \log\lambda^{\mathrm{CANN}}(\boldsymbol{x}) = \underbrace{\log\lambda^{\mathrm{GLM}}(\boldsymbol{x})}_ {\text{fixed}} + \underbrace{w_0 + \langle\boldsymbol{w}, \boldsymbol{z}^{(d)}(\boldsymbol{x})\rangle}_ {\text{learned correction}}$
+
+where $\lambda^{\mathrm{GLM}}$ = frequency of the fitted GLM (lesson 01); $\boldsymbol{z}^{(d)}(\boldsymbol{x})$ = last hidden layer of the network; $w_0, \boldsymbol{w}$ = output bias and weights
 
 The GLM is fitted first and then **frozen**: its expected counts, exposure included, enter the network as the offset. Only the correction term is trained.
 
@@ -50,7 +61,7 @@ The GLM is fitted first and then **frozen**: its expected counts, exposure inclu
 <details>
 <summary><b>② Zero initialisation: start exactly at the GLM</b></summary>
 
-With $w_0 = 0$ and $\boldsymbol{w} = \boldsymbol{0}$ the correction is $\exp(0) = 1$, so before any training
+With $w_0 = 0$ and $\boldsymbol{w} = \boldsymbol{0}$ the correction is $\exp(0) = 1$, so before any training (**CANN at initialisation**)
 
 $\displaystyle \lambda^{\mathrm{CANN}}(\boldsymbol{x}) = \lambda^{\mathrm{GLM}}(\boldsymbol{x}) .$
 
@@ -137,8 +148,8 @@ The CANN keeps the GLM's age bands as its starting point and corrects within and
 ## In production
 
 - **Governance:** the GLM stays filed and explainable; the CANN is a documented uplift
-- **Calibration:** here the CANN's predictions sum to <!--r:cann.balance_learn-->0.9833<!--/r--> × observed claims on the learning set; restore the balance property before pricing [3]
-- **Extensions:** telematics CANNs put new data in the network term only [4]
+- **Calibration:** here the CANN's predictions sum to <!--r:cann.balance_learn-->0.9833<!--/r--> × observed claims on the learning set; restore the balance property before pricing [[3](https://doi.org/10.1080/24754269.2021.1877960)]
+- **Extensions:** telematics CANNs put new data in the network term only [[4](https://doi.org/10.1017/asb.2024.4)]
 - **Monitoring:** track the size of the correction $\exp\lbrace\cdot\rbrace$ by segment over time
 
 ---

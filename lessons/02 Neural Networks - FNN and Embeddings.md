@@ -9,6 +9,8 @@ style: |
   summary { cursor: pointer; font-size: 1.15em; }
   details[open] { background: rgba(140,149,159,.08); }
   section:has(details[open]) details:not([open]) { display: none; }
+  section.theory { font-size: 23px; }
+  section.theory p { margin: .45em 0; }
 ---
 
 <!-- _class: lead -->
@@ -19,17 +21,22 @@ style: |
 
 ---
 
+<!-- _class: theory -->
+
 ## Theory
+
+**Model: feed-forward neural network (FNN) for claim frequency** [[5](https://doi.org/10.1017/S1748499520000238)]
 
 ```math
 \lambda^{\mathrm{FNN}}(\boldsymbol{x}) = \exp\big\lbrace w_0 + \langle \boldsymbol{w}, \boldsymbol{z}^{(d:1)}(\boldsymbol{x})\rangle\big\rbrace,
 \qquad \boldsymbol{z}^{(m)} = \tanh\big(W^{(m)}\boldsymbol{z}^{(m-1)} + \boldsymbol{b}^{(m)}\big)
 ```
 
-- **Entity embeddings** [1]: `VehBrand` and `Region` map to learned vectors in $\mathbb{R}^2$
-- **Start at the homogeneous model:** $\boldsymbol{w}=0$, $w_0=\log\bar\lambda$
-- **Early stopping** on a 10% validation split; keep the best epoch [2]
+where $\lambda^{\mathrm{FNN}}(\boldsymbol{x})$ = expected claims per year of cover (expected count = exposure × $\lambda$); $\boldsymbol{x}$ = the policy's covariates, with $\boldsymbol{z}^{(0)} = \boldsymbol{x}$; $\boldsymbol{z}^{(m)}$ = output of hidden layer $m = 1,\dots,d$ ($d = 3$ layers of 20, 15, 10 units); $\boldsymbol{z}^{(d:1)} = \boldsymbol{z}^{(d)}\circ\cdots\circ\boldsymbol{z}^{(1)}$, the last layer's output; $W^{(m)}, \boldsymbol{b}^{(m)}$ = weights and biases of layer $m$; $w_0, \boldsymbol{w}$ = output bias and weights
 
+- **Entity embeddings** [[1](https://arxiv.org/abs/1604.06737)]: `VehBrand` and `Region` map to learned vectors in $\mathbb{R}^2$
+- **Start at the homogeneous model:** $\boldsymbol{w}=0$, $w_0=\log\bar\lambda$, with $\bar\lambda = \sum_i N_i / \sum_i v_i$ the portfolio frequency
+- **Early stopping** on a 10% validation split; keep the best epoch [[2](https://doi.org/10.1007/s13385-019-00215-z)]
 
 ---
 
@@ -40,7 +47,11 @@ _Click a panel to open it; work through them in order._
 <details>
 <summary><b>① A network is a stack of learned features</b></summary>
 
+**FNN with exposure**: hidden layers, then a Poisson GLM on their output
+
 $\displaystyle \boldsymbol{z}^{(m)} = \tanh\big(W^{(m)}\boldsymbol{z}^{(m-1)} + \boldsymbol{b}^{(m)}\big),\quad m = 1,\dots,d, \qquad \mu(\boldsymbol{x}) = v\exp\big(w_0 + \langle\boldsymbol{w}, \boldsymbol{z}^{(d)}\rangle\big)$
+
+where $\boldsymbol{z}^{(m)}$ = output vector of hidden layer $m$, with $\boldsymbol{z}^{(0)} = \boldsymbol{x}$ the prepared covariates; $W^{(m)}, \boldsymbol{b}^{(m)}$ = its weight matrix and bias vector; $\mu(\boldsymbol{x})$ = expected claim count; $v$ = exposure; $w_0, \boldsymbol{w}$ = output bias and weights
 
 - Here $d = 3$ hidden layers of 20, 15 and 10 units (<!--r:fnn.n_params-->792<!--/r--> parameters in total)
 - The last layer is a Poisson GLM on the learned features $\boldsymbol{z}^{(d)}$, so the network is a GLM whose features are learned rather than hand-made
@@ -63,9 +74,11 @@ $\displaystyle \boldsymbol{z}^{(m)} = \tanh\big(W^{(m)}\boldsymbol{z}^{(m-1)} + 
 <details>
 <summary><b>③ Entity embeddings for categories</b></summary>
 
-A categorical covariate with $K$ levels is mapped to a learned vector:
+**Entity embedding**: a categorical covariate with $K$ levels is mapped to a learned vector [[1](https://arxiv.org/abs/1604.06737)]
 
 $\displaystyle e: \lbrace 1,\dots,K\rbrace \to \mathbb{R}^{b}, \qquad b = 2 .$
+
+where $e(k) \in \mathbb{R}^b$ = the learned vector of level $k$; $b$ = embedding dimension
 
 - One-hot encoding needs $K-1$ inputs per covariate; an embedding needs $b$
 - The vectors are trained together with the rest of the network, so levels with similar claim behaviour end up close together, which you can plot and interpret
@@ -76,7 +89,11 @@ $\displaystyle e: \lbrace 1,\dots,K\rbrace \to \mathbb{R}^{b}, \qquad b = 2 .$
 <details>
 <summary><b>④ Training: Poisson loss, NAdam, mini-batches</b></summary>
 
+**Training loss: Poisson negative log-likelihood**
+
 $\displaystyle L(\theta) = \sum_i \big(\mu_i(\theta) - N_i\log\mu_i(\theta)\big)$
+
+where $\theta$ = all network weights and embeddings; $\mu_i(\theta)$ = predicted claim count of policy $i$; $N_i$ = observed claims
 
 - This is the negative Poisson log-likelihood (`PoissonNLLLoss`), the same objective as the GLM
 - Optimiser NAdam; mini-batches of 5,000 policies; up to 200 epochs; fixed seed
@@ -97,9 +114,13 @@ $\displaystyle L(\theta) = \sum_i \big(\mu_i(\theta) - N_i\log\mu_i(\theta)\big)
 <details>
 <summary><b>⑥ Why the balance property breaks, and the fix</b></summary>
 
-Gradient descent stopped early has not solved $\sum_i(N_i - \hat\mu_i) = 0$, so the total prediction drifts from the observed total (here <!--r:fnn.balance_learn-->1.0031<!--/r-->×). Because the output is $\exp(w_0 + \cdots)$, shifting the bias rescales every prediction by the same factor:
+Gradient descent stopped early has not solved $\sum_i(N_i - \hat\mu_i) = 0$, so the total prediction drifts from the observed total (here <!--r:fnn.balance_learn-->1.0031<!--/r-->×). Because the output is $\exp(w_0 + \cdots)$, shifting the bias rescales every prediction by the same factor.
+
+**Balance correction** of the output bias [[2](https://doi.org/10.1007/s13385-019-00215-z), [3](https://doi.org/10.1080/24754269.2021.1877960)]
 
 $\displaystyle w_0 \leftarrow w_0 + \log\frac{\sum_i N_i}{\sum_i \hat\mu_i} .$
+
+where $\hat\mu_i$ = predicted claim count of policy $i$; both sums run over the learning data
 
 `balance_correction: true` applies this after training. The relative ranking of policies is unchanged.
 
@@ -143,9 +164,9 @@ Loss: Poisson NLL; optimiser: NAdam; batch 5,000; 200 epochs.
 ## In production
 
 - **Balance property:** early stopping breaks $\sum_i\hat\mu_i=\sum_i N_i$. Correct the
-  output bias (`balance_correction: true`) or refit the last layer as a GLM [2, 3]
+  output bias (`balance_correction: true`) or refit the last layer as a GLM [[2](https://doi.org/10.1007/s13385-019-00215-z), [3](https://doi.org/10.1080/24754269.2021.1877960)]
 - **Seed risk:** networks fitted with different seeds price individual policies differently;
-  average several fits (the *nagging predictor* [4]) before pricing
+  average several fits (the *nagging predictor* [[4](https://doi.org/10.3390/risks8030083)]) before pricing
 - **Explainability:** embeddings and marginal plots, or move to LocalGLMnet (lesson 04)
 
 ---
