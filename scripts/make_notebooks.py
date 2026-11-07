@@ -68,8 +68,10 @@ LAUNCHERS = {
         "https://kaggle.com/static/images/open-in-kaggle.svg",
         "https://kaggle.com/kernels/welcome?src=https://{path_gh}/{name}",
     ),
+    # studiolab.sagemaker.aws/studiolab.svg 403s GitHub's image proxy, so it shows broken on
+    # GitHub: a shields.io badge renders everywhere.
     "SageMaker Studio Lab": (
-        "https://studiolab.sagemaker.aws/studiolab.svg",
+        "https://img.shields.io/badge/Open%20in-SageMaker%20Studio%20Lab-FF9900",
         "https://studiolab.sagemaker.aws/import/{path}/{name}",
     ),
 }
