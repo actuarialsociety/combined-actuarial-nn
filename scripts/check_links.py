@@ -45,7 +45,6 @@ BOT_BLOCKERS = (
     "openai.com",
     "kaggle.com",
     "papers.ssrn.com",
-    "studiolab.sagemaker.aws",  # 403 to GitHub Actions runners, 200 in a browser
 )
 DOI_RE = re.compile(r"^https?://(?:dx\.)?doi\.org/(10\.\d{4,9}/\S+)$", re.IGNORECASE)
 UA = "Mozilla/5.0 (deep-actuarial-science link checker)"
