@@ -1,12 +1,13 @@
 ---
 name: build-lesson
-description: Take a deep learning model or paper in actuarial science from theory to a benchmarked lesson in this deep-actuarial-science repo. Finds the paper and reference results with Exa, implements the model in the Kedro pipeline, reconciles it to a benchmark, exports figures, and writes a Marp slide deck plus a Colab notebook. Use when asked to add, create or draft a lesson, model or course module.
+description: Take a deep learning model in actuarial science from theory to a lesson in this deep-actuarial-science repo when there is no specific paper result to reproduce. Implements the model in the Kedro pipeline, exports figures, and writes a Marp slide deck plus a Colab notebook. To reproduce a paper's published results (the usual case), use build-research-benchmark-wiki instead.
 argument-hint: <model or paper> [domain: frequency|mortality|reserving]
 ---
 
 # Build a lesson
 
 Goal: new theory → workable, reconciled analysis, fast. Read `AGENTS.md` first.
+Reproducing a paper's table? Use [build-research-benchmark-wiki](../build-research-benchmark-wiki/SKILL.md): it holds the full research, benchmark and wiki workflow.
 
 ## 1. Scope (no tools)
 

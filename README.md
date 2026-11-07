@@ -120,6 +120,7 @@ Browse the lessons as a [wiki](https://github.com/actuarialsociety/deep-actuaria
 This repo is set up for [Claude Code](https://code.claude.com/docs/en/overview) to add models and keep lessons current, using [Exa](https://exa.ai/docs/get-started/agent-skills/overview) agent skills for research. Rules are in [AGENTS.md](./AGENTS.md).
 1. `cp .env.example .env` and add an [Exa API key](https://dashboard.exa.ai/api-keys), or `export EXA_API_KEY=...`
 2. In Claude Code:
-   - `/build-lesson <model or paper>`: research it, implement it in the pipeline, reconcile it to a benchmark, write the deck and notebook
+   - `/build-research-benchmark-wiki <paper, model or DOI>`: find the paper's results table and reference implementation with Exa, implement it as the paper does, reconcile to the published scores (PASS/FAIL), and publish the lesson, notebook and wiki page
+   - `/build-lesson <model>`: a teaching lesson without a paper to reproduce
    - `/refresh-lessons [file|all]`: fix links, re-run benchmarks, swap in newer research
 3. CI runs the tests, a smoke run of every pipeline and every notebook on each PR; [`lesson-refresh.yml`](./.github/workflows/lesson-refresh.yml) opens a refresh PR monthly
