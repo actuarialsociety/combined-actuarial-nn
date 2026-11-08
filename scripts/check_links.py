@@ -92,7 +92,7 @@ def fetch(url: str, method: str = "HEAD", attempts: int = 3) -> tuple[int, str]:
     return status, body
 
 
-GITHUB_REPO_RE = re.compile(r"https://github\.com/([\w.-]+/[\w.-]+)/?(?:[?#].*)?$")
+GITHUB_REPO_RE = re.compile(r"https://github\.com/([\w.-]+/[\w.-]+?)(?:\.git)?(/.*|[?#].*)?$")
 
 
 def github_repo_status(repo: str) -> tuple[int, str]:
@@ -157,7 +157,8 @@ def check(source: Path, link: str) -> dict:
         # github.com's web pages 504 during incidents while its API is up: ask the API.
         status, err = github_repo_status(repo.group(1))
         if status == 200:
-            result.update(ok=True, detail=f"github.com {err}; repo exists (API)")
+            deep = "; page not checked" if (repo.group(2) or "").strip("/") else ""
+            result.update(ok=True, detail=f"github.com {err}; repo exists (API){deep}")
             return result
     if status == 403 and any(b in host for b in BOT_BLOCKERS):
         result.update(ok=True, detail="403 (site blocks bots; check manually)")
