@@ -88,13 +88,17 @@ def package_chain_ladder(tri: pd.DataFrame) -> pd.Series:
     )
 
 
-def reconcile(pred: pd.DataFrame, tri: pd.DataFrame, benchmark: dict | None, params: dict):
+def reconcile(
+    metrics: dict, pred: pd.DataFrame, tri: pd.DataFrame, benchmark: dict | None, params: dict
+):
+    """The model's metrics (e.g. Kuo's MAPE / RMSPE) against its benchmarks, plus, for the
+    chain-ladder, the cross-check against the `chainladder` package."""
     if params["kind"] != "chain_ladder":
-        return _reconcile({}, benchmark, True, params["kind"])
+        return _reconcile(metrics, benchmark, True, params["kind"])
     ours = rm.reserves(pred).set_index(rm.KEY).predicted_reserve
     pkg = package_chain_ladder(tri).reindex(ours.index)
     diff = float(np.max(np.abs(ours / pkg - 1)))
-    return _reconcile({"max_rel_diff_vs_package": diff}, benchmark, True, params["kind"])
+    return _reconcile({**metrics, "max_rel_diff_vs_package": diff}, benchmark, True, params["kind"])
 
 
 def compare(*args):
@@ -132,7 +136,13 @@ def model_pipeline(name: str) -> Pipeline:
             ),
             node(
                 reconcile,
-                ["res_predictions", "res_triangles", "params:benchmark", "params:model"],
+                [
+                    "res_metrics",
+                    "res_predictions",
+                    "res_triangles",
+                    "params:benchmark",
+                    "params:model",
+                ],
                 "res_reconciliation",
                 name="reconcile",
             ),

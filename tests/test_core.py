@@ -320,3 +320,21 @@ def test_wandb_hook_logs_metrics_figures_and_tables(monkeypatch):
     assert calls["log"][1]["neural_odp.res_figures/fit"][0] == "image"
     assert calls["log"][2] == {"neural_odp.res_reconciliation": ("table", 2)}
     assert calls["finish"] == 0 and hook.run is None
+
+
+def test_reserving_reconciliation_checks_the_models_own_metrics():
+    """Chain-ladder is reconciled on its MAPE / RMSPE (Kuo 2019, Table 1), not only on the
+    package cross-check: before the fix both metrics always came out MISSING."""
+    from deep_actuarial_science.pipelines.reserving import reconcile
+
+    tri = _triangles()
+    pred, _ = rm.chain_ladder(tri)
+    bench = [
+        {"source": "paper", "tolerance": 0.01, "expected": {"mape_ultimate": 0.0}},
+        {"source": "package", "tolerance": 1e-6, "expected": {"max_rel_diff_vs_package": 0.0}},
+    ]
+    rec = reconcile({"mape_ultimate": 0.005}, pred, tri, bench, {"kind": "chain_ladder"})
+    assert dict(zip(rec.metric, rec.status)) == {
+        "mape_ultimate": "PASS",
+        "max_rel_diff_vs_package": "PASS",
+    }
