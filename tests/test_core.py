@@ -169,6 +169,24 @@ def test_wiki_has_colab_link_for_every_lesson(tmp_path):
                 assert not re.search(r"\[\[[^\]]*\|[^\]]*\]\]", line), f"wiki link in {f.name}"
 
 
+LOCAL_NOTEBOOKS = {"run_all_mps.ipynb"}  # Apple silicon only: no cloud launchers
+
+
+def test_run_all_mps_notebook_trains_on_mps_and_runs_every_pipeline():
+    import json
+    from pathlib import Path
+
+    nb = json.loads(
+        (Path(__file__).resolve().parent.parent / "notebooks" / "run_all_mps.ipynb").read_text()
+    )
+    assert "colab" not in nb["metadata"] and "kaggle" not in nb["metadata"]
+    code = "".join("".join(c["source"]) for c in nb["cells"] if c["cell_type"] == "code")
+    assert 'os.environ["DAS_DEVICE"] = "mps"' in code
+    assert "torch.backends.mps.is_available()" in code  # falls back off a Mac (CI)
+    assert '("frequency", "mortality", "reserving")' in code
+    assert "reconciliation.csv" in code
+
+
 def test_colab_notebooks_force_a_gpu_runtime():
     """Every notebook requests a T4 GPU in its Colab metadata and stops on a CPU runtime."""
     import json
@@ -178,6 +196,8 @@ def test_colab_notebooks_force_a_gpu_runtime():
     assert notebooks
     for nb_path in notebooks:
         nb = json.loads(nb_path.read_text())
+        if nb_path.name in LOCAL_NOTEBOOKS:
+            continue
         assert nb["metadata"]["accelerator"] == "GPU", nb_path.name
         assert nb["metadata"]["colab"]["gpuType"] == "T4", nb_path.name
         setup = "".join(next(c for c in nb["cells"] if c["cell_type"] == "code")["source"])
@@ -210,6 +230,8 @@ def test_notebooks_launch_anywhere():
 
     root = Path(__file__).resolve().parent.parent
     for nb_path in sorted((root / "notebooks").glob("*.ipynb")):
+        if nb_path.name in LOCAL_NOTEBOOKS:
+            continue
         nb = json.loads(nb_path.read_text())
         assert nb["metadata"]["kaggle"]["isGpuEnabled"], nb_path.name
         assert nb["metadata"]["kaggle"]["isInternetEnabled"], nb_path.name
@@ -249,3 +271,52 @@ def test_mlflow_ui_on_kaggle_explains_instead_of_linking(monkeypatch):
     monkeypatch.setattr(notebook, "_port_open", lambda port: pytest.fail("must not start MLflow"))
     notebook.mlflow_ui()
     assert "search_runs" in shown[0]
+
+
+def test_wandb_hook_logs_metrics_figures_and_tables(monkeypatch):
+    """With WANDB_PROJECT set, a pipeline run is one W&B run with config, metrics, figures and
+    benchmark tables; without it the hook does nothing."""
+    import sys
+    import types
+
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    from deep_actuarial_science.wandb_hook import WandbHook
+
+    calls = {"log": [], "summary": {}}
+    run = types.SimpleNamespace(
+        log=calls["log"].append,
+        summary=types.SimpleNamespace(update=calls["summary"].update),
+        finish=lambda exit_code=0: calls.setdefault("finish", exit_code),
+    )
+    fake = types.ModuleType("wandb")
+    fake.init = lambda **kw: calls.setdefault("init", kw) and run
+    fake.Image = lambda fig: ("image", fig)
+    fake.Table = lambda dataframe: ("table", len(dataframe))
+    monkeypatch.setitem(sys.modules, "wandb", fake)
+    catalog = types.SimpleNamespace(
+        load=lambda name: {"reserving": {"data": {"lines": ["ppauto"]}}}
+    )
+    run_params = {"pipeline_name": "reserving", "env": "smoke"}
+
+    monkeypatch.delenv("WANDB_PROJECT", raising=False)
+    hook = WandbHook()
+    hook.before_pipeline_run(run_params, None, catalog)
+    assert hook.run is None and "init" not in calls
+
+    monkeypatch.setenv("WANDB_PROJECT", "test")
+    monkeypatch.setenv("DAS_DEVICE", "cpu")
+    hook.before_pipeline_run(run_params, None, catalog)
+    assert calls["init"]["config"]["data.lines"] == ["ppauto"]
+    assert "device:cpu" in calls["init"]["tags"] and calls["init"]["job_type"] == "reserving"
+    hook.after_dataset_saved("neural_odp.res_metrics", {"mape_ultimate": 0.04, "ok": True}, None)
+    hook.after_dataset_saved("neural_odp.res_figures", {"fit": plt.figure()}, None)
+    hook.after_dataset_saved("neural_odp.res_reconciliation", pd.DataFrame({"a": [1, 2]}), None)
+    hook.after_pipeline_run()
+    assert calls["summary"] == {"neural_odp/mape_ultimate": 0.04}
+    assert calls["log"][1]["neural_odp.res_figures/fit"][0] == "image"
+    assert calls["log"][2] == {"neural_odp.res_reconciliation": ("table", 2)}
+    assert calls["finish"] == 0 and hook.run is None

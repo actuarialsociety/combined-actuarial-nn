@@ -125,7 +125,9 @@ def device_summary() -> None:
     dev = device()
     gpu = torch.cuda.get_device_name(0) if dev.type == "cuda" else None
     print(f"Platform: {platform()} · training device: {dev}" + (f" ({gpu})" if gpu else ""))
-    if dev.type == "cpu":
+    if dev.type == "cpu" and torch.backends.mps.is_available():
+        print("Apple GPU available: set DAS_DEVICE=mps to train on it (opt-in, see README).")
+    elif dev.type == "cpu":
         print("No GPU: the full frequency networks are slow on a CPU; FAST/smoke runs are fine.")
 
 

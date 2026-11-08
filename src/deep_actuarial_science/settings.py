@@ -18,5 +18,7 @@ CONFIG_LOADER_ARGS = {
 }
 
 from deep_actuarial_science.hooks import MlflowFigureHook
+from deep_actuarial_science.wandb_hook import WandbHook
 
-HOOKS = (MlflowFigureHook(),)
+# W&B logging is a no-op unless WANDB_PROJECT is set (see wandb_hook.py).
+HOOKS = (MlflowFigureHook(), WandbHook())
