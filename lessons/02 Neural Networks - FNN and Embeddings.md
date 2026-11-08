@@ -65,7 +65,7 @@ where $e(k)$ = the learned vector of level $k$. One-hot needs $K - 1$ inputs; an
 <details>
 <summary><b>③ Training protocol of the paper</b></summary>
 
-Brauer [[2](https://doi.org/10.1007/s13385-024-00388-2)]: Poisson deviance loss; nadam; batch 7,000; up to 500 epochs; early stopping with patience 15 on a 10% validation split; output weights 0 and bias $\log\bar\lambda$, so every fit starts at the homogeneous model ($\bar\lambda = \sum_i N_i / \sum_i v_i$). Inputs capped and standardised as in Wüthrich & Merz [[3](https://doi.org/10.1007/978-3-031-12409-9)], Sect. 7.3.2.
+Brauer [[2](https://doi.org/10.1007/s13385-024-00388-2)]: Poisson deviance loss; nadam ($\epsilon = 10^{-7}$, Keras); Keras's Glorot-uniform weights and uniform ±0.05 embeddings; batch 7,000; up to 500 epochs; early stopping with patience 15 on a 10% validation split; output weights 0 and bias $\log\bar\lambda$, so every fit starts at the homogeneous model ($\bar\lambda = \sum_i N_i / \sum_i v_i$). Inputs capped and standardised as in Wüthrich & Merz [[3](https://doi.org/10.1007/978-3-031-12409-9)], Sect. 7.3.2.
 
 </details>
 

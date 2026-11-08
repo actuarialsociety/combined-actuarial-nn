@@ -41,6 +41,7 @@ from statsmodels.formula.api import glm as smf_glm
 from torch import nn
 
 from deep_actuarial_science.models.torch_utils import (
+    keras_init,
     n_params,
     seed_everything,
     tensor,
@@ -328,6 +329,7 @@ class EmbeddingFNN(nn.Module):
         sizes = [n_cont + sum(emb_dims), *hidden]
         self.hidden = nn.ModuleList(nn.Linear(a, b) for a, b in zip(sizes[:-1], sizes[1:]))
         self.out = nn.Linear(hidden[-1], 1)
+        keras_init(self)  # Keras defaults, as in Brauer (2024); then the zero-output start
         nn.init.zeros_(self.out.weight)
         nn.init.constant_(self.out.bias, bias0)
 
@@ -424,6 +426,7 @@ class LocalGLMnetNet(nn.Module):
         sizes = [n_features, *hidden]
         self.hidden = nn.ModuleList(nn.Linear(a, b) for a, b in zip(sizes[:-1], sizes[1:]))
         self.attention = nn.Linear(hidden[-1], n_features)
+        keras_init(self)  # Keras defaults, as in Richman & Wüthrich (2023); then the GLM start
         nn.init.zeros_(self.attention.weight)
         self.attention.bias.data = torch.as_tensor(np.asarray(glm_coefs, dtype=np.float32))
         self.intercept = nn.Parameter(torch.tensor(float(intercept)))

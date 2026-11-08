@@ -65,7 +65,7 @@ Richman & Wüthrich [[1](https://doi.org/10.1080/03461238.2022.2081816)], Sect. 
 <details>
 <summary><b>③ Start at a GLM on the same design</b></summary>
 
-A Poisson GLM is fitted on the 42 features; attention weights $W = 0$, bias $\boldsymbol{b}$ = its coefficients, $\beta_0$ = its intercept. So $\boldsymbol\beta(\boldsymbol{x}) \equiv \boldsymbol{b}$ before training (`test_localglmnet_starts_exactly_at_its_glm`). Training as in [[1](https://doi.org/10.1080/03461238.2022.2081816)]: nadam, batch 5,000, 100 epochs, the weights of the lowest validation loss; 15 seeds.
+A Poisson GLM is fitted on the 42 features; attention weights $W = 0$, bias $\boldsymbol{b}$ = its coefficients, $\beta_0$ = its intercept. So $\boldsymbol\beta(\boldsymbol{x}) \equiv \boldsymbol{b}$ before training (`test_localglmnet_starts_exactly_at_its_glm`); the hidden layers start from Keras's Glorot-uniform weights. Training as in [[1](https://doi.org/10.1080/03461238.2022.2081816)]: nadam, batch 5,000, 100 epochs, the weights of the lowest validation loss; 15 seeds.
 
 </details>
 

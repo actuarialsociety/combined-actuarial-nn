@@ -34,6 +34,31 @@ def device() -> torch.device:
     return torch.device(name)
 
 
+# Keras optimiser epsilon (PyTorch defaults to 1e-8). The benchmark papers train in Keras.
+KERAS_EPS = 1e-7
+
+
+def keras_init(module: nn.Module) -> nn.Module:
+    """Re-initialise every layer with Keras's defaults, as in the benchmark papers (Keras/R
+    keras): Glorot-uniform kernels and zero biases for dense and convolutional layers (PyTorch
+    uses Kaiming-uniform), uniform(-0.05, 0.05) embeddings (PyTorch: standard normal).
+    Layers with a `keras_init` method (the Keras-style LSTM) set their own extras. Call it
+    before any model-specific initialisation, such as zero output weights."""
+    for m in module.modules():
+        if isinstance(m, (nn.Linear, nn.Conv1d)):
+            nn.init.xavier_uniform_(m.weight)
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+        elif isinstance(m, nn.Embedding):
+            nn.init.uniform_(m.weight, -0.05, 0.05)
+    # After the generic pass: modules() visits a layer before its sub-layers, so the generic
+    # pass would otherwise overwrite these (e.g. the LSTM's forget-gate bias).
+    for m in module.modules():
+        if m is not module and hasattr(m, "keras_init"):
+            m.keras_init()
+    return module
+
+
 def tensor(x) -> torch.Tensor:
     return torch.as_tensor(np.asarray(x, dtype=np.float32))
 
@@ -61,7 +86,7 @@ def train_poisson(
     model.to(dev)
     X, y, off, w = (t.to(dev) for t in train)
     Xv, yv, offv, wv = (t.to(dev) for t in val)
-    opt = torch.optim.NAdam(model.parameters(), **({"lr": lr} if lr else {}))
+    opt = torch.optim.NAdam(model.parameters(), lr=lr or 0.001, eps=KERAS_EPS)
     loss_fn = nn.PoissonNLLLoss(log_input=False, reduction="sum")
     best, best_state, since = float("inf"), copy.deepcopy(model.state_dict()), 0
     history = {"loss": [], "val_loss": []}

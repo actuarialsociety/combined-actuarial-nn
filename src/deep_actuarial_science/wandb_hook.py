@@ -51,7 +51,8 @@ class WandbHook:
             return
         from deep_actuarial_science.models.torch_utils import device
 
-        name = run_params.get("pipeline_name") or "__default__"
+        names = run_params.get("pipeline_names") or [run_params.get("pipeline_name")]
+        name = "+".join(n for n in names if n) or "__default__"
         env = run_params.get("env") or "local"
         try:
             params = catalog.load("parameters")

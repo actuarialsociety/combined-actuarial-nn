@@ -39,26 +39,28 @@ benchmarks:
 
   mortality:
     # Swiss males, ages 0-89, learn 1900-1999, forecast 2000-2021; RMSE of log m(x,t).
-    # Networks: a single published run each ("these results are not very robust"), so a band.
+    # Networks: the book publishes a single run each (seed 100; "these results are not very
+    # robust", p. 57). PyTorch cannot redraw Keras's seed, so each network fits 15 seeds and the
+    # published run must lie within 2 sd of our per-seed RMSEs (tolerance "2sd").
     lee_carter:
       source: [*ch8, "pp. 31, 50: LC in-sample 0.1555, out-of-sample 0.3416"]
       tolerance: 0.0005
       expected: {rmse_in: 0.1555, rmse_out: 0.3416}
     cnn:
       source: [*ch8, "p. 50: CNN 0.2108, 0.3531"]
-      tolerance: 0.05
+      tolerance: "2sd"
       expected: {rmse_in: 0.2108, rmse_out: 0.3531}
     cnn_tanh:
       source: [*ch8, "p. 56: non-linear CNN 0.1866, 0.3189"]
-      tolerance: 0.05
+      tolerance: "2sd"
       expected: {rmse_in: 0.1866, rmse_out: 0.3189}
     lstm:
       source: [*ch8, "p. 50: LSTM 0.1746, 0.3559"]
-      tolerance: 0.05
+      tolerance: "2sd"
       expected: {rmse_in: 0.1746, rmse_out: 0.3559}
     transformer:
       source: [*ch8, "p. 50: Transformer 0.2277, 0.3624"]
-      tolerance: 0.05
+      tolerance: "2sd"
       expected: {rmse_in: 0.2277, rmse_out: 0.3624}
 
   reserving:

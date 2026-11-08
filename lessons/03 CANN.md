@@ -66,7 +66,7 @@ With $w_0 = 0$, $\boldsymbol{w} = \boldsymbol{0}$ the correction is $\exp(0) = 1
 <details>
 <summary><b>③ Same network and protocol as lesson 02</b></summary>
 
-As in Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)]: the FNN with embeddings, layers (20, 15, 10), nadam, batch 7,000, patience 15, 15 seeds each with its own 10% validation split. Only the offset (GLM3 instead of exposure) and the initial bias (0) differ.
+As in Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)]: the FNN with embeddings, layers (20, 15, 10), nadam, Keras's initialisers, batch 7,000, patience 15, 15 seeds each with its own 10% validation split. Only the offset (GLM3 instead of exposure) and the initial bias (0) differ.
 
 </details>
 
