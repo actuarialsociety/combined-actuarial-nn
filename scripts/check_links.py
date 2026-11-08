@@ -23,6 +23,7 @@ import argparse
 import json
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -68,7 +69,7 @@ def extract_links(path: Path) -> list[str]:
     return links
 
 
-def fetch(url: str, method: str = "HEAD") -> tuple[int, str]:
+def _fetch_once(url: str, method: str) -> tuple[int, str]:
     req = urllib.request.Request(url, method=method, headers={"User-Agent": UA})
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
@@ -77,6 +78,17 @@ def fetch(url: str, method: str = "HEAD") -> tuple[int, str]:
         return e.code, ""
     except Exception as e:  # noqa: BLE001 - network errors of any kind
         return 0, str(e)
+
+
+def fetch(url: str, method: str = "HEAD", attempts: int = 3) -> tuple[int, str]:
+    """Fetch, retrying transient failures (5xx, dropped connections) with backoff: a server's
+    bad minute (GitHub 504s, CRAN resets) is not a broken link."""
+    for i in range(attempts):
+        status, body = _fetch_once(url, method)
+        if not (status == 0 or status >= 500) or i == attempts - 1:
+            return status, body
+        time.sleep(2 * 3**i)  # 2 s, 6 s
+    return status, body
 
 
 def check(source: Path, link: str) -> dict:
