@@ -62,7 +62,7 @@ for pass in ${passes[*]}; do
   case $pass in
     reference)
       for p in frequency mortality reserving; do run "$REF_ENV" "$p"; done
-      cp -R data/08_reporting "$OUT/reference"
+      cp -R data/08_reporting "$OUT/reference" && find "$OUT/reference" -name .gitkeep -delete
       "$PY" - "$OUT/reference" <<'EOF'
 import glob, sys
 import pandas as pd
@@ -74,7 +74,7 @@ EOF
       ;;
     scale_up)
       for p in mortality reserving; do run "$UP_ENV" "$p"; done
-      cp -R data/08_reporting "$OUT/scale_up"
+      cp -R data/08_reporting "$OUT/scale_up" && find "$OUT/scale_up" -name .gitkeep -delete
       ;;
     *) echo "unknown pass: $pass (reference or scale_up)"; exit 1 ;;
   esac
