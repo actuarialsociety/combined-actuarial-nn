@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -91,6 +92,24 @@ def fetch(url: str, method: str = "HEAD", attempts: int = 3) -> tuple[int, str]:
     return status, body
 
 
+GITHUB_REPO_RE = re.compile(r"https://github\.com/([\w.-]+/[\w.-]+)/?(?:[?#].*)?$")
+
+
+def github_repo_status(repo: str) -> tuple[int, str]:
+    """Status of a repo from api.github.com (authenticated with GITHUB_TOKEN when set)."""
+    headers = {"User-Agent": UA, "Accept": "application/vnd.github+json"}
+    if os.environ.get("GITHUB_TOKEN"):
+        headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
+    req = urllib.request.Request(f"https://api.github.com/repos/{repo}", headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return r.status, "web 5xx"
+    except urllib.error.HTTPError as e:
+        return e.code, "(API)"
+    except Exception as e:  # noqa: BLE001 - network errors of any kind
+        return 0, str(e)
+
+
 def check(source: Path, link: str) -> dict:
     result = {"file": source.name, "link": link, "ok": False, "detail": ""}
     yt = YT_ID_RE.search(link)
@@ -133,6 +152,13 @@ def check(source: Path, link: str) -> dict:
     if status in (403, 404, 405, 429) or status == 0:
         status, err = fetch(link, "GET")
     host = urllib.parse.urlparse(link).netloc
+    repo = GITHUB_REPO_RE.match(link)
+    if repo and status >= 500:
+        # github.com's web pages 504 during incidents while its API is up: ask the API.
+        status, err = github_repo_status(repo.group(1))
+        if status == 200:
+            result.update(ok=True, detail=f"github.com {err}; repo exists (API)")
+            return result
     if status == 403 and any(b in host for b in BOT_BLOCKERS):
         result.update(ok=True, detail="403 (site blocks bots; check manually)")
     elif status == 429:

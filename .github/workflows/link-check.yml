@@ -23,3 +23,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: python3 scripts/link_citations.py --check
       - run: python3 scripts/check_links.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # repo links fall back to the API on a 5xx
