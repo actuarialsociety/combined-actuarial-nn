@@ -49,7 +49,7 @@ _Click a panel to open it; work through them in order._
 <details>
 <summary><b>① A GLM on learned features</b></summary>
 
-The output layer is a Poisson GLM on $\boldsymbol{z}^{(d)}$: the network learns its own features, non-linearities and interactions instead of the GLM's bands. <!--r:fnn.n_params-->pending<!--/r--> parameters.
+The output layer is a Poisson GLM on $\boldsymbol{z}^{(d)}$: the network learns its own features, non-linearities and interactions instead of the GLM's bands. <!--r:fnn.n_params-->792<!--/r--> parameters.
 
 </details>
 
@@ -87,7 +87,7 @@ where $D_s$ = deviance per policy of fit $s$. PASS if $\bar D$ is within twice t
 
 $\displaystyle w_0 \leftarrow w_0 + \log\frac{\sum_i N_i}{\sum_i \hat\mu_i}$
 
-where $\hat\mu_i$ = predicted claim count on the learning data. Early stopping leaves $\sum_i \hat\mu_i \ne \sum_i N_i$ (here <!--r:fnn.balance_learn-->pending<!--/r-->×); the shift rescales every prediction equally (`balance_correction: true`).
+where $\hat\mu_i$ = predicted claim count on the learning data. Early stopping leaves $\sum_i \hat\mu_i \ne \sum_i N_i$ (here <!--r:fnn.balance_learn-->1.0050<!--/r-->×); the shift rescales every prediction equally (`balance_correction: true`).
 
 </details>
 
@@ -111,9 +111,9 @@ Poisson deviance per policy, $\times 10^{-2}$; mean (sd) over 15 seeds.
 
 | Model | Published learn | Published test | This repo learn | This repo test | Status |
 | --- | --- | --- | --- | --- | --- |
-| GLM1 ([[3](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3) | 24.101 | 24.146 | <!--r:glm.deviance_learn-->pending<!--/r--> | <!--r:glm.deviance_test-->pending<!--/r--> | <!--r:glm.status-->pending<!--/r--> |
-| FNN | 23.768 (0.016) | 23.827 (0.015) | <!--r:fnn.deviance_learn-->pending<!--/r--> (<!--r:fnn.deviance_learn_sd-->pending<!--/r-->) | <!--r:fnn.deviance_test-->pending<!--/r--> (<!--r:fnn.deviance_test_sd-->pending<!--/r-->) | <!--r:fnn.status-->pending<!--/r--> |
-| FNN, average of 15 | n/a | n/a | <!--r:fnn.deviance_ensemble_learn-->pending<!--/r--> | <!--r:fnn.deviance_ensemble_test-->pending<!--/r--> | |
+| GLM1 ([[3](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3) | 24.101 | 24.146 | <!--r:glm.deviance_learn-->24.101<!--/r--> | <!--r:glm.deviance_test-->24.146<!--/r--> | <!--r:glm.status-->PASS<!--/r--> |
+| FNN | 23.768 (0.016) | 23.827 (0.015) | <!--r:fnn.deviance_learn-->23.774<!--/r--> (<!--r:fnn.deviance_learn_sd-->0.027<!--/r-->) | <!--r:fnn.deviance_test-->23.829<!--/r--> (<!--r:fnn.deviance_test_sd-->0.020<!--/r-->) | <!--r:fnn.status-->PASS<!--/r--> |
+| FNN, average of 15 | n/a | n/a | <!--r:fnn.deviance_ensemble_learn-->23.745<!--/r--> | <!--r:fnn.deviance_ensemble_test-->23.800<!--/r--> | |
 
 ---
 

@@ -110,8 +110,8 @@ Poisson deviance per policy, $\times 10^{-2}$. The paper reports one run; we rep
 
 | Model | Published learn | Published test | This repo learn | This repo test | Status |
 | --- | --- | --- | --- | --- | --- |
-| LocalGLMnet | 23.728 | 23.945 | <!--r:localglmnet.deviance_learn-->pending<!--/r--> (<!--r:localglmnet.deviance_learn_sd-->pending<!--/r-->) | <!--r:localglmnet.deviance_test-->pending<!--/r--> (<!--r:localglmnet.deviance_test_sd-->pending<!--/r-->) | <!--r:localglmnet.status-->pending<!--/r--> |
-| CANN (lesson 03) | 23.742 | 23.810 | <!--r:cann.deviance_learn-->pending<!--/r--> | <!--r:cann.deviance_test-->pending<!--/r--> | <!--r:cann.status-->pending<!--/r--> |
+| LocalGLMnet | 23.728 | 23.945 | <!--r:localglmnet.deviance_learn-->23.721<!--/r--> (<!--r:localglmnet.deviance_learn_sd-->0.039<!--/r-->) | <!--r:localglmnet.deviance_test-->23.933<!--/r--> (<!--r:localglmnet.deviance_test_sd-->0.025<!--/r-->) | <!--r:localglmnet.status-->PASS<!--/r--> |
+| CANN (lesson 03) | 23.742 | 23.810 | <!--r:cann.deviance_learn-->23.787<!--/r--> | <!--r:cann.deviance_test-->23.818<!--/r--> | <!--r:cann.status-->PASS<!--/r--> |
 
 ---
 

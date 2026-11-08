@@ -95,15 +95,15 @@ Per company, reserve error $= \hat R / R - 1$ with $\hat R$ the predicted and $R
 
 ## Results: reconciled to Kuo (2019) [[4](https://doi.org/10.3390/risks7030097)], Table 1
 
-Private passenger auto, Meyers' [[3](https://www.casact.org/sites/default/files/2021-03/7_Meyers_2015.PDF)] <!--r:chain_ladder.n_companies-->pending<!--/r--> companies, paid; errors of total ultimate loss.
+Private passenger auto, Meyers' [[3](https://www.casact.org/sites/default/files/2021-03/7_Meyers_2015.PDF)] <!--r:chain_ladder.n_companies-->50<!--/r--> companies, paid; errors of total ultimate loss.
 
 | Model | Paper, table | Published MAPE / RMSPE | This repo MAPE | This repo RMSPE | Status |
 | --- | --- | --- | --- | --- | --- |
-| Chain-ladder | [[4](https://doi.org/10.3390/risks7030097)], Table 1, Mack | 0.038 / 0.061 | <!--r:chain_ladder.mape_ultimate-->pending<!--/r--> | <!--r:chain_ladder.rmspe_ultimate-->pending<!--/r--> | <!--r:chain_ladder.status-->pending<!--/r--> |
-| Neural ODP | none published | n/a | <!--r:neural_odp.mape_ultimate-->pending<!--/r--> | <!--r:neural_odp.rmspe_ultimate-->pending<!--/r--> | comparable only |
+| Chain-ladder | [[4](https://doi.org/10.3390/risks7030097)], Table 1, Mack | 0.038 / 0.061 | <!--r:chain_ladder.mape_ultimate-->0.03815<!--/r--> | <!--r:chain_ladder.rmspe_ultimate-->0.06057<!--/r--> | <!--r:chain_ladder.status-->PASS<!--/r--> |
+| Neural ODP | none published | n/a | <!--r:neural_odp.mape_ultimate-->0.03857<!--/r--> | <!--r:neural_odp.rmspe_ultimate-->0.0609<!--/r--> | comparable only |
 | DeepTriangle | [[4](https://doi.org/10.3390/risks7030097)], Table 1 | 0.025 / 0.039 | not implemented | | |
 
-Also checked: the chain-ladder equals the `chainladder` package to <!--r:chain_ladder.package_diff-->pending<!--/r-->. DeepTriangle (a GRU on paid and incurred data) and Mack-Net [[6](https://doi.org/10.1016/j.eswa.2022.117146)] use the same companies but different models and data, so the neural ODP is compared, not reconciled.
+Also checked: the chain-ladder equals the `chainladder` package to <!--r:chain_ladder.package_diff-->2.0e-15<!--/r-->. DeepTriangle (a GRU on paid and incurred data) and Mack-Net [[6](https://doi.org/10.1016/j.eswa.2022.117146)] use the same companies but different models and data, so the neural ODP is compared, not reconciled.
 
 ---
 
@@ -111,10 +111,10 @@ Also checked: the chain-ladder equals the `chainladder` package to <!--r:chain_l
 
 | Model | Total reserve error | Median abs. company error | Companies within ±10% |
 | --- | --- | --- | --- |
-| Chain-ladder | <!--r:chain_ladder.total_reserve_error_pct-->pending<!--/r-->% | <!--r:chain_ladder.median_abs_error_pct-->pending<!--/r-->% | <!--r:chain_ladder.share_within_10pct-->pending<!--/r--> |
-| Neural ODP | <!--r:neural_odp.total_reserve_error_pct-->pending<!--/r-->% | <!--r:neural_odp.median_abs_error_pct-->pending<!--/r-->% | <!--r:neural_odp.share_within_10pct-->pending<!--/r--> |
+| Chain-ladder | <!--r:chain_ladder.total_reserve_error_pct-->+10.8<!--/r-->% | <!--r:chain_ladder.median_abs_error_pct-->20.3<!--/r-->% | <!--r:chain_ladder.share_within_10pct-->26%<!--/r--> |
+| Neural ODP | <!--r:neural_odp.total_reserve_error_pct-->+11.1<!--/r-->% | <!--r:neural_odp.median_abs_error_pct-->20.6<!--/r-->% | <!--r:neural_odp.share_within_10pct-->24%<!--/r--> |
 
-Neural ODP best epoch: <!--r:neural_odp.best_epoch-->pending<!--/r-->. With a per-company chain-ladder offset, little shared structure is left to learn.
+Neural ODP best epoch: <!--r:neural_odp.best_epoch-->0<!--/r-->. With a per-company chain-ladder offset, little shared structure is left to learn.
 
 ![w:440](figures/06-scatter.png) ![w:480](figures/06-errors.png)
 
