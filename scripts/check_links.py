@@ -117,7 +117,8 @@ def check(source: Path, link: str) -> dict:
         result.update(ok=target.exists(), detail="" if target.exists() else "missing local file")
         return result
     status, err = fetch(link)
-    if status in (403, 405, 429) or status == 0:
+    # Some servers mishandle HEAD (kaggle.com answers 404 to HEAD, 200 to GET): retry with GET.
+    if status in (403, 404, 405, 429) or status == 0:
         status, err = fetch(link, "GET")
     host = urllib.parse.urlparse(link).netloc
     if status == 403 and any(b in host for b in BOT_BLOCKERS):

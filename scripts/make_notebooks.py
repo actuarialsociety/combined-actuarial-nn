@@ -27,26 +27,75 @@ if "google.colab" in sys.modules and os.environ.get("DAS_ALLOW_CPU") != "1":
     print("GPU:", torch.cuda.get_device_name(0))
 """
 
-SETUP = f"""# Setup: works in Colab (GPU runtime), the dev container and a local clone.
-import os, sys
+SETUP = f"""# Setup: runs anywhere Jupyter runs. Opened on its own (Colab, Kaggle, SageMaker, Azure ML,
+# any hosted Jupyter), this cell clones and installs the repo; in a clone or the container it
+# uses that checkout.
+import os, sys, importlib.util
 {GPU_GUARD}
-if "google.colab" in sys.modules and not os.path.exists("/content/deep-actuarial-science"):
-    !git clone -q https://github.com/{REPO} /content/deep-actuarial-science
-    !pip install -q -e /content/deep-actuarial-science
-if "google.colab" in sys.modules:
-    os.chdir("/content/deep-actuarial-science")
-    sys.path.insert(0, "src")
+REPO_DIR = next((d for d in (os.getcwd(), os.path.dirname(os.getcwd()))
+                 if os.path.isdir(os.path.join(d, "src", "deep_actuarial_science"))), None)
+if REPO_DIR is None:
+    if sys.version_info < (3, 10):
+        raise RuntimeError("Needs Python 3.10+: choose a newer kernel or image")
+    # a writable, persistent home: Colab, Kaggle, SageMaker notebook instances, else ~
+    base = next(d for d in ("/content", "/kaggle/working", os.path.expanduser("~/SageMaker"),
+                            os.path.expanduser("~")) if os.path.isdir(d) and os.access(d, os.W_OK))
+    REPO_DIR = os.path.join(base, "deep-actuarial-science")
+    if not os.path.exists(REPO_DIR):  # Kaggle: turn on Internet in the notebook settings
+        !git clone -q https://github.com/{REPO} {{REPO_DIR}}
+    if importlib.util.find_spec("deep_actuarial_science") is None:
+        !pip install -q -e {{REPO_DIR}}
+os.chdir(REPO_DIR)
+sys.path.insert(0, "src")
 os.environ.setdefault("DO_NOT_TRACK", "1")
 os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
 
-from deep_actuarial_science.notebook import run, load, show, leaderboard, parameters, mlflow_ui
+from deep_actuarial_science.notebook import run, load, show, leaderboard, parameters, mlflow_ui, device_summary
+device_summary()
 FAST = os.environ.get("DAS_ENV") == "smoke"   # CI runs every notebook in smoke mode
 """
 
 
-def badge(name: str) -> str:
-    url = f"https://colab.research.google.com/github/{REPO}/blob/main/notebooks/{name}"
-    return f"[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]({url})"
+GITHUB_PATH = f"github/{REPO}/blob/main/notebooks"
+# Launchers. Azure ML and SageMaker Studio have no open-from-GitHub link: the SageMaker badge
+# opens the Studio console; clone the repo there (or upload the notebook) and the setup cell
+# does the rest. (SageMaker Studio Lab, which had one, is closed to new customers.)
+LAUNCHERS = {
+    "Colab": (
+        "https://colab.research.google.com/assets/colab-badge.svg",
+        "https://colab.research.google.com/{path}/{name}",
+    ),
+    "Kaggle": (
+        "https://kaggle.com/static/images/open-in-kaggle.svg",
+        "https://kaggle.com/kernels/welcome?src=https://{path_gh}/{name}",
+    ),
+    "SageMaker Studio": (
+        "https://img.shields.io/badge/Open%20in-SageMaker%20Studio-FF9900",
+        "https://console.aws.amazon.com/sagemaker/home#/studio-landing",
+    ),
+}
+
+
+def launch_url(where: str, name: str) -> str:
+    path_gh = f"github.com/{REPO}/blob/main/notebooks"
+    return LAUNCHERS[where][1].format(path=GITHUB_PATH, path_gh=path_gh, name=name)
+
+
+def badge(name: str, where: str = "Colab") -> str:
+    return f"[![Open In {where}]({LAUNCHERS[where][0]})]({launch_url(where, name)})"
+
+
+def badges(name: str) -> str:
+    return " ".join(badge(name, w) for w in LAUNCHERS)
+
+
+RUN_ANYWHERE = (
+    "_Runs anywhere: **Colab** opens on a GPU runtime (T4) and the first cell stops on a CPU"
+    " runtime; on **Kaggle** turn on *GPU T4* and *Internet* in the notebook settings; in"
+    " **SageMaker Studio** (the badge opens the console) or **Azure ML**, pick a GPU instance,"
+    " clone the repo (Git → Clone) or upload this notebook, and run all: the first cell installs"
+    " what it needs. Any other Jupyter works the same way._"
+)
 
 
 def notebook(name: str, title: str, intro: str, cells: list[tuple[str, str]]) -> None:
@@ -57,13 +106,11 @@ def notebook(name: str, title: str, intro: str, cells: list[tuple[str, str]]) ->
         # Colab opens these on a GPU runtime (free T4); training uses it automatically.
         "colab": {"provenance": [], "gpuType": "T4"},
         "accelerator": "GPU",
+        # Kaggle: GPU and internet (for the clone) when it imports the notebook
+        "kaggle": {"accelerator": "nvidiaTeslaT4", "isGpuEnabled": True, "isInternetEnabled": True},
     }
     nb.cells = [
-        nbf.v4.new_markdown_cell(
-            f"# {title}\n{badge(name)}\n\n{intro}\n\n"
-            "_Runs on a Colab **GPU runtime** (T4), selected automatically when you open it;"
-            " if Colab gives you a CPU runtime, the first cell stops and says how to switch._"
-        ),
+        nbf.v4.new_markdown_cell(f"# {title}\n{badges(name)}\n\n{intro}\n\n{RUN_ANYWHERE}"),
         nbf.v4.new_code_cell(SETUP),
     ]
     for kind, src in cells:
@@ -76,9 +123,10 @@ def notebook(name: str, title: str, intro: str, cells: list[tuple[str, str]]) ->
 
 MLFLOW_MD = (
     "## Explore the runs in MLflow\n"
-    "Parameters, metrics, figures and the benchmark table of every run above. In Colab the UI"
-    " opens below and in a new tab through Colab's proxy (MLflow runs on the Colab machine, so"
-    " a plain localhost link would point at your own computer)."
+    "Parameters, metrics, figures and the benchmark table of every run above. MLflow runs on"
+    " the notebook's machine: in Colab it opens below and in a new tab through Colab's proxy;"
+    " in SageMaker and Azure ML through Jupyter's proxy; on Kaggle, which exposes no ports,"
+    " query the runs with `mlflow.search_runs` instead."
 )
 
 
@@ -356,10 +404,8 @@ REFERENCE_RUN = (
     "Reference run: reproduce every published benchmark",
     "Runs every pipeline at the reference setup, reconciles each model to its paper's table"
     " (`conf/base/parameters_benchmarks.yml`), refreshes the lesson figures and numbers and"
-    " zips the results. Use a **GPU runtime** (Runtime → Change runtime type → T4 GPU): the"
-    " frequency networks fit 15 seeds each. Results come back to the repo as a PR.",
+    " zips the results. Use a **GPU runtime**: the frequency networks fit 15 seeds each. Results come back to the repo as a PR.",
     [
-        (py, "import torch\nprint('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'none (CPU)')"),
         (md, "## 1. Run every pipeline\nFrequency is the long one (15 seeds for each network)."),
         (py, 'for p in ("frequency", "mortality", "reserving"):\n    run(p)'),
         (md, "## 2. Reconciliation: every model against its paper"),
@@ -382,7 +428,9 @@ REFERENCE_RUN = (
             "shutil.make_archive('reference_run', 'zip', '.', 'lessons')\n"
             "if 'google.colab' in sys.modules:\n"
             "    from google.colab import files\n"
-            "    files.download('reference_run.zip')",
+            "    files.download('reference_run.zip')\n"
+            "else:  # Kaggle: Output tab; SageMaker / Azure ML / Jupyter: file browser\n"
+            "    print('Download', os.path.abspath('reference_run.zip'))",
         ),
     ],
 )

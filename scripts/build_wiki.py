@@ -11,8 +11,9 @@ generated copy, so never edit it by hand:
 - links to other repo files (AGENTS.md, .github/..., .claude/...) become
   absolute GitHub URLs
 - every lesson with a notebook gets a direct "Open in Colab" link: in the
-  sidebar, on a Notebooks page, and in a nav bar (Colab, source, prev/next) at
-  the top and bottom of the lesson
+  sidebar, on a Notebooks page (with Kaggle and SageMaker Studio), and in a
+  nav bar (Colab, Kaggle, SageMaker Studio, source, prev/next) at the top and bottom
+  of the lesson
 - Marp-only directives (<!-- _class: ... -->) are dropped
 - _Sidebar.md is built from the README's sections, and _Footer.md says where
   to edit
@@ -44,12 +45,25 @@ MARP_DIRECTIVE_RE = re.compile(r"^<!--\s*_?\w+:.*?-->\n", re.MULTILINE)
 COLAB_RE = re.compile(r"https://colab\.research\.google\.com/github/[^)\s]+\.ipynb")
 TITLE_RE = re.compile(r"^# (.+)$", re.MULTILINE)
 COLAB_BADGE = "https://colab.research.google.com/assets/colab-badge.svg"
+KAGGLE_BADGE = "https://kaggle.com/static/images/open-in-kaggle.svg"
+SAGEMAKER_BADGE = "https://img.shields.io/badge/Open%20in-SageMaker%20Studio-FF9900"
+# Studio has no open-from-GitHub link: the badge opens the console, where you clone the repo.
+SAGEMAKER_STUDIO = "https://console.aws.amazon.com/sagemaker/home#/studio-landing"
 
 
 def colab_url(text: str) -> str | None:
     """The lesson's notebook link, taken from its Colab badge."""
     m = COLAB_RE.search(text)
     return m.group(0) if m else None
+
+
+def other_launchers(colab: str) -> dict[str, str]:
+    """Kaggle and SageMaker Studio links for the notebook behind a Colab link."""
+    gh_path = colab.split("colab.research.google.com/", 1)[1]  # github/<org>/<repo>/blob/...
+    return {
+        "Kaggle": f"https://kaggle.com/kernels/welcome?src=https://github.com/{gh_path[7:]}",
+        "SageMaker Studio": SAGEMAKER_STUDIO,
+    }
 
 
 def wiki_slug(page: str) -> str:
@@ -61,6 +75,7 @@ def nav_bar(src: Path, colab: str | None, prev: Path | None, nxt: Path | None) -
     parts = []
     if colab:
         parts.append(f"**[▶ Open in Colab]({colab})**")
+        parts += [f"[{k}]({u})" for k, u in other_launchers(colab).items()]
     rel = urllib.parse.quote(os.path.relpath(src, ROOT))
     parts.append(f"[Source deck](https://github.com/{REPO}/blob/{BRANCH}/{rel})")
     if prev:
@@ -73,9 +88,11 @@ def nav_bar(src: Path, colab: str | None, prev: Path | None, nxt: Path | None) -
 
 def notebooks_page(lesson_files: list[Path]) -> str:
     rows = ["# Notebooks", "",
-            "Every lesson runs end to end in Colab: the notebook clones this repo, "
-            "installs it and runs the lesson's Kedro pipeline. No local setup needed.", "",
-            "| Lesson | Notebook |", "| --- | --- |"]
+            "Every lesson runs end to end in Colab or Kaggle: the notebook clones this repo, "
+            "installs it and runs the lesson's Kedro pipeline. No local setup needed. In "
+            "SageMaker Studio (the badge opens the console), Azure ML or any other Jupyter, "
+            "clone the repo and run a notebook: its first cell does the same.", "",
+            "| Lesson | Colab | Kaggle | SageMaker Studio |", "| --- | --- | --- | --- |"]
     for f in lesson_files:
         text = f.read_text(encoding="utf-8")
         url = colab_url(text)
@@ -84,7 +101,12 @@ def notebooks_page(lesson_files: list[Path]) -> str:
         m = TITLE_RE.search(FRONT_MATTER_RE.sub("", text))
         title = (m.group(1).strip() if m else page_name(f.name)).replace("|", "/")
         link = f"[{title}]({wiki_slug(page_name(f.name))})"
-        rows.append(f"| {link} | [![Open In Colab]({COLAB_BADGE})]({url}) |")
+        o = other_launchers(url)
+        rows.append(
+            f"| {link} | [![Open In Colab]({COLAB_BADGE})]({url}) "
+            f"| [![Open In Kaggle]({KAGGLE_BADGE})]({o['Kaggle']}) "
+            f"| [![Open In SageMaker Studio]({SAGEMAKER_BADGE})]({o['SageMaker Studio']}) |"
+        )
     return "\n".join(rows) + "\n"
 
 

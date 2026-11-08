@@ -92,10 +92,60 @@ def figure_dir(pipeline: str, model: str | None = None) -> Path:
     return base / "comparison" if model is None else base / model / "figures"
 
 
+def platform() -> str:
+    """Where this notebook runs: colab, kaggle, sagemaker, azureml, docker or local."""
+    import sys
+
+    if "google.colab" in sys.modules:
+        return "colab"
+    if "KAGGLE_KERNEL_RUN_TYPE" in os.environ:
+        return "kaggle"
+    home = os.path.expanduser("~")
+    if (
+        any(
+            os.path.isdir(d)
+            for d in ("/home/studio-lab-user", "/home/sagemaker-user", "/home/ec2-user/SageMaker")
+        )
+        or "SAGEMAKER_SPACE_NAME" in os.environ
+    ):
+        return "sagemaker"
+    if os.path.isdir("/mnt/batch/tasks/shared/LS_root") or os.path.isdir(f"{home}/cloudfiles"):
+        return "azureml"  # Azure ML compute instance (cloudfiles = the workspace file share)
+    if os.path.exists("/.dockerenv"):
+        return "docker"
+    return "local"
+
+
+def device_summary() -> None:
+    """Print the platform and the device the networks will train on."""
+    import torch
+
+    from deep_actuarial_science.models.torch_utils import device
+
+    dev = device()
+    gpu = torch.cuda.get_device_name(0) if dev.type == "cuda" else None
+    print(f"Platform: {platform()} · training device: {dev}" + (f" ({gpu})" if gpu else ""))
+    if dev.type == "cpu":
+        print("No GPU: the full frequency networks are slow on a CPU; FAST/smoke runs are fine.")
+
+
+# Hosted Jupyter (SageMaker, Azure ML) reaches a kernel-side port through
+# jupyter-server-proxy at <jupyter base url>/proxy/<port>/. The link is built in the browser,
+# because only the page knows the public host and base URL.
+PROXY_LINK_JS = """
+const cfg = document.getElementById('jupyter-config-data');
+let base = cfg ? JSON.parse(cfg.textContent).baseUrl : location.pathname.split('/lab')[0];
+if (!base.endsWith('/')) base += '/';
+const url = location.origin + base + 'proxy/PORT/';
+element.innerHTML = '<a href="' + url + '" target="_blank" rel="noopener">Open MLflow in a ' +
+  'new tab</a> <small>(' + url + '; needs jupyter-server-proxy, preinstalled on SageMaker)</small>';
+"""
+
+
 # In Colab, MLflow listens on 127.0.0.1 of a disposable VM that only Colab's authenticated
 # proxy can reach, and the proxy's domain is Colab's to choose. MLflow 3 rejects unknown Host
-# headers, cross-origin writes and framing, so in Colab only those checks are opened up.
-# Local and container runs keep MLflow's defaults.
+# headers, cross-origin writes and framing, so behind a hosted proxy (Colab, SageMaker,
+# Azure ML) only those checks are opened up. Local and container runs keep MLflow's defaults.
 COLAB_MLFLOW_FLAGS = [
     "--allowed-hosts",
     "*",
@@ -121,6 +171,9 @@ def mlflow_ui(port: int = 5000, height: int = 720, timeout: float = 120) -> None
       computer ("site can't be reached"). The UI is started there and opened through
       Colab's proxy: a new-tab link to the URL from `google.colab.kernel.proxyPort`, plus
       the UI inline.
+    - SageMaker / Azure ML: the UI is started on the notebook machine and linked through
+      Jupyter's proxy (`<jupyter base url>/proxy/<port>/`).
+    - Kaggle exposes no ports: query runs with `mlflow.search_runs` instead.
     - Container (`docker compose up lab mlflow`): the `mlflow` service already serves it.
     - Local: starts `mlflow ui` in the background and links to it.
     """
@@ -128,10 +181,22 @@ def mlflow_ui(port: int = 5000, height: int = 720, timeout: float = 120) -> None
     import sys
     import time
 
-    from IPython.display import HTML, display
+    from IPython.display import HTML, Javascript, display
 
     os.chdir(ROOT)
-    colab = "google.colab" in sys.modules
+    where = platform()
+    colab = where == "colab"
+    proxied = where in ("colab", "sagemaker", "azureml")
+    if where == "kaggle":
+        display(
+            HTML(
+                "Kaggle exposes no ports, so the MLflow UI cannot open here. Query the runs:"
+                ' <code>mlflow.set_tracking_uri("sqlite:///mlflow.db");'
+                " mlflow.search_runs()</code>, or download <code>mlflow.db</code> and run"
+                " <code>mlflow ui</code> locally."
+            )
+        )
+        return
     if os.path.exists("/.dockerenv") and not colab:
         display(
             HTML(
@@ -154,7 +219,7 @@ def mlflow_ui(port: int = 5000, height: int = 720, timeout: float = 120) -> None
             "--port",
             str(port),
         ]
-        if colab:
+        if proxied:
             cmd += COLAB_MLFLOW_FLAGS
         subprocess.Popen(
             cmd,
@@ -181,6 +246,8 @@ def mlflow_ui(port: int = 5000, height: int = 720, timeout: float = 120) -> None
             )
         )
         output.serve_kernel_port_as_iframe(port, height=height)
+    elif proxied:
+        display(Javascript(PROXY_LINK_JS.replace("PORT", str(port))))
     else:
         display(
             HTML(
