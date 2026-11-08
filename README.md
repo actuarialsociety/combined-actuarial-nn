@@ -110,6 +110,35 @@ kedro run --pipeline frequency --params frequency.data.scale=0.1
 mlflow ui --backend-store-uri sqlite:///mlflow.db        # browse runs
 ```
 
+**Apple silicon (M1/M2/M3):** the macOS PyTorch wheel includes the Metal (MPS) backend. Set
+`DAS_DEVICE=mps` to train the networks on the GPU (`cpu` and `cuda` work too; the default is CUDA
+when present, else the CPU):
+```bash
+DAS_DEVICE=mps kedro run --pipeline frequency --namespaces fnn,cann
+```
+MPS is opt-in because these networks are small (hundreds to a few thousand weights), so GPU
+kernel-launch overhead outweighs the speedup. On an M1, MPS was about as fast as the CPU for
+LocalGLMnet and 1.5 to 2.5 times slower for the FNN, the mortality networks and the neural ODP. Results
+match the CPU to about 0.002 Poisson deviance. On macOS, LightGBM trains single-threaded:
+its OpenMP runtime (Homebrew `libomp`) and PyTorch's own runtime crash when both run in one process.
+[`notebooks/run_all_mps.ipynb`](./notebooks/run_all_mps.ipynb) runs every lesson on the Apple GPU,
+reconciles every model and times MPS against the CPU on your machine.
+
+**Weights & Biases (optional):** every run also logs to W&B when `WANDB_PROJECT` is set: one W&B
+run per pipeline with its parameters, each model's metrics, figures, and the benchmark
+reconciliation and leaderboard tables. MLflow logging is unchanged.
+```bash
+uv pip install -e ".[wandb]"          # then WANDB_API_KEY in .env (https://wandb.ai/authorize) or `wandb login`
+WANDB_PROJECT=deep-actuarial-science kedro run --pipeline reserving
+scripts/full_run.sh                   # every model, dataset and benchmark on MPS, logged to W&B
+```
+`scripts/full_run.sh` runs the reference setup (every published benchmark, PASS/FAIL), then every
+dataset (`conf/scale_up`: both sexes, all six Schedule P lines, every company), as one W&B group,
+and archives the reports in `data/09_full_run/`. The frequency networks fit 15 seeds each, so
+expect hours. Without a key it logs offline (`wandb sync` uploads later). The vendored
+`wandb-primary` skill (`scripts/update_wandb_skills.sh`) lets a coding agent query and compare the
+runs.
+
 ## How it fits together
 
 | Piece | Where |

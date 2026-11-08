@@ -98,7 +98,10 @@ RUN_ANYWHERE = (
 )
 
 
-def notebook(name: str, title: str, intro: str, cells: list[tuple[str, str]]) -> None:
+def notebook(
+    name: str, title: str, intro: str, cells: list[tuple[str, str]], local: bool = False
+) -> None:
+    """Write one notebook. `local` notebooks (Apple silicon) get no cloud badges or metadata."""
     nb = nbf.v4.new_notebook()
     nb.metadata = {
         "kernelspec": {"name": "python3", "display_name": "Python 3"},
@@ -109,8 +112,11 @@ def notebook(name: str, title: str, intro: str, cells: list[tuple[str, str]]) ->
         # Kaggle: GPU and internet (for the clone) when it imports the notebook
         "kaggle": {"accelerator": "nvidiaTeslaT4", "isGpuEnabled": True, "isInternetEnabled": True},
     }
+    if local:
+        nb.metadata = {k: nb.metadata[k] for k in ("kernelspec", "language_info")}
+    header = f"# {title}\n\n{intro}" if local else f"# {title}\n{badges(name)}\n\n{intro}\n\n{RUN_ANYWHERE}"
     nb.cells = [
-        nbf.v4.new_markdown_cell(f"# {title}\n{badges(name)}\n\n{intro}\n\n{RUN_ANYWHERE}"),
+        nbf.v4.new_markdown_cell(header),
         nbf.v4.new_code_cell(SETUP),
     ]
     for kind, src in cells:
@@ -436,11 +442,86 @@ REFERENCE_RUN = (
 )
 
 
+RUN_ALL_MPS = (
+    "run_all_mps.ipynb",
+    "Run every lesson on Apple silicon (MPS)",
+    "Runs every lesson's pipeline on a Mac with an M-series chip, training the networks on"
+    " its GPU through PyTorch's Metal (MPS) backend, then reconciles every model to its paper"
+    " and times MPS against the CPU. Open it in a local clone (see *Local* in the README:"
+    " `uv venv`, `uv pip install -e \".[dev]\"`, then `jupyter lab`). Elsewhere it falls back"
+    " to the default device.\n\n"
+    "**Expect MPS to be no faster:** these networks are small, so GPU kernel-launch overhead"
+    " outweighs the speedup (section 4 measures it on your machine). The full reference run"
+    " fits 15 seeds per frequency network and takes hours; set `ENV = \"smoke\"` below for a"
+    " two-minute pass on 2% of the data. To log to Weights & Biases as well, set"
+    " `WANDB_PROJECT` (and `WANDB_API_KEY`) before starting Jupyter; `scripts/full_run.sh` is"
+    " the same full run from the terminal.",
+    [
+        (md, "## 1. Train on the Apple GPU"),
+        (
+            py,
+            "import time, torch\n"
+            "ENV = \"smoke\" if FAST else \"local\"   # \"smoke\": every pipeline on 2% of the data\n"
+            "MPS = torch.backends.mps.is_available()\n"
+            "if MPS:\n"
+            "    os.environ[\"DAS_DEVICE\"] = \"mps\"   # read by every network at training time\n"
+            "else:\n"
+            "    print(\"No MPS (not an Apple-silicon Mac, or PyTorch without Metal): using the default device.\")\n"
+            "device_summary()",
+        ),
+        (
+            md,
+            "## 2. Run every pipeline\nFrequency (GLMs, LightGBM, FNN, CANN, LocalGLMnet),"
+            " mortality (Lee–Carter and the deep models) and reserving (chain-ladder, neural"
+            " ODP), each tracked in MLflow. LightGBM trains single-threaded on macOS, because its"
+            " OpenMP runtime and PyTorch's crash in one process.",
+        ),
+        (
+            py,
+            "timings = {}\n"
+            "for p in (\"frequency\", \"mortality\", \"reserving\"):\n"
+            "    t0 = time.perf_counter()\n"
+            "    run(p, env=ENV)\n"
+            "    timings[p] = time.perf_counter() - t0\n"
+            "    print(f\"{p}: {timings[p] / 60:.1f} min\")",
+        ),
+        (md, "## 3. Reconciliation: every model against its paper"),
+        (
+            py,
+            "import glob, pandas as pd\n"
+            "rec = pd.concat(pd.read_csv(f) for f in sorted(glob.glob('data/08_reporting/*/*/reconciliation.csv')))\n"
+            "rec[['model', 'metric', 'expected', 'actual', 'tolerance', 'status', 'source']]",
+        ),
+        (
+            md,
+            "## 4. MPS against the CPU\nThe same FNN (one seed, 10% of the data) trained on"
+            " each device. GPU and CPU results agree to about 0.002 Poisson deviance.",
+        ),
+        (
+            py,
+            "small = {} if FAST else {\"frequency.data.scale\": 0.1, \"frequency.models.fnn.n_runs\": 1}\n"
+            "rows = []\n"
+            "for dev in ([\"cpu\", \"mps\"] if MPS else [\"cpu\"]):\n"
+            "    os.environ[\"DAS_DEVICE\"] = dev\n"
+            "    t0 = time.perf_counter()\n"
+            "    run(\"frequency\", models=[\"fnn\"], params=small, env=ENV)\n"
+            "    m = load(\"fnn.freq_metrics\", env=ENV)\n"
+            "    rows.append({\"device\": dev, \"wall_seconds\": time.perf_counter() - t0, **m})\n"
+            "os.environ[\"DAS_DEVICE\"] = \"mps\" if MPS else \"cpu\"\n"
+            "# fit_seconds is training alone; wall_seconds adds data preparation and logging\n"
+            "pd.DataFrame(rows).set_index(\"device\")[[\"fit_seconds\", \"wall_seconds\", \"deviance_test\", \"gini_test\", \"balance_test\"]]",
+        ),
+    ],
+)
+
+
 def main() -> None:
     OUT.mkdir(exist_ok=True)
     for name, title, intro, cells in [*LESSONS, REFERENCE_RUN]:
         notebook(name, title, intro, cells)
         print("wrote", OUT / name)
+    notebook(*RUN_ALL_MPS, local=True)
+    print("wrote", OUT / RUN_ALL_MPS[0])
 
 
 if __name__ == "__main__":

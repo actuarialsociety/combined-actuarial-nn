@@ -26,6 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+wandb = ["wandb>=0.21"]  # optional W&B logging: set WANDB_PROJECT
 dev = ["pytest", "ruff", "nbformat", "nbclient", "jupyterlab", "kedro-viz", "kedro-skills==0.2.0"]
 
 [project.scripts]

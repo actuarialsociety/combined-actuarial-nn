@@ -8,6 +8,7 @@ data/**
 !data/**/
 !data/**/.gitkeep
 mlruns/
+wandb/
 mlartifacts/
 conf/local/**
 !conf/local/.gitkeep

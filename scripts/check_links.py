@@ -21,8 +21,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -68,13 +70,42 @@ def extract_links(path: Path) -> list[str]:
     return links
 
 
-def fetch(url: str, method: str = "HEAD") -> tuple[int, str]:
+def _fetch_once(url: str, method: str) -> tuple[int, str]:
     req = urllib.request.Request(url, method=method, headers={"User-Agent": UA})
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
             return r.status, r.read().decode("utf-8", "replace") if method == "GET" else ""
     except urllib.error.HTTPError as e:
         return e.code, ""
+    except Exception as e:  # noqa: BLE001 - network errors of any kind
+        return 0, str(e)
+
+
+def fetch(url: str, method: str = "HEAD", attempts: int = 3) -> tuple[int, str]:
+    """Fetch, retrying transient failures (5xx, dropped connections) with backoff: a server's
+    bad minute (GitHub 504s, CRAN resets) is not a broken link."""
+    for i in range(attempts):
+        status, body = _fetch_once(url, method)
+        if not (status == 0 or status >= 500) or i == attempts - 1:
+            return status, body
+        time.sleep(2 * 3**i)  # 2 s, 6 s
+    return status, body
+
+
+GITHUB_REPO_RE = re.compile(r"https://github\.com/([\w.-]+/[\w.-]+?)(?:\.git)?(/.*|[?#].*)?$")
+
+
+def github_repo_status(repo: str) -> tuple[int, str]:
+    """Status of a repo from api.github.com (authenticated with GITHUB_TOKEN when set)."""
+    headers = {"User-Agent": UA, "Accept": "application/vnd.github+json"}
+    if os.environ.get("GITHUB_TOKEN"):
+        headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
+    req = urllib.request.Request(f"https://api.github.com/repos/{repo}", headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return r.status, "web 5xx"
+    except urllib.error.HTTPError as e:
+        return e.code, "(API)"
     except Exception as e:  # noqa: BLE001 - network errors of any kind
         return 0, str(e)
 
@@ -121,6 +152,14 @@ def check(source: Path, link: str) -> dict:
     if status in (403, 404, 405, 429) or status == 0:
         status, err = fetch(link, "GET")
     host = urllib.parse.urlparse(link).netloc
+    repo = GITHUB_REPO_RE.match(link)
+    if repo and status >= 500:
+        # github.com's web pages 504 during incidents while its API is up: ask the API.
+        status, err = github_repo_status(repo.group(1))
+        if status == 200:
+            deep = "; page not checked" if (repo.group(2) or "").strip("/") else ""
+            result.update(ok=True, detail=f"github.com {err}; repo exists (API){deep}")
+            return result
     if status == 403 and any(b in host for b in BOT_BLOCKERS):
         result.update(ok=True, detail="403 (site blocks bots; check manually)")
     elif status == 429:

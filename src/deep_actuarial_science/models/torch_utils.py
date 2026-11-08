@@ -20,10 +20,17 @@ def seed_everything(seed: int) -> None:
 def device() -> torch.device:
     """Training device: `DAS_DEVICE` if set (cpu, cuda, mps), else CUDA when available.
 
+    Apple-silicon GPUs (`DAS_DEVICE=mps`) are supported but opt-in: these networks are
+    small (hundreds to a few thousand weights, batches of 4 to 7,000 rows), so kernel-launch
+    overhead dominates and on an M1 MPS trained 1.0-2.5x slower than the CPU (see README).
+    All tensors are float32, which MPS requires.
+
     Models train there and are moved back to the CPU afterwards, so prediction, metrics and
     figures run unchanged. GPU and CPU results differ in the last digits, which the
     network tolerances in conf/base/parameters_benchmarks.yml cover."""
     name = os.environ.get("DAS_DEVICE") or ("cuda" if torch.cuda.is_available() else "cpu")
+    if name == "mps" and not torch.backends.mps.is_available():
+        raise RuntimeError("DAS_DEVICE=mps, but this PyTorch build or machine has no MPS")
     return torch.device(name)
 
 
@@ -62,18 +69,18 @@ def train_poisson(
     for _ in range(epochs):
         model.train()
         idx = torch.randperm(n, device=dev) if shuffle else torch.arange(n, device=dev)
-        total = 0.0
+        total = torch.zeros((), device=dev)
         for i in range(0, n, batch_size):
             b = idx[i : i + batch_size]
             loss = loss_fn(model(X[b], off[b]), y[b])
             opt.zero_grad()
             loss.backward()
             opt.step()
-            total += loss.item()
+            total += loss.detach()  # no per-batch .item(): a GPU sync on every step
         model.eval()
         with torch.no_grad():
             val_loss = loss_fn(model(Xv, offv), yv).item() / float(wv.sum())
-        history["loss"].append(total / float(w.sum()))
+        history["loss"].append(total.item() / float(w.sum()))
         history["val_loss"].append(val_loss)
         if val_loss < best:
             best, best_state, since = val_loss, copy.deepcopy(model.state_dict()), 0
