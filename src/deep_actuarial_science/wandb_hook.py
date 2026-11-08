@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 
 import pandas as pd
 from kedro.framework.hooks import hook_impl
@@ -34,6 +35,23 @@ def _flatten(d: dict, prefix: str = "") -> dict:
         key = f"{prefix}{k}"
         out.update(_flatten(v, f"{key}.") if isinstance(v, dict) else {key: v})
     return out
+
+
+def _init_or_offline(wandb, kwargs: dict, attempts: int = 3):
+    """W&B must never sink a pipeline run: retry a failed online start (a busy or unreachable
+    server), then log offline, which `wandb sync` uploads later; failing that, no W&B."""
+    for i in range(attempts):
+        try:
+            return wandb.init(**kwargs)
+        except Exception as e:  # noqa: BLE001 - auth timeouts, network errors, 5xx
+            log.warning("W&B init failed (attempt %d/%d): %s", i + 1, attempts, e)
+            time.sleep(5 * 2**i)
+    try:
+        log.warning("W&B unreachable: logging offline; upload later with `wandb sync`")
+        return wandb.init(mode="offline", **kwargs)
+    except Exception as e:  # noqa: BLE001
+        log.warning("W&B offline init failed too, continuing without W&B: %s", e)
+        return None
 
 
 class WandbHook:
@@ -59,7 +77,7 @@ class WandbHook:
         except Exception:  # noqa: BLE001 - config is a nice-to-have, never block a run
             params = {}
         domain = params.get(name, params) if isinstance(params, dict) else {}
-        self.run = wandb.init(
+        kwargs = dict(
             project=os.environ["WANDB_PROJECT"],
             entity=os.environ.get("WANDB_ENTITY"),
             job_type=name,
@@ -74,11 +92,18 @@ class WandbHook:
             },
             reinit="finish_previous",
         )
+        self.run = _init_or_offline(wandb, kwargs)
 
     @hook_impl
     def after_dataset_saved(self, dataset_name: str, data, node) -> None:
         if self.run is None:
             return
+        try:
+            self._log(dataset_name, data)
+        except Exception as e:  # noqa: BLE001 - a logging failure must not fail the node
+            log.warning("W&B logging of %s failed: %s", dataset_name, e)
+
+    def _log(self, dataset_name: str, data) -> None:
         import wandb
 
         if isinstance(data, dict) and any(isinstance(v, Figure) for v in data.values()):
@@ -105,7 +130,10 @@ class WandbHook:
 
     def _finish(self, exit_code: int = 0) -> None:
         if self.run is not None:
-            self.run.finish(exit_code=exit_code)
+            try:
+                self.run.finish(exit_code=exit_code)
+            except Exception as e:  # noqa: BLE001
+                log.warning("W&B finish failed: %s", e)
             self.run = None
 
     @hook_impl

@@ -371,3 +371,22 @@ def test_single_published_run_is_checked_against_the_seed_distribution():
     single = reconcile({"rmse_out": 0.36}, bench, True, "cnn")  # no sd: one seed only
     assert ok.status[0] == "PASS" and ok.tolerance[0] == pytest.approx(0.06)
     assert far.status[0] == "FAIL" and single.status[0] == "MISSING"
+
+
+def test_wandb_outage_falls_back_to_offline(monkeypatch):
+    """A W&B server that will not answer must not fail the pipeline: retry, then offline."""
+    import types
+
+    from deep_actuarial_science import wandb_hook
+
+    modes = []
+
+    def init(**kw):
+        modes.append(kw.get("mode", "online"))
+        if kw.get("mode") != "offline":
+            raise RuntimeError("the service process is busy and did not respond in time")
+        return "offline-run"
+
+    monkeypatch.setattr(wandb_hook.time, "sleep", lambda s: None)
+    run = wandb_hook._init_or_offline(types.SimpleNamespace(init=init), {"project": "p"})
+    assert run == "offline-run" and modes == ["online"] * 3 + ["offline"]
