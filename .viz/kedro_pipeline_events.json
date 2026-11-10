@@ -1,7 +1,7 @@
 [
   {
     "event": "before_pipeline_run",
-    "timestamp": "2026-11-08T09:04:12.336457+00:00"
+    "timestamp": "2026-11-09T20:53:39.609319+00:00"
   },
   {
     "event": "after_dataset_loaded",
@@ -14,7 +14,7 @@
     "event": "after_node_run",
     "node": "fetch_cas_schedule_p",
     "node_id": "beb869e9",
-    "duration": 0.08762629190459847,
+    "duration": 0.03413479200025904,
     "status": "success"
   },
   {
@@ -42,7 +42,7 @@
     "event": "after_node_run",
     "node": "prepare_reserving_data",
     "node_id": "8ba7fc9c",
-    "duration": 0.32742262503597885,
+    "duration": 0.24856783299946983,
     "status": "success"
   },
   {
@@ -70,7 +70,7 @@
     "event": "after_node_run",
     "node": "chain_ladder.fit",
     "node_id": "9623a1c1",
-    "duration": 1.0798296669963747,
+    "duration": 0.930887917000291,
     "status": "success"
   },
   {
@@ -105,7 +105,7 @@
     "event": "after_node_run",
     "node": "neural_odp.fit",
     "node_id": "8973bf8f",
-    "duration": 52.99565308401361,
+    "duration": 51.95909112499976,
     "status": "success"
   },
   {
@@ -120,7 +120,7 @@
     "dataset": "neural_odp.res_history",
     "node_id": "a515e621",
     "status": "Available",
-    "size": 100975
+    "size": 100998
   },
   {
     "event": "after_dataset_loaded",
@@ -147,7 +147,7 @@
     "event": "after_node_run",
     "node": "chain_ladder.evaluate",
     "node_id": "06badc30",
-    "duration": 0.021330167073756456,
+    "duration": 0.016902749999644584,
     "status": "success"
   },
   {
@@ -163,6 +163,55 @@
     "node_id": "b162518b",
     "status": "Available",
     "size": 0
+  },
+  {
+    "event": "after_dataset_loaded",
+    "dataset": "neural_odp.res_predictions",
+    "node_id": "154bf4c0",
+    "status": "Available",
+    "size": 342571
+  },
+  {
+    "event": "after_dataset_loaded",
+    "dataset": "params:reserving.models.neural_odp",
+    "node_id": "71f70330",
+    "status": "Available",
+    "size": 0
+  },
+  {
+    "event": "after_dataset_loaded",
+    "dataset": "neural_odp.res_history",
+    "node_id": "a515e621",
+    "status": "Available",
+    "size": 100998
+  },
+  {
+    "event": "after_node_run",
+    "node": "neural_odp.evaluate",
+    "node_id": "9a76317f",
+    "duration": 0.012735749999592372,
+    "status": "success"
+  },
+  {
+    "event": "after_dataset_saved",
+    "dataset": "neural_odp.res_metrics",
+    "node_id": "16566a2a",
+    "status": "Available",
+    "size": 353
+  },
+  {
+    "event": "after_dataset_saved",
+    "dataset": "neural_odp.res_metrics_mlflow",
+    "node_id": "cc90dc40",
+    "status": "Available",
+    "size": 0
+  },
+  {
+    "event": "after_dataset_loaded",
+    "dataset": "chain_ladder.res_metrics",
+    "node_id": "7dea19f7",
+    "status": "Available",
+    "size": 334
   },
   {
     "event": "after_dataset_loaded",
@@ -195,8 +244,8 @@
   {
     "event": "after_node_run",
     "node": "chain_ladder.reconcile",
-    "node_id": "23b24af6",
-    "duration": 0.6525432500056922,
+    "node_id": "e294e852",
+    "duration": 0.9308904589997837,
     "status": "success"
   },
   {
@@ -204,90 +253,7 @@
     "dataset": "chain_ladder.res_reconciliation",
     "node_id": "61b36e1a",
     "status": "Available",
-    "size": 782
-  },
-  {
-    "event": "after_dataset_loaded",
-    "dataset": "neural_odp.res_predictions",
-    "node_id": "154bf4c0",
-    "status": "Available",
-    "size": 342571
-  },
-  {
-    "event": "after_dataset_loaded",
-    "dataset": "params:reserving.models.neural_odp",
-    "node_id": "71f70330",
-    "status": "Available",
-    "size": 0
-  },
-  {
-    "event": "after_dataset_loaded",
-    "dataset": "neural_odp.res_history",
-    "node_id": "a515e621",
-    "status": "Available",
-    "size": 100975
-  },
-  {
-    "event": "after_node_run",
-    "node": "neural_odp.evaluate",
-    "node_id": "9a76317f",
-    "duration": 0.013922082958742976,
-    "status": "success"
-  },
-  {
-    "event": "after_dataset_saved",
-    "dataset": "neural_odp.res_metrics",
-    "node_id": "16566a2a",
-    "status": "Available",
-    "size": 353
-  },
-  {
-    "event": "after_dataset_saved",
-    "dataset": "neural_odp.res_metrics_mlflow",
-    "node_id": "cc90dc40",
-    "status": "Available",
-    "size": 0
-  },
-  {
-    "event": "after_dataset_loaded",
-    "dataset": "neural_odp.res_predictions",
-    "node_id": "154bf4c0",
-    "status": "Available",
-    "size": 342571
-  },
-  {
-    "event": "after_dataset_loaded",
-    "dataset": "res_triangles",
-    "node_id": "256a4fc6",
-    "status": "Available",
-    "size": 203749
-  },
-  {
-    "event": "after_dataset_loaded",
-    "dataset": "params:benchmarks.reserving.neural_odp",
-    "node_id": "a0de1bce",
-    "status": "Available"
-  },
-  {
-    "event": "after_dataset_loaded",
-    "dataset": "params:reserving.models.neural_odp",
-    "node_id": "71f70330",
-    "status": "Available",
-    "size": 0
-  },
-  {
-    "event": "after_node_run",
-    "node": "neural_odp.reconcile",
-    "node_id": "ec85e1b8",
-    "duration": 0.0017192079685628414,
-    "status": "success"
-  },
-  {
-    "event": "after_dataset_saved",
-    "dataset": "neural_odp.res_reconciliation",
-    "node_id": "3dcc27b5",
-    "status": "Available",
-    "size": 64
+    "size": 852
   },
   {
     "event": "after_dataset_loaded",
@@ -328,7 +294,7 @@
     "event": "after_node_run",
     "node": "compare_reserving_models",
     "node_id": "ecfee1f9",
-    "duration": 0.33845816692337394,
+    "duration": 0.055409125000551285,
     "status": "success"
   },
   {
@@ -353,7 +319,55 @@
     "size": 192
   },
   {
+    "event": "after_dataset_loaded",
+    "dataset": "neural_odp.res_metrics",
+    "node_id": "16566a2a",
+    "status": "Available",
+    "size": 353
+  },
+  {
+    "event": "after_dataset_loaded",
+    "dataset": "neural_odp.res_predictions",
+    "node_id": "154bf4c0",
+    "status": "Available",
+    "size": 342571
+  },
+  {
+    "event": "after_dataset_loaded",
+    "dataset": "res_triangles",
+    "node_id": "256a4fc6",
+    "status": "Available",
+    "size": 203749
+  },
+  {
+    "event": "after_dataset_loaded",
+    "dataset": "params:benchmarks.reserving.neural_odp",
+    "node_id": "a0de1bce",
+    "status": "Available"
+  },
+  {
+    "event": "after_dataset_loaded",
+    "dataset": "params:reserving.models.neural_odp",
+    "node_id": "71f70330",
+    "status": "Available",
+    "size": 0
+  },
+  {
+    "event": "after_node_run",
+    "node": "neural_odp.reconcile",
+    "node_id": "39484bc2",
+    "duration": 0.0016110830001707654,
+    "status": "success"
+  },
+  {
+    "event": "after_dataset_saved",
+    "dataset": "neural_odp.res_reconciliation",
+    "node_id": "3dcc27b5",
+    "status": "Available",
+    "size": 64
+  },
+  {
     "event": "after_pipeline_run",
-    "timestamp": "2026-11-08T09:05:10.853045+00:00"
+    "timestamp": "2026-11-09T20:55:15.833289+00:00"
   }
 ]

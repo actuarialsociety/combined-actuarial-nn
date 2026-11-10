@@ -103,6 +103,7 @@ GITHUB_TOKEN=$(gh auth token) python3 scripts/fix_math.py --github   # math rend
 | Update agent skills | `scripts/update_exa_skills.sh`, `scripts/update_kedro_skills.sh`, `scripts/update_aws_skills.sh`, `scripts/update_azure_skills.sh`, `scripts/update_wandb_skills.sh` |
 | Track runs | MLflow: `mlflow ui --backend-store-uri sqlite:///mlflow.db`; optionally W&B too: set `WANDB_PROJECT` (`.[wandb]` extra, `src/deep_actuarial_science/wandb_hook.py`); skill `wandb-primary` (plus `wandb-autoresearch`, `wandb-eval-tables`, `weave-instrument`, `agentlens-tracing-instrument`) |
 | Full run | `scripts/full_run.sh`: every model, dataset and benchmark on MPS (`DAS_DEVICE`), logged to W&B; `notebooks/run_all_mps.ipynb` for the notebook version |
+| EDA and model analysis | `python scripts/eda.py` (each dataset) and `python scripts/model_analysis.py` (each fitted model, after a full run): local Markdown reports in `data/10_eda/` and `data/11_model_analysis/`, never logged to MLflow or W&B |
 | Container | `docker compose up lab mlflow` (JupyterLab :8888, MLflow :5000) |
 | Slides | `npx @marp-team/marp-cli@4.5.1 --html -s lessons` (published to Pages by `slides.yml`) |
 | Wiki | Generated from `README.md` + `lessons/` on push to `main` (`wiki-sync.yml`) |
