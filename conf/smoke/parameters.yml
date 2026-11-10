@@ -12,7 +12,7 @@ frequency:
     localglmnet: {epochs: 3, n_runs: 2}   # two runs exercise the mean ± sd path
 
 mortality:
-  training: {epochs: 20}
+  training: {epochs: 20, n_runs: 2}   # two seeds exercise the mean ± sd path
 
 reserving:
   data: {companies: null, max_companies: 15}

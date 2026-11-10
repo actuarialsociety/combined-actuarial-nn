@@ -338,3 +338,55 @@ def test_reserving_reconciliation_checks_the_models_own_metrics():
         "mape_ultimate": "PASS",
         "max_rel_diff_vs_package": "PASS",
     }
+
+
+def test_networks_use_keras_initialisation():
+    """The benchmark papers train in Keras: Glorot kernels, zero biases, uniform(+-0.05)
+    embeddings, an orthogonal LSTM recurrent kernel and forget-gate bias 1."""
+    import torch
+
+    from deep_actuarial_science.models import mortality as mm
+    from deep_actuarial_science.models.torch_utils import keras_init
+
+    net = fm.EmbeddingFNN(7, [11, 22], [2, 2], [20, 15, 10], bias0=-2.0)
+    assert all(e.weight.abs().max() <= 0.05 for e in net.emb)
+    first = net.hidden[0]
+    assert first.weight.abs().max() <= (6 / (first.in_features + first.out_features)) ** 0.5
+    assert torch.all(first.bias == 0) and torch.all(net.out.weight == 0)  # zero-output start
+    assert net.out.bias.item() == -2.0
+
+    lstm = keras_init(mm.LSTM(10, 90, q=20, units=20)).lstm
+    bias = lstm.gates.bias.view(4, 20)
+    assert torch.all(bias[1] == 1) and torch.all(bias[[0, 2, 3]] == 0)
+    rec = lstm.gates.weight[:, 20:]  # (4 * units) x units: orthonormal columns
+    torch.testing.assert_close(rec.T @ rec, torch.eye(20), atol=1e-5, rtol=0)
+
+
+def test_single_published_run_is_checked_against_the_seed_distribution():
+    from deep_actuarial_science.benchmarks import reconcile
+
+    bench = {"source": "Ch. 8", "tolerance": "2sd", "expected": {"rmse_out": 0.3531}}
+    ok = reconcile({"rmse_out": 0.40, "rmse_out_sd": 0.03}, bench, True, "cnn")
+    far = reconcile({"rmse_out": 0.50, "rmse_out_sd": 0.03}, bench, True, "cnn")
+    single = reconcile({"rmse_out": 0.36}, bench, True, "cnn")  # no sd: one seed only
+    assert ok.status[0] == "PASS" and ok.tolerance[0] == pytest.approx(0.06)
+    assert far.status[0] == "FAIL" and single.status[0] == "MISSING"
+
+
+def test_wandb_outage_falls_back_to_offline(monkeypatch):
+    """A W&B server that will not answer must not fail the pipeline: retry, then offline."""
+    import types
+
+    from deep_actuarial_science import wandb_hook
+
+    modes = []
+
+    def init(**kw):
+        modes.append(kw.get("mode", "online"))
+        if kw.get("mode") != "offline":
+            raise RuntimeError("the service process is busy and did not respond in time")
+        return "offline-run"
+
+    monkeypatch.setattr(wandb_hook.time, "sleep", lambda s: None)
+    run = wandb_hook._init_or_offline(types.SimpleNamespace(init=init), {"project": "p"})
+    assert run == "offline-run" and modes == ["online"] * 3 + ["offline"]

@@ -66,7 +66,7 @@ With $w_0 = 0$, $\boldsymbol{w} = \boldsymbol{0}$ the correction is $\exp(0) = 1
 <details>
 <summary><b>③ Same network and protocol as lesson 02</b></summary>
 
-As in Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)]: the FNN with embeddings, layers (20, 15, 10), nadam, batch 7,000, patience 15, 15 seeds each with its own 10% validation split. Only the offset (GLM3 instead of exposure) and the initial bias (0) differ.
+As in Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)]: the FNN with embeddings, layers (20, 15, 10), nadam, Keras's initialisers, batch 7,000, patience 15, 15 seeds each with its own 10% validation split. Only the offset (GLM3 instead of exposure) and the initial bias (0) differ.
 
 </details>
 
@@ -83,7 +83,7 @@ For each policy $c(\boldsymbol{x}) = \exp(w_0 + \langle\boldsymbol{w}, \boldsymb
 <details>
 <summary><b>⑤ Balance after early stopping</b></summary>
 
-GLM3 is balanced, the correction is not (here <!--r:cann.balance_learn-->pending<!--/r-->× observed claims on the learning data). Restore it with the bias shift of lesson 02, $w_0 \leftarrow w_0 + \log(\sum_i N_i / \sum_i \hat\mu_i)$, before pricing [[4](https://doi.org/10.1080/24754269.2021.1877960)].
+GLM3 is balanced, the correction is not (here <!--r:cann.balance_learn-->1.0014<!--/r-->× observed claims on the learning data). Restore it with the bias shift of lesson 02, $w_0 \leftarrow w_0 + \log(\sum_i N_i / \sum_i \hat\mu_i)$, before pricing [[4](https://doi.org/10.1080/24754269.2021.1877960)].
 
 </details>
 
@@ -109,9 +109,9 @@ Poisson deviance per policy, $\times 10^{-2}$; mean (sd) over 15 seeds.
 
 | Model | Published learn | Published test | This repo learn | This repo test | Status |
 | --- | --- | --- | --- | --- | --- |
-| GLM3 ([[5](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.5) | 24.084 | 24.102 | <!--r:glm3.deviance_learn-->pending<!--/r--> | <!--r:glm3.deviance_test-->pending<!--/r--> | <!--r:glm3.status-->pending<!--/r--> |
-| CANN | 23.742 (0.061) | 23.810 (0.033) | <!--r:cann.deviance_learn-->pending<!--/r--> (<!--r:cann.deviance_learn_sd-->pending<!--/r-->) | <!--r:cann.deviance_test-->pending<!--/r--> (<!--r:cann.deviance_test_sd-->pending<!--/r-->) | <!--r:cann.status-->pending<!--/r--> |
-| FNN (lesson 02) | 23.768 (0.016) | 23.827 (0.015) | <!--r:fnn.deviance_learn-->pending<!--/r--> | <!--r:fnn.deviance_test-->pending<!--/r--> | <!--r:fnn.status-->pending<!--/r--> |
+| GLM3 ([[5](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.5) | 24.084 | 24.102 | <!--r:glm3.deviance_learn-->24.084<!--/r--> | <!--r:glm3.deviance_test-->24.102<!--/r--> | <!--r:glm3.status-->PASS<!--/r--> |
+| CANN | 23.742 (0.061) | 23.810 (0.033) | <!--r:cann.deviance_learn-->23.787<!--/r--> (<!--r:cann.deviance_learn_sd-->0.036<!--/r-->) | <!--r:cann.deviance_test-->23.818<!--/r--> (<!--r:cann.deviance_test_sd-->0.016<!--/r-->) | <!--r:cann.status-->PASS<!--/r--> |
+| FNN (lesson 02) | 23.768 (0.016) | 23.827 (0.015) | <!--r:fnn.deviance_learn-->23.774<!--/r--> | <!--r:fnn.deviance_test-->23.829<!--/r--> | <!--r:fnn.status-->PASS<!--/r--> |
 
 ![w:520](figures/03-leaderboard.png)
 

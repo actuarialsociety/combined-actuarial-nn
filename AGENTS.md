@@ -101,7 +101,7 @@ GITHUB_TOKEN=$(gh auth token) python3 scripts/fix_math.py --github   # math rend
 | Refresh lessons | `/refresh-lessons [file]` ([skill](.claude/skills/refresh-lessons/SKILL.md)) |
 | Run on AWS / Azure | Notebooks run on Colab, Kaggle, SageMaker and Azure ML (the setup cell clones and installs the repo). Skills: `aws-ai-ml`, `signing-in-to-aws`, `aws-billing-and-cost-management`; `azure-ai-ml-py`, `azure-quotas`, `cost-estimation` |
 | Update agent skills | `scripts/update_exa_skills.sh`, `scripts/update_kedro_skills.sh`, `scripts/update_aws_skills.sh`, `scripts/update_azure_skills.sh`, `scripts/update_wandb_skills.sh` |
-| Track runs | MLflow: `mlflow ui --backend-store-uri sqlite:///mlflow.db`; optionally W&B too: set `WANDB_PROJECT` (`.[wandb]` extra, `src/deep_actuarial_science/wandb_hook.py`); skill `wandb-primary` |
+| Track runs | MLflow: `mlflow ui --backend-store-uri sqlite:///mlflow.db`; optionally W&B too: set `WANDB_PROJECT` (`.[wandb]` extra, `src/deep_actuarial_science/wandb_hook.py`); skill `wandb-primary` (plus `wandb-autoresearch`, `wandb-eval-tables`, `weave-instrument`, `agentlens-tracing-instrument`) |
 | Full run | `scripts/full_run.sh`: every model, dataset and benchmark on MPS (`DAS_DEVICE`), logged to W&B; `notebooks/run_all_mps.ipynb` for the notebook version |
 | Container | `docker compose up lab mlflow` (JupyterLab :8888, MLflow :5000) |
 | Slides | `npx @marp-team/marp-cli@4.5.1 --html -s lessons` (published to Pages by `slides.yml`) |

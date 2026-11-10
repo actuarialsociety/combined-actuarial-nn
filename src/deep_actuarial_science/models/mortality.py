@@ -5,7 +5,14 @@ Ch. 8 (the benchmark, see conf/base/parameters_benchmarks.yml): Lee-Carter with
 random-walk-with-drift extrapolation (R `rwf(kt, drift = TRUE)`), and networks on
 10-year windows of log-mortality across all ages that predict the next year,
 forecasting recursively. Keras layers are mirrored where PyTorch differs: an LSTM with
-linear activation and one bias per gate, and attention with a learned scale. Every model exposes
+linear activation and one bias per gate, attention with a learned scale, and Keras's
+initialisers and Adam epsilon.
+
+Seeds: the book publishes one run per network (seed 100) and warns the results "are not very
+robust" across SGD runs. PyTorch cannot reproduce Keras's seed-100 draw, so each network fits
+`training.n_runs` seeds (100, 101, ...). Metrics are the mean and sd of the per-seed RMSEs;
+the benchmark asks whether the published single run lies within mean +- 2 sd. `pred` is the
+average forecast over seeds (`pred_run_<r>` holds each seed). Every model exposes
 `fit_forecast(data, params, training) -> (results, history)`, where `results` is
 the long table [Sex, Year, Age, logmx, split, pred].
 """
@@ -20,7 +27,7 @@ import torch
 from sklearn.preprocessing import MinMaxScaler
 from torch import nn, optim
 
-from deep_actuarial_science.models.torch_utils import device
+from deep_actuarial_science.models.torch_utils import KERAS_EPS, device, keras_init
 
 
 def prepare(raw: pd.DataFrame, params: dict) -> pd.DataFrame:
@@ -90,6 +97,16 @@ class KerasLSTM(nn.Module):
         self.units, self.act = units, activation or (lambda z: z)
         self.gates = nn.Linear(n_in + units, 4 * units)
 
+    def keras_init(self) -> None:
+        """Keras LSTM defaults: Glorot kernel, orthogonal recurrent kernel, zero biases
+        except the forget gate's (`unit_forget_bias = TRUE`: 1)."""
+        n_in = self.gates.in_features - self.units
+        w = self.gates.weight.data
+        nn.init.xavier_uniform_(w[:, :n_in])
+        nn.init.orthogonal_(w[:, n_in:])
+        nn.init.zeros_(self.gates.bias)
+        self.gates.bias.data[self.units : 2 * self.units] = 1.0  # gate order i, f, g, o
+
     def forward(self, x):
         h = x.new_zeros(x.shape[0], self.units)
         c = x.new_zeros(x.shape[0], self.units)
@@ -151,7 +168,7 @@ def _train(net, X, y, t: dict) -> dict:
     X, y = torch.FloatTensor(X[idx]).to(dev), torch.FloatTensor(y[idx]).to(dev)
     cut = int(0.9 * len(X))
     Xt, yt, Xv, yv = X[:cut], y[:cut], X[cut:], y[cut:]
-    opt = optim.Adam(net.parameters(), lr=t.get("lr", 0.001))
+    opt = optim.Adam(net.parameters(), lr=t.get("lr", 0.001), eps=KERAS_EPS)
     sched = optim.lr_scheduler.ReduceLROnPlateau(opt, factor=0.9, patience=t.get("patience", 5))
     loss_fn = nn.MSELoss()
     best, best_state, hist = (
@@ -185,7 +202,9 @@ def _train(net, X, y, t: dict) -> dict:
     return hist
 
 
-def neural_forecast(d: pd.DataFrame, kind: str, params: dict, t: dict, obs_year: int):
+def neural_forecast(
+    d: pd.DataFrame, kind: str, params: dict, t: dict, obs_year: int, seed: int | None = None
+):
     lookback = t["lookback"]
     years = np.sort(d.Year.unique())
     M = d.pivot(index="Year", columns="Age", values="logmx")
@@ -201,8 +220,8 @@ def neural_forecast(d: pd.DataFrame, kind: str, params: dict, t: dict, obs_year:
     S = scaler.transform(M.to_numpy().reshape(-1, 1)).reshape(M.shape)
     n_learn = int((years <= obs_year).sum())
     X, y = _windows(S[:n_learn], lookback)
-    torch.manual_seed(params.get("seed", 100))
-    net = NETS[kind](lookback, M.shape[1], **params.get("arch", {}))
+    torch.manual_seed(params.get("seed", 100) if seed is None else seed)
+    net = keras_init(NETS[kind](lookback, M.shape[1], **params.get("arch", {})))
     hist = _train(net, X, y, t)
     net.eval()
     pred = np.full(S.shape, np.nan)
@@ -217,6 +236,13 @@ def neural_forecast(d: pd.DataFrame, kind: str, params: dict, t: dict, obs_year:
     return out.T, hist  # ages x years
 
 
+def _long(a: np.ndarray, ages, years, name: str) -> pd.Series:
+    """Ages x years array -> Series indexed by (Age, Year)."""
+    s = pd.DataFrame(a, index=ages, columns=years).stack().rename(name)
+    s.index.names = ["Age", "Year"]
+    return s
+
+
 def fit_forecast(data: pd.DataFrame, params: dict, training: dict, obs_year: int):
     """Fit per sex; return the long results table and the training history."""
     parts, hist = [], {}
@@ -224,12 +250,26 @@ def fit_forecast(data: pd.DataFrame, params: dict, training: dict, obs_year: int
         d = d.sort_values(["Year", "Age"])
         if params["kind"] == "lee_carter":
             fitted, h = lee_carter(d, obs_year)
+            runs = [fitted]
         else:
-            fitted, h = neural_forecast(d, params["kind"], params, training, obs_year)
+            seed0, n_runs = params.get("seed", 100), training.get("n_runs", 1)
+            runs, hs = [], []
+            for r in range(n_runs):
+                fitted, h = neural_forecast(
+                    d, params["kind"], params, training, obs_year, seed0 + r
+                )
+                runs.append(fitted)
+                hs.append(h)
+            h = {
+                **hs[0],
+                "best_epochs": [x["best_epoch"] for x in hs],
+                "seeds": [seed0 + r for r in range(n_runs)],
+            }
         years = np.sort(d.Year.unique())
         ages = np.sort(d.Age.unique())
-        f = pd.DataFrame(fitted, index=ages, columns=years).stack().rename("pred")
-        f.index.names = ["Age", "Year"]
-        parts.append(d.merge(f.reset_index(), on=["Age", "Year"]))
+        cols = [_long(np.mean(runs, axis=0), ages, years, "pred")]
+        if len(runs) > 1:
+            cols += [_long(a, ages, years, f"pred_run_{r}") for r, a in enumerate(runs)]
+        parts.append(d.merge(pd.concat(cols, axis=1).reset_index(), on=["Age", "Year"]))
         hist[sex] = h
     return pd.concat(parts, ignore_index=True), hist

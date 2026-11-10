@@ -65,7 +65,7 @@ Richman & Wüthrich [[1](https://doi.org/10.1080/03461238.2022.2081816)], Sect. 
 <details>
 <summary><b>③ Start at a GLM on the same design</b></summary>
 
-A Poisson GLM is fitted on the 42 features; attention weights $W = 0$, bias $\boldsymbol{b}$ = its coefficients, $\beta_0$ = its intercept. So $\boldsymbol\beta(\boldsymbol{x}) \equiv \boldsymbol{b}$ before training (`test_localglmnet_starts_exactly_at_its_glm`). Training as in [[1](https://doi.org/10.1080/03461238.2022.2081816)]: nadam, batch 5,000, 100 epochs, the weights of the lowest validation loss; 15 seeds.
+A Poisson GLM is fitted on the 42 features; attention weights $W = 0$, bias $\boldsymbol{b}$ = its coefficients, $\beta_0$ = its intercept. So $\boldsymbol\beta(\boldsymbol{x}) \equiv \boldsymbol{b}$ before training (`test_localglmnet_starts_exactly_at_its_glm`); the hidden layers start from Keras's Glorot-uniform weights. Training as in [[1](https://doi.org/10.1080/03461238.2022.2081816)]: nadam, batch 5,000, 100 epochs, the weights of the lowest validation loss; 15 seeds.
 
 </details>
 
@@ -110,8 +110,8 @@ Poisson deviance per policy, $\times 10^{-2}$. The paper reports one run; we rep
 
 | Model | Published learn | Published test | This repo learn | This repo test | Status |
 | --- | --- | --- | --- | --- | --- |
-| LocalGLMnet | 23.728 | 23.945 | <!--r:localglmnet.deviance_learn-->pending<!--/r--> (<!--r:localglmnet.deviance_learn_sd-->pending<!--/r-->) | <!--r:localglmnet.deviance_test-->pending<!--/r--> (<!--r:localglmnet.deviance_test_sd-->pending<!--/r-->) | <!--r:localglmnet.status-->pending<!--/r--> |
-| CANN (lesson 03) | 23.742 | 23.810 | <!--r:cann.deviance_learn-->pending<!--/r--> | <!--r:cann.deviance_test-->pending<!--/r--> | <!--r:cann.status-->pending<!--/r--> |
+| LocalGLMnet | 23.728 | 23.945 | <!--r:localglmnet.deviance_learn-->23.721<!--/r--> (<!--r:localglmnet.deviance_learn_sd-->0.039<!--/r-->) | <!--r:localglmnet.deviance_test-->23.933<!--/r--> (<!--r:localglmnet.deviance_test_sd-->0.025<!--/r-->) | <!--r:localglmnet.status-->PASS<!--/r--> |
+| CANN (lesson 03) | 23.742 | 23.810 | <!--r:cann.deviance_learn-->23.787<!--/r--> | <!--r:cann.deviance_test-->23.818<!--/r--> | <!--r:cann.status-->PASS<!--/r--> |
 
 ---
 

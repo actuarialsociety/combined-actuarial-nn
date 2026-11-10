@@ -124,10 +124,10 @@ Poisson deviance per policy, $\times 10^{-2}$.
 
 | Model | Paper, table | Published learn / test | This repo learn / test | Gini (test) | Status |
 | --- | --- | --- | --- | --- | --- |
-| Homogeneous | [[4](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3 | 25.213 / 25.445 | <!--r:homogeneous.deviance_learn-->pending<!--/r--> / <!--r:homogeneous.deviance_test-->pending<!--/r--> | <!--r:homogeneous.gini_test-->pending<!--/r--> | <!--r:homogeneous.status-->pending<!--/r--> |
-| GLM1 | [[4](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3 | 24.101 / 24.146 | <!--r:glm.deviance_learn-->pending<!--/r--> / <!--r:glm.deviance_test-->pending<!--/r--> | <!--r:glm.gini_test-->pending<!--/r--> | <!--r:glm.status-->pending<!--/r--> |
-| GLM3 | [[4](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.5 | 24.084 / 24.102 | <!--r:glm3.deviance_learn-->pending<!--/r--> / <!--r:glm3.deviance_test-->pending<!--/r--> | <!--r:glm3.gini_test-->pending<!--/r--> | <!--r:glm3.status-->pending<!--/r--> |
-| GBM | none published | n/a | <!--r:gbm.deviance_learn-->pending<!--/r--> / <!--r:gbm.deviance_test-->pending<!--/r--> | <!--r:gbm.gini_test-->pending<!--/r--> | leaderboard only |
+| Homogeneous | [[4](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3 | 25.213 / 25.445 | <!--r:homogeneous.deviance_learn-->25.213<!--/r--> / <!--r:homogeneous.deviance_test-->25.445<!--/r--> | <!--r:homogeneous.gini_test-->0.082<!--/r--> | <!--r:homogeneous.status-->PASS<!--/r--> |
+| GLM1 | [[4](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3 | 24.101 / 24.146 | <!--r:glm.deviance_learn-->24.101<!--/r--> / <!--r:glm.deviance_test-->24.146<!--/r--> | <!--r:glm.gini_test-->0.305<!--/r--> | <!--r:glm.status-->PASS<!--/r--> |
+| GLM3 | [[4](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.5 | 24.084 / 24.102 | <!--r:glm3.deviance_learn-->24.084<!--/r--> / <!--r:glm3.deviance_test-->24.102<!--/r--> | <!--r:glm3.gini_test-->0.308<!--/r--> | <!--r:glm3.status-->PASS<!--/r--> |
+| GBM | none published | n/a | <!--r:gbm.deviance_learn-->23.323<!--/r--> / <!--r:gbm.deviance_test-->23.550<!--/r--> | <!--r:gbm.gini_test-->0.353<!--/r--> | leaderboard only |
 
 Brauer [[5](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (b)–(d), reproduces the same GLM numbers in Python.
 

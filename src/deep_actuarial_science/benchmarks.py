@@ -34,10 +34,13 @@ def reconcile(
         source = ", ".join(source)
     for name, value in expected.items():
         tol = tolerance.get(name, 0.0) if isinstance(tolerance, dict) else tolerance
+        if tol == "2sd":  # a single published run: within 2 sd of our seed distribution
+            sd = metrics.get(f"{name}_sd")
+            tol = None if sd is None else 2 * sd
         actual = metrics.get(name)
         if not applicable:
             status = "SKIPPED (not reference setup)"
-        elif actual is None:
+        elif actual is None or tol is None:
             status = "MISSING"
         else:
             status = "PASS" if abs(actual - value) <= tol else "FAIL"

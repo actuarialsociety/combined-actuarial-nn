@@ -107,12 +107,12 @@ Out-of-sample Poisson deviance per policy on 67,801 test policies. Diamonds: the
 
 | Model | Paper, table | Published test | This repo | Status |
 | --- | --- | --- | --- | --- |
-| Homogeneous | Wüthrich & Merz [[2](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3 | 25.445 | <!--r:homogeneous.deviance_test-->pending<!--/r--> | <!--r:homogeneous.status-->pending<!--/r--> |
-| GLM1 | Wüthrich & Merz [[2](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3 | 24.146 | <!--r:glm.deviance_test-->pending<!--/r--> | <!--r:glm.status-->pending<!--/r--> |
-| GLM3 | Wüthrich & Merz [[2](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.5 | 24.102 | <!--r:glm3.deviance_test-->pending<!--/r--> | <!--r:glm3.status-->pending<!--/r--> |
-| FNN (15 seeds) | Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (f) | 23.827 | <!--r:fnn.deviance_test-->pending<!--/r--> | <!--r:fnn.status-->pending<!--/r--> |
-| CANN (15 seeds) | Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (g) | 23.810 | <!--r:cann.deviance_test-->pending<!--/r--> | <!--r:cann.status-->pending<!--/r--> |
-| LocalGLMnet | Richman & Wüthrich [[4](https://doi.org/10.1080/03461238.2022.2081816)], Table 2 (c) | 23.945 | <!--r:localglmnet.deviance_test-->pending<!--/r--> | <!--r:localglmnet.status-->pending<!--/r--> |
+| Homogeneous | Wüthrich & Merz [[2](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3 | 25.445 | <!--r:homogeneous.deviance_test-->25.445<!--/r--> | <!--r:homogeneous.status-->PASS<!--/r--> |
+| GLM1 | Wüthrich & Merz [[2](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3 | 24.146 | <!--r:glm.deviance_test-->24.146<!--/r--> | <!--r:glm.status-->PASS<!--/r--> |
+| GLM3 | Wüthrich & Merz [[2](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.5 | 24.102 | <!--r:glm3.deviance_test-->24.102<!--/r--> | <!--r:glm3.status-->PASS<!--/r--> |
+| FNN (15 seeds) | Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (f) | 23.827 | <!--r:fnn.deviance_test-->23.829<!--/r--> | <!--r:fnn.status-->PASS<!--/r--> |
+| CANN (15 seeds) | Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (g) | 23.810 | <!--r:cann.deviance_test-->23.818<!--/r--> | <!--r:cann.status-->PASS<!--/r--> |
+| LocalGLMnet | Richman & Wüthrich [[4](https://doi.org/10.1080/03461238.2022.2081816)], Table 2 (c) | 23.945 | <!--r:localglmnet.deviance_test-->23.933<!--/r--> | <!--r:localglmnet.status-->PASS<!--/r--> |
 
 Mortality (lesson 05) and reserving (lesson 06) reconcile the same way.
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 
+import numpy as np
 import pandas as pd
 from kedro.pipeline import Pipeline, node, pipeline
 
@@ -31,9 +32,30 @@ def evaluate(res: pd.DataFrame, params: dict, data_params: dict, training: dict)
     first_in = data_params["first_year"] + training["lookback"]
     ins = res[(res.split == "learn") & (res.Year >= first_in)]
     out = res[res.split == "test"]
-    m = {"rmse_in": rmse(ins.logmx, ins.pred), "rmse_out": rmse(out.logmx, out.pred)}
-    for sex, d in out.groupby("Sex"):
-        m[f"rmse_out_{sex.lower()}"] = rmse(d.logmx, d.pred)
+    runs = sorted(c for c in res.columns if c.startswith("pred_run_"))
+    if not runs:  # one fit (Lee-Carter, or a network with n_runs: 1)
+        m = {"rmse_in": rmse(ins.logmx, ins.pred), "rmse_out": rmse(out.logmx, out.pred)}
+        for sex, d in out.groupby("Sex"):
+            m[f"rmse_out_{sex.lower()}"] = rmse(d.logmx, d.pred)
+    else:
+        # The book publishes one SGD run: compare it with the distribution of our per-seed
+        # RMSEs (mean and sd), and report the seed-averaged forecast separately.
+        per = {
+            "rmse_in": [rmse(ins.logmx, ins[c]) for c in runs],
+            "rmse_out": [rmse(out.logmx, out[c]) for c in runs],
+        }
+        for sex, d in out.groupby("Sex"):
+            per[f"rmse_out_{sex.lower()}"] = [rmse(d.logmx, d[c]) for c in runs]
+        m = {}
+        for k, v in per.items():
+            m[k], m[f"{k}_sd"] = float(np.mean(v)), float(np.std(v, ddof=1))
+        m["rmse_out_min"], m["rmse_out_max"] = (
+            float(np.min(per["rmse_out"])),
+            float(np.max(per["rmse_out"])),
+        )
+        m["rmse_in_ensemble"] = rmse(ins.logmx, ins.pred)
+        m["rmse_out_ensemble"] = rmse(out.logmx, out.pred)
+        m["n_runs"] = len(runs)
     log.info("%s: RMSE in %.4f, out %.4f", params["kind"], m["rmse_in"], m["rmse_out"])
     return m, to_mlflow(m)
 
