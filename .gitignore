@@ -20,3 +20,6 @@ errors.log
 lessons/*.html
 site/
 mlflow*.db
+
+# oh-my-claudecode local state
+.omc/
