@@ -5,16 +5,17 @@ Ch. 8 (the benchmark, see conf/base/parameters_benchmarks.yml): Lee-Carter with
 random-walk-with-drift extrapolation (R `rwf(kt, drift = TRUE)`), and networks on
 10-year windows of log-mortality across all ages that predict the next year,
 forecasting recursively. Keras layers are mirrored where PyTorch differs: an LSTM with
-linear activation and one bias per gate, attention with a learned scale, and Keras's
-initialisers and Adam epsilon.
+linear activation and one bias per gate, attention with a learned scale, Keras's
+initialisers and Adam epsilon, and the absolute `min_delta` of its learning-rate plateau.
 
 Seeds: the book publishes one run per network (seed 100) and warns the results "are not very
 robust" across SGD runs. PyTorch cannot reproduce Keras's seed-100 draw, so each network fits
-`training.n_runs` seeds (100, 101, ...). Metrics are the mean and sd of the per-seed RMSEs;
-the benchmark asks whether the published single run lies within mean +- 2 sd. `pred` is the
-average forecast over seeds (`pred_run_<r>` holds each seed). Every model exposes
-`fit_forecast(data, params, training) -> (results, history)`, where `results` is
-the long table [Sex, Year, Age, logmx, split, pred].
+`training.n_runs` seeds (100, 101, ...); a seed sets the initial weights and the order of
+every epoch's mini-batches, as `set_random_seed(seed)` does in Keras. Metrics are the mean
+and sd of the per-seed RMSEs; the benchmark asks whether the published single run lies
+within mean +- 2 sd. `pred` is the average forecast over seeds (`pred_run_<r>` holds each
+seed). Every model exposes `fit_forecast(data, params, training) -> (results, history)`,
+where `results` is the long table [Sex, Year, Age, logmx, split, pred].
 """
 
 from __future__ import annotations
@@ -160,7 +161,11 @@ def _windows(scaled: np.ndarray, lookback: int) -> tuple[np.ndarray, np.ndarray]
     return X, scaled[lookback:]
 
 
-def _train(net, X, y, t: dict) -> dict:
+def _train(net, X, y, t: dict, seed: int | None = None) -> dict:
+    """Ch. 8 training. The learning sample is shuffled once with `set.seed(100)` (fixed, so
+    every seed shares the 10% validation windows), then Keras reshuffles every epoch from the
+    model's seed: `seed` drives that order, so seeds differ in their SGD path as well as their
+    initial weights. The learning-rate plateau uses Keras's absolute `min_delta = 1e-4`."""
     rng = np.random.RandomState(t.get("shuffle_seed", 100))
     idx = rng.permutation(len(X))
     dev = device()
@@ -169,15 +174,17 @@ def _train(net, X, y, t: dict) -> dict:
     cut = int(0.9 * len(X))
     Xt, yt, Xv, yv = X[:cut], y[:cut], X[cut:], y[cut:]
     opt = optim.Adam(net.parameters(), lr=t.get("lr", 0.001), eps=KERAS_EPS)
-    sched = optim.lr_scheduler.ReduceLROnPlateau(opt, factor=0.9, patience=t.get("patience", 5))
+    sched = optim.lr_scheduler.ReduceLROnPlateau(
+        opt, factor=0.9, patience=t.get("patience", 5), threshold=1e-4, threshold_mode="abs"
+    )
     loss_fn = nn.MSELoss()
     best, best_state, hist = (
         float("inf"),
         copy.deepcopy(net.state_dict()),
-        {"loss": [], "val_loss": []},
+        {"loss": [], "val_loss": [], "lr": []},
     )
     bs = t.get("batch_size", 4)
-    gen = torch.Generator().manual_seed(t.get("shuffle_seed", 100))
+    gen = torch.Generator().manual_seed(t.get("shuffle_seed", 100) if seed is None else seed)
     for _ in range(t["epochs"]):
         net.train()
         # Keras fit() reshuffles every epoch; drawn on the CPU so every device sees one order
@@ -193,6 +200,7 @@ def _train(net, X, y, t: dict) -> dict:
             vl, tl = loss_fn(net(Xv), yv).item(), loss_fn(net(Xt), yt).item()
         hist["loss"].append(tl)
         hist["val_loss"].append(vl)
+        hist["lr"].append(opt.param_groups[0]["lr"])
         sched.step(vl)
         if vl < best:
             best, best_state = vl, copy.deepcopy(net.state_dict())
@@ -222,7 +230,7 @@ def neural_forecast(
     X, y = _windows(S[:n_learn], lookback)
     torch.manual_seed(params.get("seed", 100) if seed is None else seed)
     net = keras_init(NETS[kind](lookback, M.shape[1], **params.get("arch", {})))
-    hist = _train(net, X, y, t)
+    hist = _train(net, X, y, t, params.get("seed", 100) if seed is None else seed)
     net.eval()
     pred = np.full(S.shape, np.nan)
     with torch.no_grad():
@@ -264,6 +272,7 @@ def fit_forecast(data: pd.DataFrame, params: dict, training: dict, obs_year: int
                 **hs[0],
                 "best_epochs": [x["best_epoch"] for x in hs],
                 "seeds": [seed0 + r for r in range(n_runs)],
+                "runs": hs,  # every seed's per-epoch curves (training_log.py)
             }
         years = np.sort(d.Year.unique())
         ages = np.sort(d.Age.unique())

@@ -14,6 +14,9 @@ Rules (enforced for pull requests by CI, see [MAINTENANCE.md](./MAINTENANCE.md))
 - No other reference number moved: frequency was re-scored from the saved predictions, mortality and reserving were re-run at the reference setup and reproduced the previous run.
 
 ### Added
+- Per-epoch training logs for every trained model (FNN, CANN, LocalGLMnet, GBM, the four mortality networks, neural ODP): training and validation loss for every seed (and the learning rate where it changes), logged to MLflow as step metrics plus `training/<model>.csv`, and to W&B as one curve chart per model and metric (`training_log.py`).
+- Mortality: `rmse_out_age15plus`, the out-of-sample RMSE without ages 0-14, whose few Swiss deaths make the observed rates noisy and carry about half of every model's squared error.
+- Findings: two-sided p-values and Holm-adjusted p-values for every gap between models.
 - `findings.py`: which gaps between models are real (paired 95% interval over test policies or companies) and where a published single run falls among our seeds. Each pipeline writes `findings.csv` and a figure.
 - `reference/`: the frozen reference run (metrics, reconciliation, findings, environment), written by `scripts/freeze_reference.py`. Lessons and README are filled from it; a test fails if they disagree.
 - Notebooks: `reconciliation()` shows paper, reference run and this run; `findings()` shows the gaps against the reference run.
@@ -21,11 +24,16 @@ Rules (enforced for pull requests by CI, see [MAINTENANCE.md](./MAINTENANCE.md))
 - `MAINTENANCE.md`, this changelog, and a CI check that a pull request updates it.
 
 ### Changed
+- FNN and CANN are reconciled to Brauer (2024) with a tolerance of 2 standard errors of the gap between two 15-seed means (`2se`), not 2 seed sd, which was about 2.7 times too wide.
+- Findings: a gap is called real only if its Holm-adjusted p-value is below 0.05 over all pairs in the table; the 95% intervals stay per pair.
+- Mortality networks: a seed now also sets every epoch's mini-batch order (as Keras's `set_random_seed` does), not only the initial weights, so the seed spread behind the `2sd` tolerance is not understated; the learning-rate plateau uses Keras's absolute `min_delta`.
 - Mortality comparison figure: per-seed dots with the published run (`seeds.png`) replace the bar chart of means.
 - Notebook 01 also fits GLM3; notebook 03 also fits the FNN (the comparison the CANN has to win).
 - CI also runs when lessons, scripts, `reference/` or the README change.
 
 ### Fixed
+- Neural ODP was never trained (best epoch 0 in every run): it chose its epochs on the 1997 diagonal using chain-ladder offsets fitted to that same diagonal. Epochs are now chosen out of time (offsets and training from calendar years up to 1996), then the network is refitted on the whole upper triangle.
+- Tests and notebooks brought in line with the reconciliation API (`reconcile(..., reference, name)`).
 - Reconciliation rows are labelled with the model's name, not its kind: GLM3's rows were labelled `glm`.
 - Reserving: the published benchmark applies only to the reference setup; smoke and scale-up runs report SKIPPED instead of a false FAIL.
 

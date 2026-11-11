@@ -1,7 +1,8 @@
 # Published results each model must reproduce at the reference setup (conf/base).
 # Every entry names the paper and the table the values come from. Closed-form fits must match
-# to rounding; networks fitted over several seeds must match within a tolerance of twice the
-# published seed standard deviation (or the stated band where only a single run is published).
+# to rounding. A published mean over n seeds ("2se") must lie within 2 standard errors of the
+# gap between it and our mean over seeds; a published single run ("2sd", or a stated band)
+# must lie within 2 sd of our per-seed values.
 # Frequency deviances are per policy in 10^-2 (Wüthrich & Merz 2023, eq. 5.28).
 _wm2023: &wm2023 "Wüthrich & Merz (2023), Statistical Foundations of Actuarial Learning and its Applications, Springer, doi:10.1007/978-3-031-12409-9"
 _brauer: &brauer "Brauer (2024), Enhancing actuarial non-life pricing models via transformers, European Actuarial Journal, doi:10.1007/s13385-024-00388-2"
@@ -24,11 +25,15 @@ benchmarks:
     gbm: null   # no published configuration on this split; compared on the leaderboard only
     fnn:
       source: [*brauer, "Table 2 (f) FNN_EMB, mean (sd) over 15 seeds: 23.768 (0.016), 23.827 (0.015)"]
-      tolerance: {deviance_learn: 0.032, deviance_test: 0.030}
+      tolerance: "2se"   # two 15-seed means: 2 x sqrt(sd_pub^2/15 + sd_ours^2/15)
+      sd: {deviance_learn: 0.016, deviance_test: 0.015}
+      n: 15
       expected: {deviance_learn: 23.768, deviance_test: 23.827}
     cann:
       source: [*brauer, "Table 2 (g) CANN on GLM3, mean (sd) over 15 seeds: 23.742 (0.061), 23.810 (0.033)"]
-      tolerance: {deviance_learn: 0.122, deviance_test: 0.066}
+      tolerance: "2se"
+      sd: {deviance_learn: 0.061, deviance_test: 0.033}
+      n: 15
       expected: {deviance_learn: 23.742, deviance_test: 23.810}
     localglmnet:
       source:

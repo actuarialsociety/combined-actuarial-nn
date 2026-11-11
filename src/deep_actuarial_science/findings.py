@@ -5,7 +5,11 @@ ranking is worth:
 
 - `gaps`: a gap between two models is the mean of paired per-unit loss differences (per test
   policy, per company), so it has a standard error over units and a 95% interval. A gap whose
-  interval contains 0 would not survive another test sample.
+  interval contains 0 would not survive another test sample. The intervals are per pair; the
+  `verdict` is Holm-adjusted over every pair in the table (`p_holm` < 0.05), so comparing many
+  models does not manufacture "real" gaps. The interval treats each fitted model as fixed: it
+  is test-sample noise only. For a network it is the mean over seeds; for a model fitted once
+  (GBM, Lee-Carter) a "real" gap holds for that fit, not for every fit of the method.
 - `seeds`: a network published as a single training run is one draw from its seed
   distribution. The table places that run among our seeds, and our seeds against a baseline.
 
@@ -25,13 +29,14 @@ from deep_actuarial_science.metrics import poisson_unit_deviance, rmse
 
 REAL, NOISE = "real", "not distinguishable"
 COLUMNS = ["worse", "better", "loss_worse", "loss_better", "gap", "ci_low", "ci_high"]
-COLUMNS += ["verdict", "units", "adjacent"]
+COLUMNS += ["p_value", "p_holm", "verdict", "units", "adjacent"]
 AVERAGED = re.compile(r"_x\d+$")  # `fnn_x15`: the average of the 15 seeds' predictions of `fnn`
 
 
 def gaps(losses: dict[str, np.ndarray]) -> pd.DataFrame:
     """Every pair of models: mean loss of `worse` minus `better`, with the 95% t-interval of
-    the paired differences over units. `adjacent` marks neighbours on the leaderboard: those
+    the paired differences over units and the two-sided p-value, Holm-adjusted over all pairs
+    (`p_holm`, which sets the verdict). `adjacent` marks neighbours on the leaderboard: those
     rows, read top to bottom, say which steps of the ranking are real."""
     names = sorted(losses, key=lambda m: -float(np.mean(losses[m])))
     rows = []
@@ -39,8 +44,10 @@ def gaps(losses: dict[str, np.ndarray]) -> pd.DataFrame:
         for j in range(i + 1, len(names)):
             d = np.asarray(losses[worse], float) - np.asarray(losses[names[j]], float)
             n = len(d)
-            half = stats.t.ppf(0.975, n - 1) * d.std(ddof=1) / np.sqrt(n) if n > 1 else np.nan
+            se = d.std(ddof=1) / np.sqrt(n) if n > 1 else np.nan
+            half = stats.t.ppf(0.975, n - 1) * se if n > 1 else np.nan
             gap = float(d.mean())
+            p = float(2 * stats.t.sf(abs(gap) / se, n - 1)) if n > 1 and se > 0 else np.nan
             rows.append(
                 {
                     "worse": worse,
@@ -50,12 +57,30 @@ def gaps(losses: dict[str, np.ndarray]) -> pd.DataFrame:
                     "gap": gap,
                     "ci_low": gap - half,
                     "ci_high": gap + half,
-                    "verdict": REAL if gap - half > 0 else NOISE,
+                    "p_value": p,
                     "units": n,
                     "adjacent": j == i + 1,
                 }
             )
-    return pd.DataFrame(rows, columns=COLUMNS)
+    out = pd.DataFrame(rows, columns=COLUMNS)
+    out["p_holm"] = holm(out.p_value.to_numpy())
+    out["verdict"] = np.where((out.p_holm < 0.05) & (out.gap > 0), REAL, NOISE)
+    return out
+
+
+def holm(p: np.ndarray) -> np.ndarray:
+    """Holm-Bonferroni adjusted p-values (NaN stays NaN)."""
+    p = np.asarray(p, float)
+    out = np.full_like(p, np.nan)
+    ok = ~np.isnan(p)
+    q = p[ok]
+    order = np.argsort(q)
+    m = len(q)
+    adj = np.maximum.accumulate((m - np.arange(m)) * q[order]).clip(max=1.0)
+    res = np.empty(m)
+    res[order] = adj
+    out[ok] = res
+    return out
 
 
 def ladder(table: pd.DataFrame, names: list[str]) -> pd.DataFrame:

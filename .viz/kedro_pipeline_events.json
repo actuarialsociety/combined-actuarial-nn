@@ -1,7 +1,7 @@
 [
   {
     "event": "before_pipeline_run",
-    "timestamp": "2026-11-10T18:10:29.904484+00:00"
+    "timestamp": "2026-11-11T22:26:57.768549+00:00"
   },
   {
     "event": "after_dataset_loaded",
@@ -14,7 +14,7 @@
     "event": "after_node_run",
     "node": "fetch_cas_schedule_p",
     "node_id": "beb869e9",
-    "duration": 0.035751041999901645,
+    "duration": 0.035556499999984226,
     "status": "success"
   },
   {
@@ -42,7 +42,7 @@
     "event": "after_node_run",
     "node": "prepare_reserving_data",
     "node_id": "8ba7fc9c",
-    "duration": 0.01278870799797005,
+    "duration": 0.05502437500013002,
     "status": "success"
   },
   {
@@ -50,14 +50,14 @@
     "dataset": "res_triangles",
     "node_id": "256a4fc6",
     "status": "Available",
-    "size": 54911
+    "size": 25360
   },
   {
     "event": "after_dataset_loaded",
     "dataset": "res_triangles",
     "node_id": "256a4fc6",
     "status": "Available",
-    "size": 54911
+    "size": 25360
   },
   {
     "event": "after_dataset_loaded",
@@ -70,7 +70,7 @@
     "event": "after_node_run",
     "node": "chain_ladder.fit",
     "node_id": "9623a1c1",
-    "duration": 0.16137358299965854,
+    "duration": 0.0478938339999786,
     "status": "success"
   },
   {
@@ -78,21 +78,21 @@
     "dataset": "chain_ladder.res_predictions",
     "node_id": "17b7a490",
     "status": "Available",
-    "size": 73977
+    "size": 32123
   },
   {
     "event": "after_dataset_saved",
     "dataset": "chain_ladder.res_history",
     "node_id": "5618a49e",
     "status": "Available",
-    "size": 12387
+    "size": 3880
   },
   {
     "event": "after_dataset_loaded",
     "dataset": "res_triangles",
     "node_id": "256a4fc6",
     "status": "Available",
-    "size": 54911
+    "size": 25360
   },
   {
     "event": "after_dataset_loaded",
@@ -105,7 +105,7 @@
     "event": "after_node_run",
     "node": "neural_odp.fit",
     "node_id": "8973bf8f",
-    "duration": 17.829760709002585,
+    "duration": 2.6841815840000436,
     "status": "success"
   },
   {
@@ -113,21 +113,21 @@
     "dataset": "neural_odp.res_predictions",
     "node_id": "154bf4c0",
     "status": "Available",
-    "size": 76750
+    "size": 32187
   },
   {
     "event": "after_dataset_saved",
     "dataset": "neural_odp.res_history",
     "node_id": "a515e621",
     "status": "Available",
-    "size": 100980
+    "size": 1738
   },
   {
     "event": "after_dataset_loaded",
     "dataset": "chain_ladder.res_predictions",
     "node_id": "17b7a490",
     "status": "Available",
-    "size": 73977
+    "size": 32123
   },
   {
     "event": "after_dataset_loaded",
@@ -141,13 +141,13 @@
     "dataset": "chain_ladder.res_history",
     "node_id": "5618a49e",
     "status": "Available",
-    "size": 12387
+    "size": 3880
   },
   {
     "event": "after_node_run",
     "node": "chain_ladder.evaluate",
     "node_id": "06badc30",
-    "duration": 0.030922500001906883,
+    "duration": 0.008462166999834153,
     "status": "success"
   },
   {
@@ -155,7 +155,7 @@
     "dataset": "chain_ladder.res_metrics",
     "node_id": "7dea19f7",
     "status": "Available",
-    "size": 331
+    "size": 329
   },
   {
     "event": "after_dataset_saved",
@@ -169,7 +169,7 @@
     "dataset": "neural_odp.res_predictions",
     "node_id": "154bf4c0",
     "status": "Available",
-    "size": 76750
+    "size": 32187
   },
   {
     "event": "after_dataset_loaded",
@@ -183,13 +183,13 @@
     "dataset": "neural_odp.res_history",
     "node_id": "a515e621",
     "status": "Available",
-    "size": 100980
+    "size": 1738
   },
   {
     "event": "after_node_run",
     "node": "neural_odp.evaluate",
     "node_id": "9a76317f",
-    "duration": 0.013821042000927264,
+    "duration": 0.008630207999885897,
     "status": "success"
   },
   {
@@ -211,21 +211,21 @@
     "dataset": "chain_ladder.res_metrics",
     "node_id": "7dea19f7",
     "status": "Available",
-    "size": 331
+    "size": 329
   },
   {
     "event": "after_dataset_loaded",
     "dataset": "chain_ladder.res_predictions",
     "node_id": "17b7a490",
     "status": "Available",
-    "size": 73977
+    "size": 32123
   },
   {
     "event": "after_dataset_loaded",
     "dataset": "res_triangles",
     "node_id": "256a4fc6",
     "status": "Available",
-    "size": 54911
+    "size": 25360
   },
   {
     "event": "after_dataset_loaded",
@@ -252,7 +252,7 @@
     "event": "after_node_run",
     "node": "chain_ladder.reconcile",
     "node_id": "43652f13",
-    "duration": 2.1775836660017376,
+    "duration": 0.515361374999884,
     "status": "success"
   },
   {
@@ -260,14 +260,14 @@
     "dataset": "chain_ladder.res_reconciliation",
     "node_id": "61b36e1a",
     "status": "Available",
-    "size": 859
+    "size": 904
   },
   {
     "event": "after_dataset_loaded",
     "dataset": "chain_ladder.res_metrics",
     "node_id": "7dea19f7",
     "status": "Available",
-    "size": 331
+    "size": 329
   },
   {
     "event": "after_dataset_loaded",
@@ -281,27 +281,27 @@
     "dataset": "chain_ladder.res_predictions",
     "node_id": "17b7a490",
     "status": "Available",
-    "size": 73977
+    "size": 32123
   },
   {
     "event": "after_dataset_loaded",
     "dataset": "neural_odp.res_predictions",
     "node_id": "154bf4c0",
     "status": "Available",
-    "size": 76750
+    "size": 32187
   },
   {
     "event": "after_dataset_loaded",
     "dataset": "res_triangles",
     "node_id": "256a4fc6",
     "status": "Available",
-    "size": 54911
+    "size": 25360
   },
   {
     "event": "after_node_run",
     "node": "compare_reserving_models",
     "node_id": "e3956675",
-    "duration": 0.1093771249979909,
+    "duration": 0.05283600000007027,
     "status": "success"
   },
   {
@@ -309,21 +309,21 @@
     "dataset": "res_leaderboard",
     "node_id": "532c88d1",
     "status": "Available",
-    "size": 455
+    "size": 453
   },
   {
     "event": "after_dataset_saved",
     "dataset": "res_findings",
     "node_id": "2ce01dd9",
     "status": "Available",
-    "size": 223
+    "size": 292
   },
   {
     "event": "after_dataset_saved",
     "dataset": "res_company_reserves",
     "node_id": "0e12e9da",
     "status": "Available",
-    "size": 3253
+    "size": 1037
   },
   {
     "event": "after_dataset_saved",
@@ -344,14 +344,14 @@
     "dataset": "neural_odp.res_predictions",
     "node_id": "154bf4c0",
     "status": "Available",
-    "size": 76750
+    "size": 32187
   },
   {
     "event": "after_dataset_loaded",
     "dataset": "res_triangles",
     "node_id": "256a4fc6",
     "status": "Available",
-    "size": 54911
+    "size": 25360
   },
   {
     "event": "after_dataset_loaded",
@@ -377,7 +377,7 @@
     "event": "after_node_run",
     "node": "neural_odp.reconcile",
     "node_id": "212123bc",
-    "duration": 0.01005566700041527,
+    "duration": 0.0024982080001336726,
     "status": "success"
   },
   {
@@ -389,6 +389,6 @@
   },
   {
     "event": "after_pipeline_run",
-    "timestamp": "2026-11-10T18:10:53.309396+00:00"
+    "timestamp": "2026-11-11T22:27:03.738248+00:00"
   }
 ]

@@ -29,13 +29,21 @@ def fit_forecast(data: pd.DataFrame, params: dict, training: dict, data_params: 
 
 
 def evaluate(res: pd.DataFrame, params: dict, data_params: dict, training: dict):
-    """RMSE of log m on the reference evaluation window (in-sample starts after the lookback)."""
+    """RMSE of log m on the reference evaluation window (in-sample starts after the lookback).
+    `rmse_out_age15plus` leaves out ages 0-14: few Swiss deaths make their observed rates
+    noisy (some are zero, floored at log m = -11), and they carry about half of the squared
+    error of every model."""
     first_in = data_params["first_year"] + training["lookback"]
     ins = res[(res.split == "learn") & (res.Year >= first_in)]
     out = res[res.split == "test"]
+    adult = out[out.Age >= 15]
     runs = sorted(c for c in res.columns if c.startswith("pred_run_"))
     if not runs:  # one fit (Lee-Carter, or a network with n_runs: 1)
-        m = {"rmse_in": rmse(ins.logmx, ins.pred), "rmse_out": rmse(out.logmx, out.pred)}
+        m = {
+            "rmse_in": rmse(ins.logmx, ins.pred),
+            "rmse_out": rmse(out.logmx, out.pred),
+            "rmse_out_age15plus": rmse(adult.logmx, adult.pred),
+        }
         for sex, d in out.groupby("Sex"):
             m[f"rmse_out_{sex.lower()}"] = rmse(d.logmx, d.pred)
     else:
@@ -44,6 +52,7 @@ def evaluate(res: pd.DataFrame, params: dict, data_params: dict, training: dict)
         per = {
             "rmse_in": [rmse(ins.logmx, ins[c]) for c in runs],
             "rmse_out": [rmse(out.logmx, out[c]) for c in runs],
+            "rmse_out_age15plus": [rmse(adult.logmx, adult[c]) for c in runs],
         }
         for sex, d in out.groupby("Sex"):
             per[f"rmse_out_{sex.lower()}"] = [rmse(d.logmx, d[c]) for c in runs]
