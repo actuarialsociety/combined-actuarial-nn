@@ -46,6 +46,7 @@ git diff reference/ lessons/ README.md # review every number that moved
 | Refresh lessons (links, newer papers) | `/refresh-lessons`; [`lesson-refresh.yml`](./.github/workflows/lesson-refresh.yml) opens a PR monthly |
 | Add a paper | `/build-research-benchmark-wiki <paper>`; steps in [AGENTS.md](./AGENTS.md) §3 |
 | EDA and model-analysis reports (local) | `python scripts/eda.py`, `python scripts/model_analysis.py` |
+| Refactoring check (after extending code, before a release) | `/refactor-check` ([skill](.claude/skills/refactor-check/SKILL.md)): shared objects, long units, hard-coded settings, comment drift; behaviour-preserving |
 | Folder READMEs match the code | `python3 scripts/check_readmes.py`; enforced at push by `.githooks/pre-push` (`scripts/install_hooks.sh` once per clone) and in CI |
 | Research library (local) | `python scripts/research.py fetch`, `index`, `search "..."`, `status` |
 | Update vendored agent skills | `scripts/update_*_skills.sh` |
