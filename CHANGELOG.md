@@ -25,6 +25,7 @@ Rules (enforced for pull requests by CI, see [MAINTENANCE.md](./MAINTENANCE.md))
 - `MAINTENANCE.md`, this changelog, and a CI check that a pull request updates it.
 
 ### Changed
+- Git flow: feature branches off `develop` with conventional branch names and commits; CI also runs on pushes to `develop`. AGENTS.md §7 records the maintainer's working principles.
 - FNN and CANN are reconciled to Brauer (2024) with a tolerance of 2 standard errors of the gap between two 15-seed means (`2se`), not 2 seed sd, which was about 2.7 times too wide.
 - Findings: a gap is called real only if its Holm-adjusted p-value is below 0.05 over all pairs in the table; the 95% intervals stay per pair.
 - Mortality networks: a seed now also sets every epoch's mini-batch order (as Keras's `set_random_seed` does), not only the initial weights, so the seed spread behind the `2sd` tolerance is not understated; the learning-rate plateau uses Keras's absolute `min_delta`.

@@ -133,6 +133,37 @@ GITHUB_TOKEN=$(gh auth token) python3 scripts/fix_math.py --github   # math rend
 `.env` (git-ignored) or repo secrets. Never write a key into a lesson, skill or commit.
 
 <!-- kedro-skills:catalog-config:start -->
+### 7. Working principles (the maintainer's standing rules)
+
+**Git.** Short-lived feature branches off `develop`, named per
+[conventionalbranch.org](https://conventionalbranch.org/) (`feature/…`, `bugfix/…`, `hotfix/…`,
+`release/…`, `chore/…`); commits per [conventionalcommits.org](https://www.conventionalcommits.org)
+(`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`). Pull requests target `develop`;
+`develop` is merged to `main` for a release (the wiki and slides publish from `main`).
+
+**Code.** Modular and minimal, with few lines and thorough comments. Reusable atomic Python
+objects with shared components; look for refactoring each time code is extended. Version the
+package explicitly.
+
+**Docs.** Every folder has a `README.md` with a mermaid diagram of what its code really does,
+checked at push time. `MAINTENANCE.md` and `CHANGELOG.md` are updated with every change. `docs/`
+holds HTML infographic pages: succinct, interactive plotly plots, click to expand, linking
+straight to the systems behind them (MLflow, W&B, AWS, …).
+
+**Reports.** Less is more and visual, with detail behind an expand. Each one states the model
+version and data used, is reproducible, links to the running system, and exists as both a
+report and a slide set. Expert review is extra work on top of a reviewer's day job: review tools
+must be fast to use, with the ground truth easy to see.
+
+**Scripts.** Every login and core task is a script in `scripts/`, in bash and PowerShell.
+
+**Skills.** For each Python package used, check whether it publishes agent skills; vendor them
+into `.claude/skills/` with an `update_*_skills` script.
+
+**Kedro.** kedro-datasets, kedro-viz and MLflow. Track core metrics between pipeline steps for
+audit (time, row and step totals, monetary totals). Keep notebooks that run each pipeline with
+commentary for newcomers, checked against the pipelines. Settings belong in parameters.
+
 ## Catalog config
 
 Kedro catalog configuration guidance for conf/**/*.yml files. Use when adding datasets, editing catalog entries, setting up factories, or working with credentials and parameter interpolation.

@@ -9,7 +9,7 @@ on:
     paths: ["src/**", "conf/**", "tests/**", "notebooks/**", "scripts/**", "lessons/**", "reference/**",
             "README.md", "pyproject.toml", ".github/workflows/ci.yml"]
   push:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 
 permissions:
