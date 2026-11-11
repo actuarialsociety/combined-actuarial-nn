@@ -14,6 +14,7 @@ Rules (enforced for pull requests by CI, see [MAINTENANCE.md](./MAINTENANCE.md))
 - No other reference number moved: frequency was re-scored from the saved predictions, mortality and reserving were re-run at the reference setup and reproduced the previous run.
 
 ### Added
+- `scripts/research.py`: a local library of every paper the repo cites, with open-access PDFs from OpenAlex, repository pages and arXiv, and a full-text search index by page (`data/12_research/`, never committed).
 - Per-epoch training logs for every trained model (FNN, CANN, LocalGLMnet, GBM, the four mortality networks, neural ODP): training and validation loss for every seed (and the learning rate where it changes), logged to MLflow as step metrics plus `training/<model>.csv`, and to W&B as one curve chart per model and metric (`training_log.py`).
 - Mortality: `rmse_out_age15plus`, the out-of-sample RMSE without ages 0-14, whose few Swiss deaths make the observed rates noisy and carry about half of every model's squared error.
 - Findings: two-sided p-values and Holm-adjusted p-values for every gap between models.
