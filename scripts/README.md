@@ -1,12 +1,12 @@
 # `scripts/`
 
-Every core task as a script. Python scripts run on any OS; shell scripts have PowerShell
-twins where noted.
+Every core task and login as a script. Python scripts run on any OS; every bash script has a
+PowerShell twin (`.ps1`) that does the same steps.
 
 ```mermaid
 flowchart TD
     subgraph run["Run and freeze"]
-        full_run["full_run.sh"] --> freeze_reference["freeze_reference.py"]
+        full_run["full_run.sh / full_run.ps1"] --> freeze_reference["freeze_reference.py"]
         freeze_reference --> export_figures["export_figures.py"]
         freeze_reference --> fill_results["fill_results.py"]
     end
@@ -26,13 +26,15 @@ flowchart TD
     subgraph upkeep["Upkeep"]
         check_readmes["check_readmes.py"]
         install_hooks["install_hooks.sh / install_hooks.ps1"]
-        skills["update_aws_skills.sh<br/>update_azure_skills.sh<br/>update_exa_skills.sh<br/>update_kedro_skills.sh<br/>update_wandb_skills.sh"]
+        login["login.sh / login.ps1"]
+        shared["_skills.ps1 · _env.ps1<br/>shared PowerShell helpers"]
+        skills["update_aws_skills · update_azure_skills<br/>update_exa_skills · update_kedro_skills<br/>update_wandb_skills (.sh / .ps1)"]
     end
 ```
 
 | Script | Does |
 | --- | --- |
-| `full_run.sh` | every pipeline at the reference setup, freeze, then scale-up; MPS, logged to W&B |
+| `full_run.sh`, `full_run.ps1` | every pipeline at the reference setup, freeze, then scale-up; MPS, logged to W&B |
 | `freeze_reference.py` | latest reference run → `reference/`, then figures and numbers |
 | `export_figures.py` | copies the lesson figures from the run |
 | `fill_results.py` | fills every number in the lessons and README from `reference/` (`--check` in CI) |
@@ -47,4 +49,6 @@ flowchart TD
 | `research.py` | local library of every cited paper, full-text search (`data/12_research/`) |
 | `check_readmes.py` | every folder's README matches its code (pre-push hook and CI) |
 | `install_hooks.sh`, `install_hooks.ps1` | enable the hooks in `.githooks/` (once per clone) |
-| `update_aws_skills.sh`, `update_azure_skills.sh`, `update_exa_skills.sh`, `update_kedro_skills.sh`, `update_wandb_skills.sh` | re-vendor agent skills into `.claude/skills/` |
+| `update_aws_skills.sh`, `update_azure_skills.sh`, `update_exa_skills.sh`, `update_kedro_skills.sh`, `update_wandb_skills.sh` and their twins `update_*_skills.ps1` | re-vendor agent skills into `.claude/skills/` |
+| `login.sh`, `login.ps1` | sign in to GitHub and W&B (and AWS, Azure on request), skipping any already signed in |
+| `_skills.ps1`, `_env.ps1` | shared PowerShell helpers: download and copy a skill; load `.env` |

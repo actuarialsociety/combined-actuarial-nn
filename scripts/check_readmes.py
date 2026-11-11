@@ -13,6 +13,7 @@ project README, which is the wiki's home page, only needs its diagram):
 3. Every other file is named in the README, directly or by a backticked glob (`*.png`).
 4. Every backticked file name in the README (`plots.py`) exists somewhere in the repo:
    a deleted or renamed file cannot linger in the docs.
+5. Every bash script in `scripts/` has a PowerShell twin (`x.sh` -> `x.ps1`).
 """
 
 from __future__ import annotations
@@ -74,6 +75,9 @@ def problems() -> list[str]:
             base = t.rsplit("/", 1)[-1]
             if FILE_LIKE.match(base) and "*" not in base and base not in names:
                 out.append(f"{where}: `{t}` does not exist")
+    for p in files:  # rule 5: bash and PowerShell versions of every script
+        if str(p.parent) == "scripts" and p.suffix == ".sh" and p.with_suffix(".ps1") not in files:
+            out.append(f"scripts/{p.name}: no PowerShell twin `{p.stem}.ps1`")
     return out
 
 

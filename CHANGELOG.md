@@ -14,6 +14,7 @@ Rules (enforced for pull requests by CI, see [MAINTENANCE.md](./MAINTENANCE.md))
 - No other reference number moved: frequency was re-scored from the saved predictions, mortality and reserving were re-run at the reference setup and reproduced the previous run.
 
 ### Added
+- PowerShell twins of every bash script (`full_run.ps1`, `update_*_skills.ps1`, `install_hooks.ps1`) and `login.sh` / `login.ps1` for GitHub, W&B, AWS and Azure; `check_readmes.py` fails if a bash script has no twin. The PowerShell versions are not yet run in CI.
 - A README.md with a mermaid diagram in every folder, and `scripts/check_readmes.py`, which fails if a README stops matching its code; run by a pre-push hook (`.githooks/`, enabled with `scripts/install_hooks.sh` or `.ps1`) and by CI.
 - `scripts/research.py`: a local library of every paper the repo cites, with open-access PDFs from OpenAlex, repository pages and arXiv, and a full-text search index by page (`data/12_research/`, never committed).
 - Per-epoch training logs for every trained model (FNN, CANN, LocalGLMnet, GBM, the four mortality networks, neural ODP): training and validation loss for every seed (and the learning rate where it changes), logged to MLflow as step metrics plus `training/<model>.csv`, and to W&B as one curve chart per model and metric (`training_log.py`).
