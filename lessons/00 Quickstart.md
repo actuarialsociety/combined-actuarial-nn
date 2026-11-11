@@ -85,7 +85,7 @@ Settings live in config, seeds are fixed, MLflow logs every run. Networks train 
 <details>
 <summary><b>⑥ Is a gap between two models real?</b></summary>
 
-**Paired gap in test loss, with its 95% interval** [5]
+**Paired gap in test loss, with its 95% interval** [[5](https://doi.org/10.1080/07350015.1995.10524599)]
 
 $\displaystyle \hat\Delta = \frac{1}{n}\sum_{i=1}^n \big(d_i^{A} - d_i^{B}\big), \qquad \hat\Delta \pm t_{n-1}\thinspace\frac{s}{\sqrt{n}}$
 
@@ -136,7 +136,7 @@ Out-of-sample Poisson deviance per policy on 67,801 test policies. Diamonds: the
 | FNN → CANN | ⟪gap.fnn.cann⟫ | ⟪verdict.fnn.cann⟫ |
 | CANN, 15 seeds averaged → GBM | ⟪gap.cann_x15.gbm⟫ | ⟪verdict.cann_x15.gbm⟫ |
 
-Paired over test policies [5] (Core ideas ⑥). Grey: the test set cannot rank the two models.
+Paired over test policies [[5](https://doi.org/10.1080/07350015.1995.10524599)] (Core ideas ⑥). Grey: the test set cannot rank the two models.
 
 ---
 

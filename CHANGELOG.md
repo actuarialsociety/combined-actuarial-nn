@@ -32,6 +32,7 @@ Rules (enforced for pull requests by CI, see [MAINTENANCE.md](./MAINTENANCE.md))
 - CI also runs when lessons, scripts, `reference/` or the README change.
 
 ### Fixed
+- Link check: two lessons had unlinked citations; the synthetic telematics data page (UConn) is offline, so Open Actuarial Data links its paper only.
 - Neural ODP was never trained (best epoch 0 in every run): it chose its epochs on the 1997 diagonal using chain-ladder offsets fitted to that same diagonal. Epochs are now chosen out of time (offsets and training from calendar years up to 1996), then the network is refitted on the whole upper triangle.
 - Tests and notebooks brought in line with the reconciliation API (`reconcile(..., reference, name)`).
 - Reconciliation rows are labelled with the model's name, not its kind: GLM3's rows were labelled `glm`.

@@ -101,7 +101,7 @@ where $S$ = all (age, year) cells of 2000–2021 (out-of-sample) or 1910–1999 
 <details>
 <summary><b>⑥ One published run, fifteen seeds</b></summary>
 
-A network trained by stochastic gradient descent is one draw from a distribution over seeds, and [2] publishes one draw per network. Two checks, with $r_1,\dots,r_{15}$ our per-seed RMSEs, $\bar r$ their mean and $s$ their standard deviation:
+A network trained by stochastic gradient descent is one draw from a distribution over seeds, and [[2](https://aitools4actuaries.com/Ch8E/mortality_forecasting.pdf)] publishes one draw per network. Two checks, with $r_1,\dots,r_{15}$ our per-seed RMSEs, $\bar r$ their mean and $s$ their standard deviation:
 
 - **PASS** if $|r^{\mathrm{pub}} - \bar r| \le 2 s$, where $r^{\mathrm{pub}}$ = the published RMSE. A wide seed spread passes easily
 - **Rank:** how many $r_k \le r^{\mathrm{pub}}$. None means the published run is better than everything our implementation produced
