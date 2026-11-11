@@ -82,6 +82,9 @@ Code, Copilot) maintain the lessons and add models.
 
 ### 3. Adding a model (the core workflow)
 
+0. Read the paper with the `paper-to-code` skill's Phase 1 (algorithm, equation and
+   hyperparameter checklist, from `data/12_research/text/`); use its code and test patterns,
+   not its standalone-project scaffolding.
 1. Implement it in `models/<domain>.py` with the domain's interface and register it
    (`MODELS` dict or the pipeline's `MODELS` list).
 2. Add its parameter block under `<domain>.models.<name>` and, if one exists, its
@@ -118,7 +121,7 @@ GITHUB_TOKEN=$(gh auth token) python3 scripts/fix_math.py --github   # math rend
 | Kedro guidance | Kedro skills in `.claude/skills/` (`catalog-config`, `parameters-and-config`, `explain-project`, `kedro-build-demo`); update with `scripts/update_kedro_skills.sh` |
 | Refresh lessons | `/refresh-lessons [file]` ([skill](.claude/skills/refresh-lessons/SKILL.md)) |
 | Run on AWS / Azure | Notebooks run on Colab, Kaggle, SageMaker and Azure ML (the setup cell clones and installs the repo). Skills: `aws-ai-ml`, `signing-in-to-aws`, `aws-billing-and-cost-management`; `azure-ai-ml-py`, `azure-quotas`, `cost-estimation` |
-| Update agent skills | `scripts/update_exa_skills.sh`, `scripts/update_kedro_skills.sh`, `scripts/update_aws_skills.sh`, `scripts/update_azure_skills.sh`, `scripts/update_wandb_skills.sh`, `scripts/update_mlflow_skills.sh` (each with a `.ps1` twin) |
+| Update agent skills | `scripts/update_exa_skills.sh`, `scripts/update_kedro_skills.sh`, `scripts/update_aws_skills.sh`, `scripts/update_azure_skills.sh`, `scripts/update_wandb_skills.sh`, `scripts/update_mlflow_skills.sh`, `scripts/update_paper_to_code_skill.sh` (each with a `.ps1` twin) |
 | Track runs | MLflow: `mlflow ui --backend-store-uri sqlite:///mlflow.db` (skills `mlflow-docs`, `mlflow-onboarding`, `mlflow-sagemaker`); optionally W&B too: set `WANDB_PROJECT` (`.[wandb]` extra, `src/deep_actuarial_science/wandb_hook.py`); skill `wandb-primary` (plus `wandb-autoresearch`, `wandb-eval-tables`, `weave-instrument`, `agentlens-tracing-instrument`) |
 | Full run | `scripts/full_run.sh`: every model, dataset and benchmark on MPS (`DAS_DEVICE`), logged to W&B; `notebooks/run_all_mps.ipynb` for the notebook version |
 | EDA and model analysis | `python scripts/eda.py` (each dataset) and `python scripts/model_analysis.py` (each fitted model, after a full run): local Markdown reports in `data/10_eda/` and `data/11_model_analysis/`, never logged to MLflow or W&B |
