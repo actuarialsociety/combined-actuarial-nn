@@ -131,6 +131,8 @@ Poisson deviance per policy, $\times 10^{-2}$.
 
 Brauer [[5](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (b)–(d), reproduces the same GLM numbers in Python.
 
+GLM1 → GLM3: ⟪gap.glm.glm3⟫, ⟪verdict.glm.glm3⟫. The GBM beats every network of lessons 02–04, even the CANN averaged over 15 seeds, by ⟪gap.cann_x15.gbm⟫ (gap in test deviance, 95% interval over test policies: lesson 00, Core ideas ⑥).
+
 ---
 
 ## Diagnostics
@@ -152,7 +154,7 @@ GLM1's age bands are step functions; the GBM finds the young-driver shape itself
 - **Calibration:** actual vs expected by decile on the test set, not just deviance
 - **Balance:** a GLM with intercept satisfies $\sum_i \hat\mu_i = \sum_i N_i$ on the learning data
 - **GBM:** tune with early stopping on a validation split; monitor feature drift
-- **Baseline first:** a network that cannot beat GLM3 and a tuned GBM is not worth deploying
+- **Baseline first:** a network that cannot beat GLM3 and a tuned GBM is not worth deploying; here every network beats GLM3 and none beats the GBM
 
 ---
 
@@ -164,4 +166,4 @@ GLM1's age bands are step functions; the GBM finds the young-driver shape itself
 4. Wüthrich, M. V., & Merz, M. (2023). *Statistical Foundations of Actuarial Learning and its Applications*. Springer. [doi:10.1007/978-3-031-12409-9](https://doi.org/10.1007/978-3-031-12409-9) (open access)
 5. Brauer, A. (2024). Enhancing actuarial non-life pricing models via transformers. *European Actuarial Journal*, 14(3), 991–1012. [doi:10.1007/s13385-024-00388-2](https://doi.org/10.1007/s13385-024-00388-2)
 
-_Last reviewed: 2026-11-07_
+_Last reviewed: 2026-11-10_

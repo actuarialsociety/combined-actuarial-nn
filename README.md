@@ -1,22 +1,39 @@
 # deep-actuarial-science
-> *A research-paper benchmark toolkit for deep learning in actuarial science: each model reproduces a **named paper's published table** in a Kedro pipeline and reports PASS or FAIL.*
-> * *Each reproduction comes with a short **lesson** (Marp slides with LaTeX, also on the [wiki](https://github.com/actuarialsociety/deep-actuarial-science/wiki)), a **notebook** that runs on Colab, Kaggle, SageMaker, Azure ML or any Jupyter (GPU when available) and **MLflow** tracking.*
+> *Deep learning in actuarial science, checked against the literature: each model reproduces a **named paper's published table** in a Kedro pipeline and reports PASS or FAIL.*
+> * *Each reproduction has a short **lesson** (slides with the theory and the model's exact settings, also on the [wiki](https://github.com/actuarialsociety/deep-actuarial-science/wiki)), a **notebook** and **MLflow** tracking.*
 > * *Public data at switchable scale: 678k French motor policies, Swiss HMD mortality, US Schedule P triangles with realised outcomes. See [Open Actuarial Data](./Open%20Actuarial%20Data.md).*
 > * *New to Python, VS Code or Git? Start with [ds-training](https://github.com/actuarialsociety/ds-training).*
 
+## Findings
+
+⟪count.PASS⟫ of the 25 published metrics reproduce; ⟪count.FAIL⟫ does not. A PASS says a number matches; the gaps below say whether a ranking means anything.
+
+| | Finding | Evidence |
+| --- | --- | --- |
+| 1 | Closed-form models reproduce to rounding | GLM1 ⟪glm.deviance_test⟫, GLM3 ⟪glm3.deviance_test⟫, Lee–Carter ⟪lee_carter.rmse_out⟫, chain-ladder MAPE ⟪chain_ladder.mape_ultimate⟫ |
+| 2 | Networks beat the best GLM | GLM3 → FNN: ⟪gap.glm3.fnn⟫ |
+| 3 | FNN and CANN cannot be ranked on this test set | FNN → CANN: ⟪gap.fnn.cann⟫, ⟪verdict.fnn.cann⟫ |
+| 4 | A plain gradient-boosting model beats every network, even seed-averaged | CANN ×15 → GBM: ⟪gap.cann_x15.gbm⟫ |
+| 5 | The mortality networks' published runs are not typical of their seeds | Published run vs our 15 seeds: CNN ⟪cnn.published_run⟫, LSTM ⟪lstm.published_run⟫. Seeds beating Lee–Carter: CNN ⟪cnn.seeds_beating_lee_carter⟫, LSTM ⟪lstm.seeds_beating_lee_carter⟫, Transformer ⟪transformer.seeds_beating_lee_carter⟫, non-linear CNN ⟪cnn_tanh.seeds_beating_lee_carter⟫ |
+| 6 | The neural ODP does not improve on the chain-ladder | MAPE gap, chain-ladder ahead: ⟪gap.neural_odp.chain_ladder⟫ |
+
+**How to read a gap.** `A → B: gap (interval)` is A's test loss minus B's (Poisson deviance per policy ×10⁻², or absolute error of ultimate loss), with the 95% interval of the paired differences over test policies or companies. An interval containing 0 means another test sample could reverse the ranking. Method: [lesson 00](./lessons/00%20Quickstart.md), Core ideas ⑥; code: [`findings.py`](./src/deep_actuarial_science/findings.py).
+
+**Where the numbers come from.** [`reference/`](./reference) is the frozen reference run: every metric, the reconciliation, the findings and the package versions. Every number on this page and in the lessons is filled from it, CI fails if one disagrees, and each notebook shows it beside the paper and your own run.
+
 ## Benchmarks: paper → table → reproduction
 
-| Lesson | Model | Reproduces (paper, table) | Notebook |
-| --- | --- | --- | --- |
-| [00 · Quickstart](./lessons/00%20Quickstart.md) | Pipelines, configs, reconciliation | All of the below | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/00_quickstart.ipynb) [![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/actuarialsociety/deep-actuarial-science/blob/main/notebooks/00_quickstart.ipynb) [![Open In SageMaker Studio](https://img.shields.io/badge/Open%20in-SageMaker%20Studio-FF9900)](https://console.aws.amazon.com/sagemaker/home#/studio-landing) |
-| [01 · Baselines: GLM and GBM](./lessons/01%20Baselines%20-%20GLM%20and%20GBM.md) | Poisson GLM1, GLM3; LightGBM | Wüthrich & Merz (2023), Tables 5.3, 5.5 (GBM: none published) | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/01_glm_gbm_baselines.ipynb) [![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/actuarialsociety/deep-actuarial-science/blob/main/notebooks/01_glm_gbm_baselines.ipynb) [![Open In SageMaker Studio](https://img.shields.io/badge/Open%20in-SageMaker%20Studio-FF9900)](https://console.aws.amazon.com/sagemaker/home#/studio-landing) |
-| [02 · Neural networks and embeddings](./lessons/02%20Neural%20Networks%20-%20FNN%20and%20Embeddings.md) | FNN with entity embeddings | Brauer (2024), Table 2 (f), 15 seeds | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/02_fnn_embeddings.ipynb) [![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/actuarialsociety/deep-actuarial-science/blob/main/notebooks/02_fnn_embeddings.ipynb) [![Open In SageMaker Studio](https://img.shields.io/badge/Open%20in-SageMaker%20Studio-FF9900)](https://console.aws.amazon.com/sagemaker/home#/studio-landing) |
-| [03 · CANN](./lessons/03%20CANN.md) | GLM3 nested in a network | Brauer (2024), Table 2 (g), 15 seeds | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/03_cann.ipynb) [![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/actuarialsociety/deep-actuarial-science/blob/main/notebooks/03_cann.ipynb) [![Open In SageMaker Studio](https://img.shields.io/badge/Open%20in-SageMaker%20Studio-FF9900)](https://console.aws.amazon.com/sagemaker/home#/studio-landing) |
-| [04 · LocalGLMnet](./lessons/04%20LocalGLMnet.md) | Interpretable network, variable selection | Richman & Wüthrich (2023), Table 2 (c) | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/04_localglmnet.ipynb) [![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/actuarialsociety/deep-actuarial-science/blob/main/notebooks/04_localglmnet.ipynb) [![Open In SageMaker Studio](https://img.shields.io/badge/Open%20in-SageMaker%20Studio-FF9900)](https://console.aws.amazon.com/sagemaker/home#/studio-landing) |
-| [05 · Mortality: Lee–Carter to deep learning](./lessons/05%20Mortality%20-%20Lee-Carter%20to%20Deep%20Learning.md) | Lee–Carter, CNNs, LSTM, Transformer | Richman, Scognamiglio & Wüthrich (2026), *AI Tools for Actuaries* Ch. 8, pp. 50, 56 | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/05_mortality.ipynb) [![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/actuarialsociety/deep-actuarial-science/blob/main/notebooks/05_mortality.ipynb) [![Open In SageMaker Studio](https://img.shields.io/badge/Open%20in-SageMaker%20Studio-FF9900)](https://console.aws.amazon.com/sagemaker/home#/studio-landing) |
-| [06 · Reserving: chain-ladder to neural ODP](./lessons/06%20Reserving%20-%20Chain-Ladder%20to%20Neural%20ODP.md) | Chain-ladder, neural ODP (CANN) | Kuo (2019), Table 1, on Meyers' (2015) companies (neural ODP: none published) | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/06_reserving.ipynb) [![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/actuarialsociety/deep-actuarial-science/blob/main/notebooks/06_reserving.ipynb) [![Open In SageMaker Studio](https://img.shields.io/badge/Open%20in-SageMaker%20Studio-FF9900)](https://console.aws.amazon.com/sagemaker/home#/studio-landing) |
+| Lesson | Model | Reproduces (paper, table) | Result | Notebook |
+| --- | --- | --- | --- | --- |
+| [00 · Quickstart](./lessons/00%20Quickstart.md) | Pipelines, configs, reconciliation, findings | All of the below | | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/00_quickstart.ipynb) |
+| [01 · Baselines: GLM and GBM](./lessons/01%20Baselines%20-%20GLM%20and%20GBM.md) | Poisson GLM1, GLM3; LightGBM | Wüthrich & Merz (2023), Tables 5.3, 5.5 (GBM: none published) | ⟪glm.status⟫, ⟪glm3.status⟫ | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/01_glm_gbm_baselines.ipynb) |
+| [02 · Neural networks and embeddings](./lessons/02%20Neural%20Networks%20-%20FNN%20and%20Embeddings.md) | FNN with entity embeddings | Brauer (2024), Table 2 (f), 15 seeds | ⟪fnn.status⟫ | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/02_fnn_embeddings.ipynb) |
+| [03 · CANN](./lessons/03%20CANN.md) | GLM3 nested in a network | Brauer (2024), Table 2 (g), 15 seeds | ⟪cann.status⟫ | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/03_cann.ipynb) |
+| [04 · LocalGLMnet](./lessons/04%20LocalGLMnet.md) | Interpretable network, variable selection | Richman & Wüthrich (2023), Table 2 (c) | ⟪localglmnet.status⟫ | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/04_localglmnet.ipynb) |
+| [05 · Mortality: Lee–Carter to deep learning](./lessons/05%20Mortality%20-%20Lee-Carter%20to%20Deep%20Learning.md) | Lee–Carter, CNNs, LSTM, Transformer | Richman, Scognamiglio & Wüthrich (2026), *AI Tools for Actuaries* Ch. 8, pp. 50, 56 | ⟪lee_carter.status⟫; CNN ⟪cnn.status⟫, non-linear CNN ⟪cnn_tanh.status⟫, LSTM ⟪lstm.status⟫, Transformer ⟪transformer.status⟫ | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/05_mortality.ipynb) |
+| [06 · Reserving: chain-ladder to neural ODP](./lessons/06%20Reserving%20-%20Chain-Ladder%20to%20Neural%20ODP.md) | Chain-ladder, neural ODP (CANN) | Kuo (2019), Table 1, on Meyers' (2015) companies (neural ODP: none published) | ⟪chain_ladder.status⟫ | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/06_reserving.ipynb) |
 
-Values, tolerances and full citations: [`conf/base/parameters_benchmarks.yml`](./conf/base/parameters_benchmarks.yml). Reproduce everything on a free GPU: [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/reference_run.ipynb) [![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/actuarialsociety/deep-actuarial-science/blob/main/notebooks/reference_run.ipynb) [![Open In SageMaker Studio](https://img.shields.io/badge/Open%20in-SageMaker%20Studio-FF9900)](https://console.aws.amazon.com/sagemaker/home#/studio-landing)
+Published values, tolerances and full citations: [`conf/base/parameters_benchmarks.yml`](./conf/base/parameters_benchmarks.yml). Every notebook also opens in Kaggle and SageMaker Studio from its first cell's badges. Reproduce everything on a free GPU: [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/actuarialsociety/deep-actuarial-science/blob/main/notebooks/reference_run.ipynb)
 
 ## The course in seven ideas
 
@@ -80,21 +97,21 @@ The chain-ladder is an over-dispersed Poisson GLM. A neural correction on top st
 
 ## Reference
 - [Open Actuarial Data](./Open%20Actuarial%20Data.md): public pricing, reserving and mortality datasets
+- [MAINTENANCE.md](./MAINTENANCE.md): rules for every commit, the reference-run workflow, known issues
+- [CHANGELOG.md](./CHANGELOG.md): what changed, and which results moved
 
 ## Run it
 
-**In the cloud, no setup:** open any notebook in the benchmarks table; `reference_run.ipynb` reproduces every benchmark. The first cell clones this repo, installs it and runs the same pipeline, wherever it runs.
+**In the cloud, no setup:** open a notebook from the table. Its first cell clones this repo, installs it and runs the same pipeline as `kedro run`.
 
 | Where | How | GPU | MLflow UI |
 | --- | --- | --- | --- |
-| Colab | Colab badge | T4, requested automatically | inline and new tab (Colab proxy) |
-| Kaggle | Kaggle badge; turn on *Internet* in the notebook settings | *GPU T4* in the settings | none (no ports): `mlflow.search_runs()` |
-| SageMaker Studio | SageMaker Studio badge opens the console (Studio has no open-from-GitHub link): open JupyterLab, Git → Clone `https://github.com/actuarialsociety/deep-actuarial-science`, open a notebook, run all | choose a GPU instance (e.g. `ml.g4dn.xlarge`) | new tab (Jupyter proxy) |
-| Azure Machine Learning | compute instance → terminal → `git clone` the repo, open a notebook, run all (Azure has no open-from-GitHub link) | choose a GPU size (e.g. `Standard_NC4as_T4_v3`) | new tab (Jupyter proxy, needs `jupyter-server-proxy`) |
+| Colab | Colab badge | T4, requested automatically | inline and new tab |
+| Kaggle | Kaggle badge; turn on *Internet* | *GPU T4* in the settings | none: `mlflow.search_runs()` |
+| SageMaker Studio | badge opens the console; Git → Clone this repo, run a notebook | e.g. `ml.g4dn.xlarge` | new tab (Jupyter proxy) |
+| Azure ML | compute instance → `git clone`, run a notebook | e.g. `Standard_NC4as_T4_v3` | new tab (needs `jupyter-server-proxy`) |
 
-Agent skills for running on AWS and Azure are vendored in `.claude/skills/` (`scripts/update_aws_skills.sh`, `scripts/update_azure_skills.sh`): SageMaker and Azure ML jobs, AWS sign-in, Azure GPU quotas, and cost estimates on both.
-
-**Container** (recommended locally; also a VS Code dev container):
+**Container** (also a VS Code dev container):
 ```bash
 docker compose up lab mlflow          # JupyterLab http://localhost:8888, MLflow http://localhost:5000
 docker compose run --rm pipeline      # full reference run, tracked in MLflow
@@ -110,55 +127,29 @@ kedro run --pipeline frequency --params frequency.data.scale=0.1
 mlflow ui --backend-store-uri sqlite:///mlflow.db        # browse runs
 ```
 
-**Apple silicon (M1/M2/M3):** the macOS PyTorch wheel includes the Metal (MPS) backend. Set
-`DAS_DEVICE=mps` to train the networks on the GPU (`cpu` and `cuda` work too; the default is CUDA
-when present, else the CPU):
-```bash
-DAS_DEVICE=mps kedro run --pipeline frequency --namespaces fnn,cann
-```
-MPS is opt-in because these networks are small (hundreds to a few thousand weights), so GPU
-kernel-launch overhead outweighs the speedup. On an M1, MPS was about as fast as the CPU for
-LocalGLMnet and 1.5 to 2.5 times slower for the FNN, the mortality networks and the neural ODP. Results
-match the CPU to about 0.002 Poisson deviance. On macOS, LightGBM trains single-threaded:
-its OpenMP runtime (Homebrew `libomp`) and PyTorch's own runtime crash when both run in one process.
-[`notebooks/run_all_mps.ipynb`](./notebooks/run_all_mps.ipynb) runs every lesson on the Apple GPU,
-reconciles every model and times MPS against the CPU on your machine.
-
-**Weights & Biases (optional):** every run also logs to W&B when `WANDB_PROJECT` is set: one W&B
-run per pipeline with its parameters, each model's metrics, figures, and the benchmark
-reconciliation and leaderboard tables. MLflow logging is unchanged.
-```bash
-uv pip install -e ".[wandb]"          # then WANDB_API_KEY in .env (https://wandb.ai/authorize) or `wandb login`
-WANDB_PROJECT=deep-actuarial-science kedro run --pipeline reserving
-scripts/full_run.sh                   # every model, dataset and benchmark on MPS, logged to W&B
-```
-`scripts/full_run.sh` runs the reference setup (every published benchmark, PASS/FAIL), then every
-dataset (`conf/scale_up`: both sexes, all six Schedule P lines, every company), as one W&B group,
-and archives the reports in `data/09_full_run/`. The frequency networks fit 15 seeds each, so
-expect hours. Without a key it logs offline (`wandb sync` uploads later). The vendored
-`wandb-primary` skill (`scripts/update_wandb_skills.sh`) lets a coding agent query and compare the
-runs.
+- **Apple silicon:** `DAS_DEVICE=mps` trains on the Apple GPU (opt-in: these networks are small, so MPS is no faster than the CPU; results agree to about 0.002 deviance). [`notebooks/run_all_mps.ipynb`](./notebooks/run_all_mps.ipynb) runs and times everything.
+- **Weights & Biases (optional):** `uv pip install -e ".[wandb]"`, set `WANDB_PROJECT`; MLflow logging is unchanged.
+- **Full run:** `scripts/full_run.sh` runs the reference setup (hours: 15 seeds per network), freezes it into `reference/`, then runs every dataset (`conf/scale_up`). See [MAINTENANCE.md](./MAINTENANCE.md).
 
 ## How it fits together
 
 | Piece | Where |
 | --- | --- |
-| Models | `src/deep_actuarial_science/models/` (`frequency.py`, `mortality.py`, `reserving.py`) |
+| Models | `src/deep_actuarial_science/models/` (`frequency.py`, `mortality.py`, `reserving.py`): each docstring names its paper and every deviation from it |
 | Pipelines | `src/deep_actuarial_science/pipelines/`: `ingest`, `frequency`, `mortality`, `reserving`; one namespace per model, plus a comparison node |
 | Configs | `conf/base/parameters_*.yml` (data scale, model settings); `conf/smoke/` for fast runs |
 | Benchmarks | `conf/base/parameters_benchmarks.yml`: published values, tolerances and sources; each model writes a PASS/FAIL `reconciliation.csv` |
+| Findings | `findings.py`: which gaps between models are real, where a published run falls among our seeds; each pipeline writes `findings.csv` |
+| Reference run | `reference/`: the frozen full run behind every published number (`scripts/freeze_reference.py`) |
 | Tracking | kedro-mlflow: parameters, metrics, figures, models and benchmark tables for every run (`mlflow.db`) |
-| Outputs | `data/08_reporting/<pipeline>/`: metrics, figures, leaderboards |
-| Notebooks | `notebooks/`, generated by `scripts/make_notebooks.py`; they call the pipelines through `deep_actuarial_science.notebook` |
-| Slides | `lessons/*.md` are Marp decks: preview with `npx @marp-team/marp-cli@4.5.1 --html -s lessons` (`--html` makes the Core ideas panels clickable); published to GitHub Pages |
+| Outputs | `data/08_reporting/<pipeline>/`: metrics, figures, leaderboards, findings |
+| Notebooks | `notebooks/`, generated by `scripts/make_notebooks.py`; they call the pipelines through `deep_actuarial_science.notebook` and show paper, reference run and your run side by side |
+| Slides | `lessons/*.md` are Marp decks: `npx @marp-team/marp-cli@4.5.1 --html -s lessons`; published to GitHub Pages and the [wiki](https://github.com/actuarialsociety/deep-actuarial-science/wiki) |
 
-## Maintaining these lessons
-Browse the lessons as a [wiki](https://github.com/actuarialsociety/deep-actuarial-science/wiki). It is regenerated from this repo on every merge to `main`.
+## Maintaining
 
-This repo is set up for [Claude Code](https://code.claude.com/docs/en/overview) to add models and keep lessons current, using [Exa](https://exa.ai/docs/get-started/agent-skills/overview) agent skills for research. Rules are in [AGENTS.md](./AGENTS.md).
-1. `cp .env.example .env` and add an [Exa API key](https://dashboard.exa.ai/api-keys), or `export EXA_API_KEY=...`
-2. In Claude Code:
-   - `/build-research-benchmark-wiki <paper, model or DOI>`: find the paper's results table and reference implementation with Exa, implement it as the paper does, reconcile to the published scores (PASS/FAIL), and publish the lesson, notebook and wiki page
-   - `/build-lesson <model>`: a teaching lesson without a paper to reproduce
-   - `/refresh-lessons [file|all]`: fix links, re-run benchmarks, swap in newer research
-3. CI runs the tests, a smoke run of every pipeline and every notebook on each PR; [`lesson-refresh.yml`](./.github/workflows/lesson-refresh.yml) opens a refresh PR monthly
+Rules for every commit and the reference-run workflow are in [MAINTENANCE.md](./MAINTENANCE.md); agent rules in [AGENTS.md](./AGENTS.md). This repo is set up for [Claude Code](https://code.claude.com/docs/en/overview) with [Exa](https://exa.ai/docs/get-started/agent-skills/overview) research skills (`cp .env.example .env`, add an [Exa API key](https://dashboard.exa.ai/api-keys)):
+
+- `/build-research-benchmark-wiki <paper, model or DOI>`: find the paper's table and reference implementation, implement it as the paper does, reconcile (PASS/FAIL), publish the lesson, notebook and wiki page
+- `/build-lesson <model>`: a teaching lesson without a paper to reproduce
+- `/refresh-lessons [file|all]`: fix links, re-run benchmarks, swap in newer research

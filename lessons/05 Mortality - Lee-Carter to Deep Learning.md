@@ -98,6 +98,17 @@ where $S$ = all (age, year) cells of 2000–2021 (out-of-sample) or 1910–1999 
 
 </details>
 
+<details>
+<summary><b>⑥ One published run, fifteen seeds</b></summary>
+
+A network trained by stochastic gradient descent is one draw from a distribution over seeds, and [2] publishes one draw per network. Two checks, with $r_1,\dots,r_{15}$ our per-seed RMSEs, $\bar r$ their mean and $s$ their standard deviation:
+
+- **PASS** if $|r^{\mathrm{pub}} - \bar r| \le 2 s$, where $r^{\mathrm{pub}}$ = the published RMSE. A wide seed spread passes easily
+- **Rank:** how many $r_k \le r^{\mathrm{pub}}$. None means the published run is better than everything our implementation produced
+- The seed-averaged forecast (mean of the 15 forecasts) is scored separately; code: `findings.seeds`
+
+</details>
+
 ---
 
 ## The data: HMD Switzerland, males, 1900–2021
@@ -120,9 +131,26 @@ RMSE of $\log m_{x,t}$. Lee–Carter is closed-form and must match exactly; each
 | LSTM | 0.1746 / 0.3559 (p. 50) | <!--r:lstm.rmse_in-->0.1830<!--/r--> ± <!--r:lstm.rmse_in_sd-->0.0082<!--/r--> | <!--r:lstm.rmse_out-->0.5138<!--/r--> ± <!--r:lstm.rmse_out_sd-->0.0580<!--/r--> | <!--r:lstm.status-->**FAIL**<!--/r--> |
 | Transformer | 0.2277 / 0.3624 (p. 50) | <!--r:transformer.rmse_in-->0.2181<!--/r--> ± <!--r:transformer.rmse_in_sd-->0.0143<!--/r--> | <!--r:transformer.rmse_out-->0.5668<!--/r--> ± <!--r:transformer.rmse_out_sd-->0.1513<!--/r--> | <!--r:transformer.status-->PASS<!--/r--> |
 
-In sample, every network matches the book. Out of sample, only the non-linear CNN's seeds centre on the book's run. The CNN's published run (0.3531) is below all 15 of our seeds (best <!--r:cnn.rmse_out_min-->0.3599<!--/r-->), and so is the LSTM's (0.3559; best <!--r:lstm.rmse_out_min-->0.4154<!--/r-->). The CNN and the Transformer pass only because their seeds vary so widely. Treat those two PASSes as weak evidence.
+PASS for a network means "within our seed mean ± 2 sd" (Core ideas ⑥): a wide spread passes easily, so read the next slide.
 
 No peer-reviewed table reports this exact setup; [[2](https://aitools4actuaries.com/Ch8E/mortality_forecasting.pdf)] is the authored source of these numbers.
+
+---
+
+## Is the published run typical?
+
+![w:430](figures/05-seeds.png)
+
+Out-of-sample RMSE over our 15 seeds, against the book's single run and Lee–Carter (<!--r:lee_carter.rmse_out-->0.3416<!--/r-->).
+
+| Model | Published | Seeds: min / mean / max | Published run is | Seeds beating Lee–Carter | Seed average |
+| --- | --- | --- | --- | --- | --- |
+| CNN | 0.3531 | ⟪cnn.seed_min⟫ / ⟪cnn.seed_mean⟫ / ⟪cnn.seed_max⟫ | ⟪cnn.published_run⟫ | ⟪cnn.seeds_beating_lee_carter⟫ of 15 | ⟪cnn.ensemble⟫ |
+| Non-linear CNN | 0.3189 | ⟪cnn_tanh.seed_min⟫ / ⟪cnn_tanh.seed_mean⟫ / ⟪cnn_tanh.seed_max⟫ | ⟪cnn_tanh.published_run⟫ | ⟪cnn_tanh.seeds_beating_lee_carter⟫ of 15 | ⟪cnn_tanh.ensemble⟫ |
+| LSTM | 0.3559 | ⟪lstm.seed_min⟫ / ⟪lstm.seed_mean⟫ / ⟪lstm.seed_max⟫ | ⟪lstm.published_run⟫ | ⟪lstm.seeds_beating_lee_carter⟫ of 15 | ⟪lstm.ensemble⟫ |
+| Transformer | 0.3624 | ⟪transformer.seed_min⟫ / ⟪transformer.seed_mean⟫ / ⟪transformer.seed_max⟫ | ⟪transformer.published_run⟫ | ⟪transformer.seeds_beating_lee_carter⟫ of 15 | ⟪transformer.ensemble⟫ |
+
+A published run better than every seed is not reproduced, whatever its PASS. Only the non-linear CNN forecasts as well as Lee–Carter.
 
 ---
 
@@ -160,4 +188,4 @@ Right of the dashed line: forecast errors by age and year. Note the 1918 influen
 
 Data: [Human Mortality Database](https://www.mortality.org/).
 
-_Last reviewed: 2026-11-07_
+_Last reviewed: 2026-11-10_

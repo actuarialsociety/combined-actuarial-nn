@@ -50,7 +50,8 @@ sys.path.insert(0, "src")
 os.environ.setdefault("DO_NOT_TRACK", "1")
 os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
 
-from deep_actuarial_science.notebook import run, load, show, leaderboard, parameters, mlflow_ui, device_summary
+from deep_actuarial_science.notebook import (run, load, show, leaderboard, reconciliation, findings,
+                                             parameters, mlflow_ui, device_summary)
 device_summary()
 FAST = os.environ.get("DAS_ENV") == "smoke"   # CI runs every notebook in smoke mode
 """
@@ -114,7 +115,11 @@ def notebook(
     }
     if local:
         nb.metadata = {k: nb.metadata[k] for k in ("kernelspec", "language_info")}
-    header = f"# {title}\n\n{intro}" if local else f"# {title}\n{badges(name)}\n\n{intro}\n\n{RUN_ANYWHERE}"
+    header = (
+        f"# {title}\n\n{intro}"
+        if local
+        else f"# {title}\n{badges(name)}\n\n{intro}\n\n{RUN_ANYWHERE}"
+    )
     nb.cells = [
         nbf.v4.new_markdown_cell(header),
         nbf.v4.new_code_cell(SETUP),
@@ -138,6 +143,18 @@ MLFLOW_MD = (
 
 md, py = "md", "py"
 
+RECONCILE_MD = (
+    "## Reproduce the published table\n`paper` is the published value, `reference_run` this"
+    " repo's frozen full run (`reference/`), `this_run` what you just ran. **PASS**: within"
+    " the tolerance of the paper. A reduced run (smoke, `scale` < 1) reports SKIPPED."
+)
+GAPS_MD = (
+    "## Which gaps are real?\nEach row is one step down the ranking: `gap` is the loss of"
+    " `worse` minus `better`, with the 95% interval of the paired differences over {units}."
+    " An interval that contains 0 is **not distinguishable** from noise. `_xN` rows: what"
+    " averaging a network's N seeds adds. `*_reference`: the same from the frozen full run."
+)
+
 LESSONS = [
     (
         "00_quickstart.ipynb",
@@ -156,10 +173,11 @@ LESSONS = [
             ),
             (
                 md,
-                "## 2. Reconcile to the published benchmark\nEach model has a reconciliation table:"
-                " **PASS** means this run reproduces the published result within tolerance.",
+                RECONCILE_MD.replace("## Reproduce", "## 2. Reproduce"),
             ),
-            (py, 'load("glm.freq_reconciliation")'),
+            (py, 'reconciliation("frequency", ["homogeneous", "glm"])'),
+            (md, GAPS_MD.format(units="test policies").replace("## Which", "## 2b. Which")),
+            (py, 'findings("frequency", ["homogeneous", "glm"])'),
             (
                 md,
                 "## 3. Change a config, re-run\nParameters live in `conf/base/parameters_*.yml`."
@@ -205,8 +223,12 @@ LESSONS = [
         [
             (
                 py,
-                'models = ["homogeneous", "glm", "gbm"]\nrun("frequency", models=models)\nleaderboard("frequency", models)',
+                'models = ["homogeneous", "glm", "glm3", "gbm"]\nrun("frequency", models=models)\nleaderboard("frequency", models)',
             ),
+            (md, RECONCILE_MD),
+            (py, 'reconciliation("frequency", models)'),
+            (md, GAPS_MD.format(units="test policies")),
+            (py, 'findings("frequency", models)'),
             (md, "## Open the box: GLM coefficients\nThe same `GLM` class the pipeline uses:"),
             (py, 'glm = load("glm.freq_model")\nglm.result.summary().tables[1]'),
             (
@@ -236,7 +258,10 @@ LESSONS = [
                 py,
                 'run("frequency", models=["glm", "fnn"])\nleaderboard("frequency", ["glm", "fnn"])',
             ),
-            (py, 'load("fnn.freq_reconciliation")'),
+            (md, RECONCILE_MD + " Networks: mean over 15 seeds, as in the paper."),
+            (py, 'reconciliation("frequency", ["glm", "fnn"])'),
+            (md, GAPS_MD.format(units="test policies")),
+            (py, 'findings("frequency", ["glm", "fnn"])'),
             (
                 md,
                 "## Open the box: the learned brand embedding\nBrands close together in this plane"
@@ -273,13 +298,17 @@ LESSONS = [
         "03_cann.ipynb",
         "03 · CANN: nesting the GLM in a network",
         r"$\lambda^{\mathrm{CANN}}(x)=\lambda^{\mathrm{GLM}}(x)\cdot\exp\{w_0+\langle w,z^{(d:1)}(x)\rangle\}$,"
-        r" initialised at $w=0$: training starts exactly at the GLM.",
+        r" initialised at $w=0$: training starts exactly at the GLM. Full data: about 15 minutes on a GPU.",
         [
             (
                 py,
-                'run("frequency", models=["glm3", "cann"])\nleaderboard("frequency", ["glm3", "cann"])',
+                'models = ["glm3", "fnn", "cann"]   # the FNN is the comparison the CANN has to win\n'
+                'run("frequency", models=models)\nleaderboard("frequency", models)',
             ),
-            (py, 'load("cann.freq_reconciliation")'),
+            (md, RECONCILE_MD + " Networks: mean over 15 seeds, as in the paper."),
+            (py, 'reconciliation("frequency", models)'),
+            (md, GAPS_MD.format(units="test policies")),
+            (py, 'findings("frequency", models)'),
             (
                 md,
                 "## Open the box: zero initialisation reproduces the GLM\nBuild a CANN with 0 epochs:"
@@ -320,9 +349,12 @@ LESSONS = [
         [
             (
                 py,
-                'run("frequency", models=["localglmnet"])\nleaderboard("frequency", ["localglmnet"])',
+                'models = ["glm3", "localglmnet"]\nrun("frequency", models=models)\nleaderboard("frequency", models)',
             ),
-            (py, 'load("localglmnet.freq_reconciliation")'),
+            (md, RECONCILE_MD),
+            (py, 'reconciliation("frequency", models)'),
+            (md, GAPS_MD.format(units="test policies")),
+            (py, 'findings("frequency", models)'),
             (
                 md,
                 "## Attention weights and variable selection\n`RandN` is pure noise: its attention"
@@ -353,6 +385,16 @@ LESSONS = [
                 'models = ["lee_carter", "cnn", "cnn_tanh", "lstm", "transformer"]\n'
                 'run("mortality")\nleaderboard("mortality", models)',
             ),
+            (md, RECONCILE_MD + " Networks: mean over 15 seeds; the book publishes one run."),
+            (py, 'reconciliation("mortality", models)'),
+            (
+                md,
+                "## Is the published run typical?\nOut-of-sample RMSE per seed. `published_run`"
+                " places the book's single run among our seeds; `seeds_beating_lee_carter` counts"
+                " the seeds that forecast better than Lee-Carter; `ensemble` scores the"
+                " seed-averaged forecast. `*_reference`: the frozen full run.",
+            ),
+            (py, 'findings("mortality", models)'),
             (md, "## Open the box: Lee-Carter parameters"),
             (
                 py,
@@ -385,7 +427,15 @@ LESSONS = [
         " back-tested on the **realised** outcomes in the CAS Schedule P data.",
         [
             (py, 'run("reserving")\nleaderboard("reserving", ["chain_ladder", "neural_odp"])'),
-            (py, 'load("chain_ladder.res_reconciliation")'),
+            (md, RECONCILE_MD),
+            (py, 'reconciliation("reserving")'),
+            (
+                md,
+                GAPS_MD.format(units="companies").replace(
+                    " `_xN` rows: what averaging a network's N seeds adds.", ""
+                ),
+            ),
+            (py, 'findings("reserving")'),
             (py, 'show("reserving", None, width=560)'),
             (md, "## Company-level back-test"),
             (
@@ -409,29 +459,49 @@ REFERENCE_RUN = (
     "reference_run.ipynb",
     "Reference run: reproduce every published benchmark",
     "Runs every pipeline at the reference setup, reconciles each model to its paper's table"
-    " (`conf/base/parameters_benchmarks.yml`), refreshes the lesson figures and numbers and"
-    " zips the results. Use a **GPU runtime**: the frequency networks fit 15 seeds each. Results come back to the repo as a PR.",
+    " (`conf/base/parameters_benchmarks.yml`), tests which gaps between models are real, freezes"
+    " the run as the new reference and zips the results. Use a **GPU runtime**: the frequency networks fit 15 seeds each. Results come back to the repo as a PR.",
     [
         (md, "## 1. Run every pipeline\nFrequency is the long one (15 seeds for each network)."),
         (py, 'for p in ("frequency", "mortality", "reserving"):\n    run(p)'),
-        (md, "## 2. Reconciliation: every model against its paper"),
-        (
-            py,
-            "import glob, pandas as pd\n"
-            "rec = pd.concat(pd.read_csv(f) for f in sorted(glob.glob('data/08_reporting/*/*/reconciliation.csv')))\n"
-            "rec[['model', 'metric', 'expected', 'actual', 'tolerance', 'status', 'source']]",
-        ),
-        (md, "## 3. Refresh the lesson figures and numbers"),
-        (py, "!python scripts/export_figures.py\n!python scripts/fill_results.py"),
         (
             md,
-            "## 4. Download and open a PR\nUnzip `reference_run.zip` at the repo root, check"
-            " `git diff lessons/`, then commit on a branch and open a PR.",
+            RECONCILE_MD.replace(
+                "## Reproduce the published table", "## 2. Every model against its paper"
+            ),
         ),
         (
             py,
-            "import shutil, sys\n"
-            "shutil.make_archive('reference_run', 'zip', '.', 'lessons')\n"
+            "import pandas as pd\n"
+            "PIPELINES = ('frequency', 'mortality', 'reserving')\n"
+            "pd.concat(reconciliation(p) for p in PIPELINES)",
+        ),
+        (
+            md,
+            GAPS_MD.format(units="test policies (frequency) or companies (reserving)").replace(
+                "## Which", "## 3. Which"
+            ),
+        ),
+        (py, "from IPython.display import display\nfor p in PIPELINES:\n    display(findings(p))"),
+        (
+            md,
+            "## 4. Freeze this run as the reference\nWrites `reference/` (metrics, reconciliation,"
+            " findings, environment), copies the figures to `lessons/figures/` and refills every"
+            " number in the lessons and the README.",
+        ),
+        (py, "!python scripts/freeze_reference.py"),
+        (
+            md,
+            "## 5. Download and open a PR\nUnzip `reference_run.zip` at the repo root, check"
+            " `git diff`, then commit on a branch and open a PR.",
+        ),
+        (
+            py,
+            "import sys\n"
+            "import zipfile, glob\n"
+            "with zipfile.ZipFile('reference_run.zip', 'w') as z:\n"
+            "    for f in ['README.md', *glob.glob('reference/*'), *glob.glob('lessons/**', recursive=True)]:\n"
+            "        z.write(f)\n"
             "if 'google.colab' in sys.modules:\n"
             "    from google.colab import files\n"
             "    files.download('reference_run.zip')\n"
@@ -448,11 +518,11 @@ RUN_ALL_MPS = (
     "Runs every lesson's pipeline on a Mac with an M-series chip, training the networks on"
     " its GPU through PyTorch's Metal (MPS) backend, then reconciles every model to its paper"
     " and times MPS against the CPU. Open it in a local clone (see *Local* in the README:"
-    " `uv venv`, `uv pip install -e \".[dev]\"`, then `jupyter lab`). Elsewhere it falls back"
+    ' `uv venv`, `uv pip install -e ".[dev]"`, then `jupyter lab`). Elsewhere it falls back'
     " to the default device.\n\n"
     "**Expect MPS to be no faster:** these networks are small, so GPU kernel-launch overhead"
     " outweighs the speedup (section 4 measures it on your machine). The full reference run"
-    " fits 15 seeds per frequency network and takes hours; set `ENV = \"smoke\"` below for a"
+    ' fits 15 seeds per frequency network and takes hours; set `ENV = "smoke"` below for a'
     " two-minute pass on 2% of the data. To log to Weights & Biases as well, set"
     " `WANDB_PROJECT` (and `WANDB_API_KEY`) before starting Jupyter; `scripts/full_run.sh` is"
     " the same full run from the terminal.",
@@ -461,12 +531,12 @@ RUN_ALL_MPS = (
         (
             py,
             "import time, torch\n"
-            "ENV = \"smoke\" if FAST else \"local\"   # \"smoke\": every pipeline on 2% of the data\n"
+            'ENV = "smoke" if FAST else "local"   # "smoke": every pipeline on 2% of the data\n'
             "MPS = torch.backends.mps.is_available()\n"
             "if MPS:\n"
-            "    os.environ[\"DAS_DEVICE\"] = \"mps\"   # read by every network at training time\n"
+            '    os.environ["DAS_DEVICE"] = "mps"   # read by every network at training time\n'
             "else:\n"
-            "    print(\"No MPS (not an Apple-silicon Mac, or PyTorch without Metal): using the default device.\")\n"
+            '    print("No MPS (not an Apple-silicon Mac, or PyTorch without Metal): using the default device.")\n'
             "device_summary()",
         ),
         (
@@ -479,18 +549,23 @@ RUN_ALL_MPS = (
         (
             py,
             "timings = {}\n"
-            "for p in (\"frequency\", \"mortality\", \"reserving\"):\n"
+            'for p in ("frequency", "mortality", "reserving"):\n'
             "    t0 = time.perf_counter()\n"
             "    run(p, env=ENV)\n"
             "    timings[p] = time.perf_counter() - t0\n"
-            "    print(f\"{p}: {timings[p] / 60:.1f} min\")",
+            '    print(f"{p}: {timings[p] / 60:.1f} min")',
         ),
-        (md, "## 3. Reconciliation: every model against its paper"),
+        (
+            md,
+            RECONCILE_MD.replace(
+                "## Reproduce the published table", "## 3. Every model against its paper"
+            ),
+        ),
         (
             py,
-            "import glob, pandas as pd\n"
-            "rec = pd.concat(pd.read_csv(f) for f in sorted(glob.glob('data/08_reporting/*/*/reconciliation.csv')))\n"
-            "rec[['model', 'metric', 'expected', 'actual', 'tolerance', 'status', 'source']]",
+            "import pandas as pd\n"
+            "PIPELINES = ('frequency', 'mortality', 'reserving')\n"
+            "pd.concat(reconciliation(p, env=ENV) for p in PIPELINES)",
         ),
         (
             md,
@@ -499,17 +574,17 @@ RUN_ALL_MPS = (
         ),
         (
             py,
-            "small = {} if FAST else {\"frequency.data.scale\": 0.1, \"frequency.models.fnn.n_runs\": 1}\n"
+            'small = {} if FAST else {"frequency.data.scale": 0.1, "frequency.models.fnn.n_runs": 1}\n'
             "rows = []\n"
-            "for dev in ([\"cpu\", \"mps\"] if MPS else [\"cpu\"]):\n"
-            "    os.environ[\"DAS_DEVICE\"] = dev\n"
+            'for dev in (["cpu", "mps"] if MPS else ["cpu"]):\n'
+            '    os.environ["DAS_DEVICE"] = dev\n'
             "    t0 = time.perf_counter()\n"
-            "    run(\"frequency\", models=[\"fnn\"], params=small, env=ENV)\n"
-            "    m = load(\"fnn.freq_metrics\", env=ENV)\n"
-            "    rows.append({\"device\": dev, \"wall_seconds\": time.perf_counter() - t0, **m})\n"
-            "os.environ[\"DAS_DEVICE\"] = \"mps\" if MPS else \"cpu\"\n"
+            '    run("frequency", models=["fnn"], params=small, env=ENV)\n'
+            '    m = load("fnn.freq_metrics", env=ENV)\n'
+            '    rows.append({"device": dev, "wall_seconds": time.perf_counter() - t0, **m})\n'
+            'os.environ["DAS_DEVICE"] = "mps" if MPS else "cpu"\n'
             "# fit_seconds is training alone; wall_seconds adds data preparation and logging\n"
-            "pd.DataFrame(rows).set_index(\"device\")[[\"fit_seconds\", \"wall_seconds\", \"deviance_test\", \"gini_test\", \"balance_test\"]]",
+            'pd.DataFrame(rows).set_index("device")[["fit_seconds", "wall_seconds", "deviance_test", "gini_test", "balance_test"]]',
         ),
     ],
 )

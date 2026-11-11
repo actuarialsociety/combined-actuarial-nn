@@ -114,7 +114,7 @@ Also checked: the chain-ladder equals the `chainladder` package to <!--r:chain_l
 | Chain-ladder | <!--r:chain_ladder.total_reserve_error_pct-->+10.8<!--/r-->% | <!--r:chain_ladder.median_abs_error_pct-->20.3<!--/r-->% | <!--r:chain_ladder.share_within_10pct-->26%<!--/r--> |
 | Neural ODP | <!--r:neural_odp.total_reserve_error_pct-->+11.1<!--/r-->% | <!--r:neural_odp.median_abs_error_pct-->20.6<!--/r-->% | <!--r:neural_odp.share_within_10pct-->24%<!--/r--> |
 
-Neural ODP best epoch: <!--r:neural_odp.best_epoch-->0<!--/r-->. With a per-company chain-ladder offset, little shared structure is left to learn.
+Gap in MAPE, chain-ladder ahead, paired over the 50 companies (lesson 00, Core ideas ⑥): ⟪gap.neural_odp.chain_ladder⟫, ⟪verdict.neural_odp.chain_ladder⟫ but a hundredth of the MAPE itself. Best epoch <!--r:neural_odp.best_epoch-->0<!--/r-->: the validation loss never improved on the chain-ladder start. With a per-company chain-ladder offset, little shared structure is left to learn.
 
 ![w:440](figures/06-scatter.png) ![w:480](figures/06-errors.png)
 
@@ -141,4 +141,4 @@ Neural ODP best epoch: <!--r:neural_odp.best_epoch-->0<!--/r-->. With a per-comp
 
 Data: [CAS Loss Reserving Database](https://www.casact.org/publications-research/research/research-resources/loss-reserving-data-pulled-naic-schedule-p).
 
-_Last reviewed: 2026-11-07_
+_Last reviewed: 2026-11-10_

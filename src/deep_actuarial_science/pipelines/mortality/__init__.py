@@ -8,12 +8,13 @@ kedro run --pipeline mortality --env scale_up       # both sexes (list values: u
 from __future__ import annotations
 
 import logging
+from functools import partial
 
 import numpy as np
 import pandas as pd
 from kedro.pipeline import Pipeline, node, pipeline
 
-from deep_actuarial_science import plots
+from deep_actuarial_science import findings, plots
 from deep_actuarial_science.benchmarks import reconcile as _reconcile
 from deep_actuarial_science.metrics import rmse, to_mlflow
 from deep_actuarial_science.models import mortality as mm
@@ -74,32 +75,42 @@ def figures(res: pd.DataFrame, history: dict, params: dict, data_params: dict) -
     return plots.named(figs)
 
 
-def reconcile(
-    metrics: dict, benchmark: dict | None, data_params: dict, params: dict, reference: bool = True
-):
-    ref = reference and data_params["sexes"] == ["Male"] and data_params["obs_year"] == 1999
-    return _reconcile(metrics, benchmark, ref, params["kind"])
+def is_reference(data_params: dict, reference: bool) -> bool:
+    """The published setup: Swiss males, learning period up to 1999."""
+    return reference and data_params["sexes"] == ["Male"] and data_params["obs_year"] == 1999
+
+
+def reconcile(metrics: dict, benchmark: dict | None, data_params: dict, reference: bool, name: str):
+    return _reconcile(metrics, benchmark, is_reference(data_params, reference), name)
+
+
+def published_rmse(benchmarks: dict, data_params: dict, reference: bool) -> dict:
+    """The book's out-of-sample RMSE per model; empty away from the published setup."""
+    if not is_reference(data_params, reference):
+        return {}
+    return {m: b["expected"]["rmse_out"] for m, b in benchmarks.items() if b}
 
 
 def compare(*args):
     k = len(MODELS)
     metrics, results = args[:k], args[k : 2 * k]
-    data_params = args[-1]
+    data_params, benchmarks, reference = args[-3:]
     table = pd.DataFrame([{"model": n, **m} for n, m in zip(MODELS, metrics)])
+    found, per_seed = findings.mortality(
+        dict(zip(MODELS, results)), published_rmse(benchmarks, data_params, reference)
+    )
     oy = data_params["obs_year"]
     wide = results[0][["Sex", "Year", "Age", "logmx"]].copy()
     for n, r in zip(MODELS, results):
         wide[n] = r["pred"].to_numpy()
     male = wide[wide.Sex == wide.Sex.iloc[0]]
     figs = {
-        "leaderboard_rmse_out": plots.leaderboard(
-            table, "rmse_out", title="Out-of-sample RMSE of log m(x,t)"
-        ),
+        "seeds": plots.seeds(per_seed, found, "Out-of-sample RMSE of log m(x,t)"),
         "observed_surface": plots.mortality_surface(male, "logmx", "Observed log m(x,t)", oy),
         "age_profile_last_year": plots.age_profile(male, MODELS, int(male.Year.max())),
         "rmse_by_horizon": plots.rmse_by_year(male, MODELS, oy),
     }
-    return table, plots.named(figs)
+    return table, found, plots.named(figs)
 
 
 def model_pipeline(name: str) -> Pipeline:
@@ -129,12 +140,11 @@ def model_pipeline(name: str) -> Pipeline:
                 name="figures",
             ),
             node(
-                reconcile,
+                partial(reconcile, name=name),
                 [
                     "mort_metrics",
                     "params:benchmark",
                     "params:mortality.data",
-                    "params:model",
                     "params:reference_setup",
                 ],
                 "mort_reconciliation",
@@ -175,8 +185,9 @@ def create_pipeline(**kwargs) -> Pipeline:
                 compare,
                 [f"{m}.mort_metrics" for m in MODELS]
                 + [f"{m}.mort_results" for m in MODELS]
-                + ["params:mortality.data"],
-                ["mort_leaderboard", "mort_comparison_figures"],
+                + ["params:mortality.data", "params:benchmarks.mortality"]
+                + ["params:reference_setup"],
+                ["mort_leaderboard", "mort_findings", "mort_comparison_figures"],
                 name="compare_mortality_models",
             )
         ]

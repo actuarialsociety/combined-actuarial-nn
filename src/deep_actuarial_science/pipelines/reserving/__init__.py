@@ -7,13 +7,14 @@ kedro run --pipeline reserving --env scale_up       # all six lines, all compani
 from __future__ import annotations
 
 import logging
+from functools import partial
 
 import chainladder as cl
 import numpy as np
 import pandas as pd
 from kedro.pipeline import Pipeline, node, pipeline
 
-from deep_actuarial_science import plots
+from deep_actuarial_science import findings, plots
 from deep_actuarial_science.benchmarks import reconcile as _reconcile
 from deep_actuarial_science.metrics import to_mlflow
 from deep_actuarial_science.models import reserving as rm
@@ -88,17 +89,34 @@ def package_chain_ladder(tri: pd.DataFrame) -> pd.Series:
     )
 
 
+PACKAGE_CHECK = "max_rel_diff_vs_package"
+
+
 def reconcile(
-    metrics: dict, pred: pd.DataFrame, tri: pd.DataFrame, benchmark: dict | None, params: dict
+    metrics: dict,
+    pred: pd.DataFrame,
+    tri: pd.DataFrame,
+    benchmark: dict | list | None,
+    data_params: dict,
+    reference: bool,
+    name: str,
 ):
-    """The model's metrics (e.g. Kuo's MAPE / RMSPE) against its benchmarks, plus, for the
-    chain-ladder, the cross-check against the `chainladder` package."""
-    if params["kind"] != "chain_ladder":
-        return _reconcile(metrics, benchmark, True, params["kind"])
-    ours = rm.reserves(pred).set_index(rm.KEY).predicted_reserve
-    pkg = package_chain_ladder(tri).reindex(ours.index)
-    diff = float(np.max(np.abs(ours / pkg - 1)))
-    return _reconcile({**metrics, "max_rel_diff_vs_package": diff}, benchmark, True, params["kind"])
+    """The model's metrics (Kuo's MAPE / RMSPE) against the published table, which applies
+    only to the published setup (Meyers' private passenger auto companies), plus, for the
+    chain-ladder, the cross-check against the `chainladder` package, which always applies."""
+    published = (
+        reference and data_params["lines"] == ["ppauto"] and bool(data_params.get("companies"))
+    )
+    if name == "chain_ladder":
+        ours = rm.reserves(pred).set_index(rm.KEY).predicted_reserve
+        pkg = package_chain_ladder(tri).reindex(ours.index)
+        metrics = {**metrics, PACKAGE_CHECK: float(np.max(np.abs(ours / pkg - 1)))}
+
+    def applies(entry: dict | None) -> bool:
+        return published or PACKAGE_CHECK in (entry or {}).get("expected", {})
+
+    entries = benchmark if isinstance(benchmark, list) else [benchmark]
+    return pd.concat([_reconcile(metrics, b, applies(b), name) for b in entries], ignore_index=True)
 
 
 def compare(*args):
@@ -108,7 +126,9 @@ def compare(*args):
     res = rm.reserves(preds[0]).rename(columns={"predicted_reserve": MODELS[0]})
     for n, p in zip(MODELS[1:], preds[1:]):
         res[n] = rm.reserves(p).predicted_reserve.to_numpy()
+    found = findings.reserving(dict(zip(MODELS, preds)))
     figs = {
+        "gaps": plots.gaps(found, "Gap in |error of ultimate loss|, 95% interval"),
         "reserve_scatter": plots.reserve_scatter(res, MODELS),
         "reserve_errors": plots.reserve_errors(res, MODELS),
         "development_pattern": plots.development(tri[tri.upper]),
@@ -116,7 +136,7 @@ def compare(*args):
             table, "median_abs_error_pct", title="Median |reserve error| (%)"
         ),
     }
-    return table, res, plots.named(figs)
+    return table, found, res, plots.named(figs)
 
 
 def model_pipeline(name: str) -> Pipeline:
@@ -135,13 +155,14 @@ def model_pipeline(name: str) -> Pipeline:
                 name="evaluate",
             ),
             node(
-                reconcile,
+                partial(reconcile, name=name),
                 [
                     "res_metrics",
                     "res_predictions",
                     "res_triangles",
                     "params:benchmark",
-                    "params:model",
+                    "params:reserving.data",
+                    "params:reference_setup",
                 ],
                 "res_reconciliation",
                 name="reconcile",
@@ -155,6 +176,8 @@ def model_pipeline(name: str) -> Pipeline:
         parameters={
             "params:model": f"params:reserving.models.{name}",
             "params:benchmark": f"params:benchmarks.reserving.{name}",
+            "params:reserving.data": "params:reserving.data",
+            "params:reference_setup": "params:reference_setup",
         },
     )
 
@@ -179,7 +202,12 @@ def create_pipeline(**kwargs) -> Pipeline:
                 [f"{m}.res_metrics" for m in MODELS]
                 + [f"{m}.res_predictions" for m in MODELS]
                 + ["res_triangles"],
-                ["res_leaderboard", "res_company_reserves", "res_comparison_figures"],
+                [
+                    "res_leaderboard",
+                    "res_findings",
+                    "res_company_reserves",
+                    "res_comparison_figures",
+                ],
                 name="compare_reserving_models",
             )
         ]

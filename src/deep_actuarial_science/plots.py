@@ -56,6 +56,55 @@ def _fig(w=6.4, h=4.0, ncols=1):
     return plt.subplots(1, ncols, figsize=(w, h), squeeze=False)
 
 
+# --- Findings ---------------------------------------------------------------------------------
+
+
+def gaps(table: pd.DataFrame, title: str) -> plt.Figure:
+    """Forest plot of `findings.gaps` rows: each gap with its 95% interval. A gap is real when
+    its interval clears 0 (blue), and not distinguishable from noise otherwise (grey)."""
+    t = table.iloc[::-1]
+    fig, ax = _fig(6.4, 0.42 * len(t) + 1.3)
+    ax = ax[0, 0]
+    y = np.arange(len(t))
+    for yi, r in zip(y, t.itertuples()):
+        colour = PALETTE[0] if r.verdict == "real" else MUTED
+        ax.plot([r.ci_low, r.ci_high], [yi, yi], color=colour, lw=2.2, solid_capstyle="round")
+        ax.plot(r.gap, yi, "o", color=colour, ms=6)
+    ax.axvline(0, color=INK, lw=1)
+    hi = np.sort(t.ci_high.to_numpy())
+    if len(hi) > 2 and hi[-1] > 2 * hi[-2]:  # one huge gap would flatten the rest: clip it
+        ax.set_xlim(right=1.25 * hi[-2])
+        for yi, r in zip(y, t.itertuples()):
+            if r.gap > 1.25 * hi[-2]:
+                ax.annotate(f"{r.gap:.2f} →", (1, yi), xycoords=("axes fraction", "data"),
+                            ha="right", va="center", color=PALETTE[0], fontsize=9)  # fmt: skip
+    ax.set_yticks(y, [f"{r.worse} → {r.better}" for r in t.itertuples()])
+    ax.set(xlabel="loss of the worse model minus the better one", title=title)
+    return fig
+
+
+def seeds(per_seed: dict, table: pd.DataFrame, title: str) -> plt.Figure:
+    """Each seed's score as a dot, the seed-averaged forecast as a diamond and the published
+    single run as a bar (`findings.seeds`)."""
+    fig, ax = _fig(6.4, 3.8)
+    ax = ax[0, 0]
+    rng = np.random.default_rng(0)  # horizontal jitter only
+    for i, r in enumerate(table.itertuples()):
+        s = per_seed[r.model]
+        ax.scatter(i + rng.uniform(-0.12, 0.12, len(s)) * (len(s) > 1), s, s=20,
+                   color=PALETTE[0], alpha=0.7, label="each seed" if i == 0 else None)  # fmt: skip
+        if len(s) > 1:
+            ax.scatter(i, r.ensemble, s=60, marker="D", color=PALETTE[2], zorder=3,
+                       label="seed-averaged forecast" if i == 1 else None)  # fmt: skip
+        if pd.notna(r.published):
+            ax.hlines(r.published, i - 0.3, i + 0.3, color=PALETTE[1], lw=2.5, zorder=4,
+                      label="published run" if i == 0 else None)  # fmt: skip
+    ax.set_xticks(range(len(table)), table.model)
+    ax.set(ylabel="RMSE", title=title)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3)
+    return fig
+
+
 # --- Frequency ------------------------------------------------------------------------------
 
 

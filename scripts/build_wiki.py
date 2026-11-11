@@ -87,12 +87,17 @@ def nav_bar(src: Path, colab: str | None, prev: Path | None, nxt: Path | None) -
 
 
 def notebooks_page(lesson_files: list[Path]) -> str:
-    rows = ["# Notebooks", "",
-            "Every lesson runs end to end in Colab or Kaggle: the notebook clones this repo, "
-            "installs it and runs the lesson's Kedro pipeline. No local setup needed. In "
-            "SageMaker Studio (the badge opens the console), Azure ML or any other Jupyter, "
-            "clone the repo and run a notebook: its first cell does the same.", "",
-            "| Lesson | Colab | Kaggle | SageMaker Studio |", "| --- | --- | --- | --- |"]
+    rows = [
+        "# Notebooks",
+        "",
+        "Every lesson runs end to end in Colab or Kaggle: the notebook clones this repo, "
+        "installs it and runs the lesson's Kedro pipeline. No local setup needed. In "
+        "SageMaker Studio (the badge opens the console), Azure ML or any other Jupyter, "
+        "clone the repo and run a notebook: its first cell does the same.",
+        "",
+        "| Lesson | Colab | Kaggle | SageMaker Studio |",
+        "| --- | --- | --- | --- |",
+    ]
     for f in lesson_files:
         text = f.read_text(encoding="utf-8")
         url = colab_url(text)

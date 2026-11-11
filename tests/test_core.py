@@ -1,10 +1,18 @@
-"""Fast unit tests: metrics, the CANN zero-initialisation property, chain-ladder vs package."""
+"""Fast unit tests: metrics, findings, the CANN zero-initialisation property, chain-ladder vs
+package, and that the lessons agree with the frozen reference run."""
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from deep_actuarial_science.metrics import balance_ratio, gini_index, poisson_deviance
+from deep_actuarial_science import findings
+from deep_actuarial_science.metrics import (
+    balance_ratio,
+    gini_index,
+    poisson_deviance,
+    poisson_deviance_per_policy,
+    poisson_unit_deviance,
+)
 from deep_actuarial_science.models import frequency as fm
 from deep_actuarial_science.models import reserving as rm
 
@@ -19,6 +27,69 @@ def test_balance_and_gini():
     y, mu, v = np.array([0, 1, 3.0]), np.array([0.5, 1.0, 2.5]), np.ones(3)
     assert balance_ratio(y, mu) == pytest.approx(1.0)
     assert gini_index(y, mu, v) > 0
+
+
+def test_gini_of_a_constant_prediction_is_zero():
+    rng = np.random.default_rng(0)
+    y, v = rng.poisson(0.1, 500).astype(float), rng.uniform(0.1, 1, 500)
+    assert gini_index(y, 0.07 * v, v) == pytest.approx(0, abs=1e-9)  # whatever the data order
+
+
+def test_unit_deviances_average_to_the_deviance_per_policy():
+    rng = np.random.default_rng(0)
+    v = rng.uniform(0.1, 1, 300)
+    y, mu = rng.poisson(0.2 * v).astype(float), rng.uniform(0.05, 0.3, 300) * v
+    assert poisson_unit_deviance(y, mu).mean() == pytest.approx(
+        poisson_deviance_per_policy(y, mu, v)
+    )
+
+
+def test_gaps_separate_a_real_gap_from_noise():
+    rng = np.random.default_rng(0)
+    base = rng.gamma(2.0, 1.0, 5000)
+    losses = {
+        "worst": base + 0.5 + rng.normal(0, 0.1, 5000),  # clearly worse than `base`
+        "base": base,
+        "twin": base + rng.normal(0, 0.1, 5000),  # same quality, different noise
+    }
+    g = findings.gaps(losses).set_index(["worse", "better"])
+    assert g.loc[("worst", "base"), "verdict"] == findings.REAL
+    assert g.loc[("worst", "base"), "gap"] == pytest.approx(0.5, abs=0.01)
+    twins = g.loc[[i for i in g.index if set(i) == {"base", "twin"}]].iloc[0]
+    assert twins.verdict == findings.NOISE and twins.ci_low <= 0 <= twins.ci_high
+    assert len(findings.ladder(findings.gaps(losses), ["worst", "base"])) == 1
+    assert findings.summary(findings.gaps({"only": base})).empty
+
+
+def test_seeds_place_the_published_run():
+    per_seed = {"lc": np.array([0.34]), "net": np.array([0.40, 0.33, 0.50])}
+    t = findings.seeds(per_seed, {"lc": 0.34, "net": 0.36}, {"net": 0.30}, "lc")
+    net = t.set_index("model").loc["net"]
+    assert net.published_run == "better than every seed"
+    assert net.seeds_at_or_below_published == 0 and net.seeds_beating_lc == 1
+
+
+def test_lessons_and_readme_match_the_frozen_reference_run():
+    """Every number in the lessons and the README is filled from reference/, and the paper
+    values in reference/ are those of conf/base/parameters_benchmarks.yml."""
+    import importlib.util
+    from pathlib import Path
+
+    import yaml
+
+    root = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("fill", root / "scripts" / "fill_results.py")
+    fill = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fill)
+    assert fill.main(check=True) == 0, "run python3 scripts/fill_results.py"
+
+    rec = pd.read_csv(root / "reference" / "reconciliation.csv")
+    assert set(rec.status) <= {"PASS", "FAIL"}
+    conf = yaml.safe_load((root / "conf/base/parameters_benchmarks.yml").read_text())["benchmarks"]
+    for r in rec.itertuples():
+        entries = conf[r.pipeline][r.model]
+        entries = entries if isinstance(entries, list) else [entries]
+        assert any(e["expected"].get(r.metric) == r.expected for e in entries), (r.model, r.metric)
 
 
 def _synthetic_policies(n=4000, seed=0):
@@ -184,7 +255,7 @@ def test_run_all_mps_notebook_trains_on_mps_and_runs_every_pipeline():
     assert 'os.environ["DAS_DEVICE"] = "mps"' in code
     assert "torch.backends.mps.is_available()" in code  # falls back off a Mac (CI)
     assert '("frequency", "mortality", "reserving")' in code
-    assert "reconciliation.csv" in code
+    assert "reconciliation(p, env=ENV)" in code
 
 
 def test_colab_notebooks_force_a_gpu_runtime():

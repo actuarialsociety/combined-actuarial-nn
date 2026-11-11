@@ -113,6 +113,11 @@ Poisson deviance per policy, $\times 10^{-2}$. The paper reports one run; we rep
 | LocalGLMnet | 23.728 | 23.945 | <!--r:localglmnet.deviance_learn-->23.721<!--/r--> (<!--r:localglmnet.deviance_learn_sd-->0.039<!--/r-->) | <!--r:localglmnet.deviance_test-->23.933<!--/r--> (<!--r:localglmnet.deviance_test_sd-->0.025<!--/r-->) | <!--r:localglmnet.status-->PASS<!--/r--> |
 | CANN (lesson 03) | 23.742 | 23.810 | <!--r:cann.deviance_learn-->23.787<!--/r--> | <!--r:cann.deviance_test-->23.818<!--/r--> | <!--r:cann.status-->PASS<!--/r--> |
 
+Gap in test deviance, 95% interval over test policies (lesson 00, Core ideas ⑥):
+
+- **GLM3 → LocalGLMnet:** ⟪gap.glm3.localglmnet⟫, ⟪verdict.glm3.localglmnet⟫
+- **LocalGLMnet → FNN:** ⟪gap.localglmnet.fnn⟫, ⟪verdict.localglmnet.fnn⟫: the price of a network that reads like a GLM
+
 ---
 
 ## Attention weights: read them like coefficients
@@ -143,4 +148,4 @@ Poisson deviance per policy, $\times 10^{-2}$. The paper reports one run; we rep
 3. Wüthrich, M. V., & Merz, M. (2023). *Statistical Foundations of Actuarial Learning and its Applications*. Springer. [doi:10.1007/978-3-031-12409-9](https://doi.org/10.1007/978-3-031-12409-9)
 4. Perla, F., Richman, R., Scognamiglio, S., & Wüthrich, M. V. (2024). Accurate and explainable mortality forecasting with the LocalGLMnet. *Scandinavian Actuarial Journal*, 2024(7), 739–761. [doi:10.1080/03461238.2024.2307620](https://doi.org/10.1080/03461238.2024.2307620)
 
-_Last reviewed: 2026-11-07_
+_Last reviewed: 2026-11-10_

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+from scipy.special import xlogy
 from sklearn.metrics import mean_poisson_deviance
 
 
@@ -24,17 +25,27 @@ def poisson_deviance_per_policy(y, mu, v) -> float:
     return poisson_deviance(y, mu, v) * v.sum() / len(v)
 
 
+def poisson_unit_deviance(y, mu) -> np.ndarray:
+    """Each policy's contribution to `poisson_deviance_per_policy` (their mean equals it):
+    100 * 2 * (mu - y + y log(y / mu)). The exposure cancels."""
+    y, mu = np.asarray(y, dtype=float), np.asarray(mu, dtype=float)
+    return 200 * (mu - y + xlogy(y, y / mu))
+
+
 def balance_ratio(y, mu) -> float:
     """Sum of predicted / sum of observed claims. 1.0 = balance property holds."""
     return float(np.sum(mu) / np.sum(y))
 
 
 def gini_index(y, mu, v) -> float:
-    """Exposure-weighted Gini index of the ordered Lorenz curve (higher = better ranking)."""
+    """Exposure-weighted Gini index of the ordered Lorenz curve (higher = better ranking).
+    Policies with the same predicted rate are one point of the curve, so a constant
+    prediction scores 0 whatever the order of the data."""
     y, mu, v = (np.asarray(a, dtype=float) for a in (y, mu, v))
-    order = np.argsort(-(mu / v), kind="stable")
-    cum_v = np.cumsum(v[order]) / v.sum()
-    cum_y = np.cumsum(y[order]) / y.sum()
+    # riskiest rate first; rounding makes equal rates equal despite float error in mu / v
+    _, group = np.unique(-np.round(np.log(mu / v), 10), return_inverse=True)
+    cum_v = np.cumsum(np.bincount(group, weights=v)) / v.sum()
+    cum_y = np.cumsum(np.bincount(group, weights=y)) / y.sum()
     area = np.trapezoid(np.r_[0, cum_y], np.r_[0, cum_v])
     return float(2 * area - 1)
 
