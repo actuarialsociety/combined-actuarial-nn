@@ -14,6 +14,7 @@ Rules (enforced for pull requests by CI, see [MAINTENANCE.md](./MAINTENANCE.md))
 - No other reference number moved: frequency was re-scored from the saved predictions, mortality and reserving were re-run at the reference setup and reproduced the previous run.
 
 ### Added
+- MLflow agent skills (`mlflow-docs`, `mlflow-onboarding`, `mlflow-sagemaker`) vendored from mlflow/skills with `scripts/update_mlflow_skills.sh` / `.ps1`. No official skills exist yet for PyTorch, LightGBM, pandas, scikit-learn, statsmodels or plotly.
 - `refactor-check` skill: a regular, behaviour-preserving review for shared objects, long functions, hard-coded settings and comment drift.
 - PowerShell twins of every bash script (`full_run.ps1`, `update_*_skills.ps1`, `install_hooks.ps1`) and `login.sh` / `login.ps1` for GitHub, W&B, AWS and Azure; `check_readmes.py` fails if a bash script has no twin. The PowerShell versions are not yet run in CI.
 - A README.md with a mermaid diagram in every folder, and `scripts/check_readmes.py`, which fails if a README stops matching its code; run by a pre-push hook (`.githooks/`, enabled with `scripts/install_hooks.sh` or `.ps1`) and by CI.

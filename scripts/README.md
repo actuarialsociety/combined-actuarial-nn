@@ -28,7 +28,7 @@ flowchart TD
         install_hooks["install_hooks.sh / install_hooks.ps1"]
         login["login.sh / login.ps1"]
         shared["_skills.ps1 · _env.ps1<br/>shared PowerShell helpers"]
-        skills["update_aws_skills · update_azure_skills<br/>update_exa_skills · update_kedro_skills<br/>update_wandb_skills (.sh / .ps1)"]
+        skills["update_aws_skills · update_azure_skills<br/>update_exa_skills · update_kedro_skills<br/>update_wandb_skills · update_mlflow_skills (.sh / .ps1)"]
     end
 ```
 
@@ -49,6 +49,6 @@ flowchart TD
 | `research.py` | local library of every cited paper, full-text search (`data/12_research/`) |
 | `check_readmes.py` | every folder's README matches its code (pre-push hook and CI) |
 | `install_hooks.sh`, `install_hooks.ps1` | enable the hooks in `.githooks/` (once per clone) |
-| `update_aws_skills.sh`, `update_azure_skills.sh`, `update_exa_skills.sh`, `update_kedro_skills.sh`, `update_wandb_skills.sh` and their twins `update_*_skills.ps1` | re-vendor agent skills into `.claude/skills/` |
+| `update_aws_skills.sh`, `update_azure_skills.sh`, `update_exa_skills.sh`, `update_kedro_skills.sh`, `update_wandb_skills.sh`, `update_mlflow_skills.sh` and their twins `update_*_skills.ps1` | re-vendor agent skills into `.claude/skills/` |
 | `login.sh`, `login.ps1` | sign in to GitHub and W&B (and AWS, Azure on request), skipping any already signed in |
 | `_skills.ps1`, `_env.ps1` | shared PowerShell helpers: download and copy a skill; load `.env` |
