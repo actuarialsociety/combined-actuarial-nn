@@ -129,7 +129,7 @@ def check_github(files: list[Path]) -> int:
 
 def main(argv: list[str]) -> int:
     check = "--check" in argv or "--github" in argv
-    files = [ROOT / "README.md", *sorted((ROOT / "lessons").glob("*.md"))]
+    files = [ROOT / "README.md", *sorted((ROOT / "lessons").glob("[0-9][0-9] *.md"))]
     changed = []
     for f in files:
         text = f.read_text(encoding="utf-8")

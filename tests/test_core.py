@@ -223,7 +223,7 @@ def test_wiki_has_colab_link_for_every_lesson(tmp_path):
 
     sidebar = (tmp_path / "_Sidebar.md").read_text()
     notebooks = (tmp_path / "Notebooks.md").read_text()
-    for lesson in sorted((root / "lessons").glob("*.md")):
+    for lesson in sorted((root / "lessons").glob("[0-9][0-9] *.md")):  # decks, not README.md
         url = bw.colab_url(lesson.read_text())
         assert url, f"{lesson.name} has no Colab badge"
         assert (root / url.split("/blob/main/")[1]).exists(), f"{url} points at a missing notebook"

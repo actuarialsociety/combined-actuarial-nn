@@ -12,6 +12,7 @@ wandb/
 mlartifacts/
 conf/local/**
 !conf/local/.gitkeep
+!conf/local/README.md
 *.egg-info/
 .venv/
 .ipynb_checkpoints/

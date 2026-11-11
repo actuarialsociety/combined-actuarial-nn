@@ -117,7 +117,7 @@ def notebooks_page(lesson_files: list[Path]) -> str:
 
 def lessons() -> list[Path]:
     root = sorted(p for p in ROOT.glob("*.md") if p.name not in NOT_LESSONS | {"README.md"})
-    return [ROOT / "README.md", *root, *sorted((ROOT / "lessons").glob("*.md"))]
+    return [ROOT / "README.md", *root, *sorted((ROOT / "lessons").glob("[0-9][0-9] *.md"))]
 
 
 def page_name(md_file: str) -> str:
@@ -179,7 +179,7 @@ def main(out_dir: str) -> int:
         if old.read_text(encoding="utf-8").startswith(GENERATED_MARK):
             old.unlink()
 
-    lesson_files = sorted((ROOT / "lessons").glob("*.md"))
+    lesson_files = sorted((ROOT / "lessons").glob("[0-9][0-9] *.md"))
     colab = {f.name: u for f in lesson_files if (u := colab_url(f.read_text(encoding="utf-8")))}
 
     for src in files:

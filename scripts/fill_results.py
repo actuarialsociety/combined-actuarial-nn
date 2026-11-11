@@ -80,7 +80,7 @@ def fmt(key: str, v) -> str:
 def main(check: bool = False) -> int:
     values = collect()
     missing, stale = set(), []
-    for doc in [ROOT / "README.md", *sorted((ROOT / "lessons").glob("*.md"))]:
+    for doc in [ROOT / "README.md", *sorted((ROOT / "lessons").glob("[0-9][0-9] *.md"))]:
         text = doc.read_text(encoding="utf-8")
 
         def repl(m: re.Match) -> str:

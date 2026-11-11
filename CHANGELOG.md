@@ -14,6 +14,7 @@ Rules (enforced for pull requests by CI, see [MAINTENANCE.md](./MAINTENANCE.md))
 - No other reference number moved: frequency was re-scored from the saved predictions, mortality and reserving were re-run at the reference setup and reproduced the previous run.
 
 ### Added
+- A README.md with a mermaid diagram in every folder, and `scripts/check_readmes.py`, which fails if a README stops matching its code; run by a pre-push hook (`.githooks/`, enabled with `scripts/install_hooks.sh` or `.ps1`) and by CI.
 - `scripts/research.py`: a local library of every paper the repo cites, with open-access PDFs from OpenAlex, repository pages and arXiv, and a full-text search index by page (`data/12_research/`, never committed).
 - Per-epoch training logs for every trained model (FNN, CANN, LocalGLMnet, GBM, the four mortality networks, neural ODP): training and validation loss for every seed (and the learning rate where it changes), logged to MLflow as step metrics plus `training/<model>.csv`, and to W&B as one curve chart per model and metric (`training_log.py`).
 - Mortality: `rmse_out_age15plus`, the out-of-sample RMSE without ages 0-14, whose few Swiss deaths make the observed rates noisy and carry about half of every model's squared error.
@@ -25,6 +26,7 @@ Rules (enforced for pull requests by CI, see [MAINTENANCE.md](./MAINTENANCE.md))
 - `MAINTENANCE.md`, this changelog, and a CI check that a pull request updates it.
 
 ### Changed
+- Lesson scripts and the slide build read only the numbered decks (`lessons/NN *.md`), so `lessons/README.md` is not published as a lesson.
 - Git flow: feature branches off `develop` with conventional branch names and commits; CI also runs on pushes to `develop`. AGENTS.md §7 records the maintainer's working principles.
 - FNN and CANN are reconciled to Brauer (2024) with a tolerance of 2 standard errors of the gap between two 15-seed means (`2se`), not 2 seed sd, which was about 2.7 times too wide.
 - Findings: a gap is called real only if its Holm-adjusted p-value is below 0.05 over all pairs in the table; the 95% intervals stay per pair.

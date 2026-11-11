@@ -133,6 +133,20 @@ mlflow ui --backend-store-uri sqlite:///mlflow.db        # browse runs
 
 ## How it fits together
 
+```mermaid
+flowchart LR
+    data[("Public data<br/>freMTPL2 · Swiss HMD · Schedule P")] --> ingest
+    subgraph kedro["Kedro pipelines (src/)"]
+        ingest --> fit["fit each model<br/>(one namespace each)"] --> score["evaluate"]
+        score --> rec["reconcile<br/>vs the paper's table"]
+        score --> find["findings<br/>are gaps real?"]
+    end
+    conf["conf/<br/>parameters + benchmarks"] --> kedro
+    kedro --> track["MLflow · W&B<br/>metrics, figures, training curves"]
+    rec & find --> ref["reference/<br/>frozen run"]
+    ref --> lessons["lessons/ · notebooks/<br/>wiki · slides"]
+```
+
 | Piece | Where |
 | --- | --- |
 | Models | `src/deep_actuarial_science/models/` (`frequency.py`, `mortality.py`, `reserving.py`): each docstring names its paper and every deviation from it |
