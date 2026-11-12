@@ -1,0 +1,2 @@
+worse,better,loss_worse,loss_better,gap,ci_low,ci_high,p_value,p_holm,verdict,units,adjacent
+neural_odp,chain_ladder,0.03871007066154991,0.03815446995805087,0.0005556007034990462,-0.0024777279325234342,0.0035889293395215266,0.7143955583020315,0.7143955583020315,not distinguishable,50,True

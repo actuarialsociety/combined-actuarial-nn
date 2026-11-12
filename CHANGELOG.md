@@ -11,7 +11,10 @@ Rules (enforced for pull requests by CI, see [MAINTENANCE.md](./MAINTENANCE.md))
 ### Results
 - Homogeneous model: Gini 0.082 → 0.000. A constant prediction ranks nothing; the old value came from the order of the data (ties in the Lorenz curve).
 - Leaderboard figure: GLM1's published diamond was GLM3's value (24.102); it is now its own (24.146), and GLM3 has one.
-- No other reference number moved: frequency was re-scored from the saved predictions, mortality and reserving were re-run at the reference setup and reproduced the previous run.
+- CANN: learn deviance now **FAIL** (23.787 vs 23.742, tolerance 0.036): the `2se` tolerance is correct for two 15-seed means; the old 2 sd (0.122) hid it. Test deviance still PASS. Reference: 23 PASS, 2 FAIL (CANN learn, LSTM out of sample).
+- Mortality networks (seed-dependent epoch order, Keras LayerNorm epsilon), out-of-sample RMSE, mean of 15 seeds: CNN 0.480 → 0.482, non-linear CNN 0.350 → 0.373, LSTM 0.514 → 0.553 (still FAIL), Transformer 0.567 → 0.600. The book's published CNN run moved from better than every seed to inside the seed range; LSTM and Transformer published runs still beat every seed. In-sample RMSEs match the book (CNN 0.207 vs 0.2108).
+- Neural ODP, now trained (best epoch 0 → 224): total reserve error +11.1% → +8.2% (chain-ladder +10.8%), median company error 20.6% → 18.6%; MAPE of ultimate 0.0386 → 0.0387, not distinguishable from the chain-ladder.
+- Frequency findings: with Holm adjustment, LocalGLMnet's 15-seed average vs FNN is no longer a real gap (adjusted p 0.15). No frequency metric moved.
 
 ### Added
 - `paper-to-code` skill (LeCoder, Apache-2.0) vendored verbatim with `scripts/update_paper_to_code_skill.sh` / `.ps1`; `build-research-benchmark-wiki` uses its paper-analysis checklist on the local research library, implementing inside the Kedro pipelines rather than as a new project.

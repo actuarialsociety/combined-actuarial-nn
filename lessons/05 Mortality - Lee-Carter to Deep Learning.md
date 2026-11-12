@@ -71,7 +71,7 @@ where $T$ = last learning year (1999); $h$ = years ahead; $\hat\delta$ = mean ye
 <details>
 <summary><b>③ Next year from the last ten</b></summary>
 
-As in [[2](https://aitools4actuaries.com/Ch8E/mortality_forecasting.pdf)]: each sample is a 10 × 90 window (years × ages) of min–max scaled $\log m$, the target the next year's 90 rates. Windows shuffled (seed 100); 10% validation; Adam, learning rate 0.001, batch 4, 1,000 epochs, rate × 0.9 after 5 stalled epochs; the best epoch is kept. Mean squared error loss. Keras's initialisers and Adam $\epsilon = 10^{-7}$. The book fits one seed (100); here each network fits <!--r:cnn.n_runs-->15<!--/r--> seeds (100, 101, …), because PyTorch cannot redraw Keras's seed.
+As in [[2](https://aitools4actuaries.com/Ch8E/mortality_forecasting.pdf)]: each sample is a 10 × 90 window (years × ages) of min–max scaled $\log m$, the target the next year's 90 rates. Windows shuffled once (seed 100); 10% validation; Adam, learning rate 0.001, batch 4, 1,000 epochs, reshuffled every epoch in an order set by the seed; rate × 0.9 after 5 stalled epochs (PyTorch's relative threshold: Keras's absolute one made every network underfit); the best epoch is kept. Mean squared error loss. Keras's initialisers and Adam $\epsilon = 10^{-7}$. The book fits one seed (100); here each network fits <!--r:cnn.n_runs-->15<!--/r--> seeds (100, 101, …), because PyTorch cannot redraw Keras's seed.
 
 </details>
 
@@ -126,10 +126,10 @@ RMSE of $\log m_{x,t}$. Lee–Carter is closed-form and must match exactly; each
 | Model | Published in / out | This repo in-sample | This repo out-of-sample | Status |
 | --- | --- | --- | --- | --- |
 | Lee–Carter | 0.1555 / 0.3416 (p. 50) | <!--r:lee_carter.rmse_in-->0.1555<!--/r--> | <!--r:lee_carter.rmse_out-->0.3416<!--/r--> | <!--r:lee_carter.status-->PASS<!--/r--> |
-| CNN | 0.2108 / 0.3531 (p. 50) | <!--r:cnn.rmse_in-->0.2063<!--/r--> ± <!--r:cnn.rmse_in_sd-->0.0073<!--/r--> | <!--r:cnn.rmse_out-->0.4796<!--/r--> ± <!--r:cnn.rmse_out_sd-->0.0761<!--/r--> | <!--r:cnn.status-->PASS<!--/r--> |
-| Non-linear CNN | 0.1866 / 0.3189 (p. 56) | <!--r:cnn_tanh.rmse_in-->0.1864<!--/r--> ± <!--r:cnn_tanh.rmse_in_sd-->0.0038<!--/r--> | <!--r:cnn_tanh.rmse_out-->0.3495<!--/r--> ± <!--r:cnn_tanh.rmse_out_sd-->0.0276<!--/r--> | <!--r:cnn_tanh.status-->PASS<!--/r--> |
-| LSTM | 0.1746 / 0.3559 (p. 50) | <!--r:lstm.rmse_in-->0.1830<!--/r--> ± <!--r:lstm.rmse_in_sd-->0.0082<!--/r--> | <!--r:lstm.rmse_out-->0.5138<!--/r--> ± <!--r:lstm.rmse_out_sd-->0.0580<!--/r--> | <!--r:lstm.status-->**FAIL**<!--/r--> |
-| Transformer | 0.2277 / 0.3624 (p. 50) | <!--r:transformer.rmse_in-->0.2181<!--/r--> ± <!--r:transformer.rmse_in_sd-->0.0143<!--/r--> | <!--r:transformer.rmse_out-->0.5668<!--/r--> ± <!--r:transformer.rmse_out_sd-->0.1513<!--/r--> | <!--r:transformer.status-->PASS<!--/r--> |
+| CNN | 0.2108 / 0.3531 (p. 50) | <!--r:cnn.rmse_in-->0.2071<!--/r--> ± <!--r:cnn.rmse_in_sd-->0.0110<!--/r--> | <!--r:cnn.rmse_out-->0.4824<!--/r--> ± <!--r:cnn.rmse_out_sd-->0.0848<!--/r--> | <!--r:cnn.status-->PASS<!--/r--> |
+| Non-linear CNN | 0.1866 / 0.3189 (p. 56) | <!--r:cnn_tanh.rmse_in-->0.1893<!--/r--> ± <!--r:cnn_tanh.rmse_in_sd-->0.0058<!--/r--> | <!--r:cnn_tanh.rmse_out-->0.3727<!--/r--> ± <!--r:cnn_tanh.rmse_out_sd-->0.0526<!--/r--> | <!--r:cnn_tanh.status-->PASS<!--/r--> |
+| LSTM | 0.1746 / 0.3559 (p. 50) | <!--r:lstm.rmse_in-->0.1861<!--/r--> ± <!--r:lstm.rmse_in_sd-->0.0097<!--/r--> | <!--r:lstm.rmse_out-->0.5531<!--/r--> ± <!--r:lstm.rmse_out_sd-->0.0872<!--/r--> | <!--r:lstm.status-->**FAIL**<!--/r--> |
+| Transformer | 0.2277 / 0.3624 (p. 50) | <!--r:transformer.rmse_in-->0.2182<!--/r--> ± <!--r:transformer.rmse_in_sd-->0.0116<!--/r--> | <!--r:transformer.rmse_out-->0.6001<!--/r--> ± <!--r:transformer.rmse_out_sd-->0.1908<!--/r--> | <!--r:transformer.status-->PASS<!--/r--> |
 
 PASS for a network means "within our seed mean ± 2 sd" (Core ideas ⑥): a wide spread passes easily, so read the next slide.
 
@@ -145,10 +145,10 @@ Out-of-sample RMSE over our 15 seeds, against the book's single run and Lee–Ca
 
 | Model | Published | Seeds: min / mean / max | Published run is | Seeds beating Lee–Carter | Seed average |
 | --- | --- | --- | --- | --- | --- |
-| CNN | 0.3531 | ⟪cnn.seed_min⟫ / ⟪cnn.seed_mean⟫ / ⟪cnn.seed_max⟫ | ⟪cnn.published_run⟫ | ⟪cnn.seeds_beating_lee_carter⟫ of 15 | ⟪cnn.ensemble⟫ |
-| Non-linear CNN | 0.3189 | ⟪cnn_tanh.seed_min⟫ / ⟪cnn_tanh.seed_mean⟫ / ⟪cnn_tanh.seed_max⟫ | ⟪cnn_tanh.published_run⟫ | ⟪cnn_tanh.seeds_beating_lee_carter⟫ of 15 | ⟪cnn_tanh.ensemble⟫ |
-| LSTM | 0.3559 | ⟪lstm.seed_min⟫ / ⟪lstm.seed_mean⟫ / ⟪lstm.seed_max⟫ | ⟪lstm.published_run⟫ | ⟪lstm.seeds_beating_lee_carter⟫ of 15 | ⟪lstm.ensemble⟫ |
-| Transformer | 0.3624 | ⟪transformer.seed_min⟫ / ⟪transformer.seed_mean⟫ / ⟪transformer.seed_max⟫ | ⟪transformer.published_run⟫ | ⟪transformer.seeds_beating_lee_carter⟫ of 15 | ⟪transformer.ensemble⟫ |
+| CNN | 0.3531 | <!--r:cnn.seed_min-->0.3443<!--/r--> / <!--r:cnn.seed_mean-->0.4824<!--/r--> / <!--r:cnn.seed_max-->0.6234<!--/r--> | <!--r:cnn.published_run-->inside the seed range<!--/r--> | <!--r:cnn.seeds_beating_lee_carter-->0<!--/r--> of 15 | <!--r:cnn.ensemble-->0.4519<!--/r--> |
+| Non-linear CNN | 0.3189 | <!--r:cnn_tanh.seed_min-->0.3116<!--/r--> / <!--r:cnn_tanh.seed_mean-->0.3727<!--/r--> / <!--r:cnn_tanh.seed_max-->0.5071<!--/r--> | <!--r:cnn_tanh.published_run-->inside the seed range<!--/r--> | <!--r:cnn_tanh.seeds_beating_lee_carter-->6<!--/r--> of 15 | <!--r:cnn_tanh.ensemble-->0.3200<!--/r--> |
+| LSTM | 0.3559 | <!--r:lstm.seed_min-->0.4342<!--/r--> / <!--r:lstm.seed_mean-->0.5531<!--/r--> / <!--r:lstm.seed_max-->0.7163<!--/r--> | <!--r:lstm.published_run-->better than every seed<!--/r--> | <!--r:lstm.seeds_beating_lee_carter-->0<!--/r--> of 15 | <!--r:lstm.ensemble-->0.5461<!--/r--> |
+| Transformer | 0.3624 | <!--r:transformer.seed_min-->0.3664<!--/r--> / <!--r:transformer.seed_mean-->0.6001<!--/r--> / <!--r:transformer.seed_max-->1.1335<!--/r--> | <!--r:transformer.published_run-->better than every seed<!--/r--> | <!--r:transformer.seeds_beating_lee_carter-->0<!--/r--> of 15 | <!--r:transformer.ensemble-->0.3909<!--/r--> |
 
 A published run better than every seed is not reproduced, whatever its PASS. Only the non-linear CNN forecasts as well as Lee–Carter.
 

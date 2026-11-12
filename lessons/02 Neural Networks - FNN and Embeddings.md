@@ -117,8 +117,8 @@ Poisson deviance per policy, $\times 10^{-2}$; mean (sd) over 15 seeds.
 
 Gap in test deviance, 95% interval over test policies (lesson 00, Core ideas ⑥):
 
-- **GLM3 → FNN:** ⟪gap.glm3.fnn⟫, ⟪verdict.glm3.fnn⟫
-- **Averaging the 15 fits:** ⟪gap.fnn.fnn_x15⟫, more than the seed sd of one fit
+- **GLM3 → FNN:** <!--r:gap.glm3.fnn-->0.273 (0.182 to 0.364)<!--/r-->, <!--r:verdict.glm3.fnn-->real<!--/r-->
+- **Averaging the 15 fits:** <!--r:gap.fnn.fnn_x15-->0.029 (0.028 to 0.030)<!--/r-->, more than the seed sd of one fit
 
 ---
 

@@ -132,9 +132,9 @@ Out-of-sample Poisson deviance per policy on 67,801 test policies. Diamonds: the
 
 | Step | Gap in test deviance (95% interval) | Verdict |
 | --- | --- | --- |
-| GLM3 → FNN | ⟪gap.glm3.fnn⟫ | ⟪verdict.glm3.fnn⟫ |
-| FNN → CANN | ⟪gap.fnn.cann⟫ | ⟪verdict.fnn.cann⟫ |
-| CANN, 15 seeds averaged → GBM | ⟪gap.cann_x15.gbm⟫ | ⟪verdict.cann_x15.gbm⟫ |
+| GLM3 → FNN | <!--r:gap.glm3.fnn-->0.273 (0.182 to 0.364)<!--/r--> | <!--r:verdict.glm3.fnn-->real<!--/r--> |
+| FNN → CANN | <!--r:gap.fnn.cann-->0.011 (-0.027 to 0.050)<!--/r--> | <!--r:verdict.fnn.cann-->not distinguishable<!--/r--> |
+| CANN, 15 seeds averaged → GBM | <!--r:gap.cann_x15.gbm-->0.240 (0.169 to 0.311)<!--/r--> | <!--r:verdict.cann_x15.gbm-->real<!--/r--> |
 
 Paired over test policies [[5](https://doi.org/10.1080/07350015.1995.10524599)] (Core ideas ⑥). Grey: the test set cannot rank the two models.
 
@@ -148,7 +148,7 @@ Paired over test policies [[5](https://doi.org/10.1080/07350015.1995.10524599)] 
 | GLM1 | Wüthrich & Merz [[2](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3 | 24.146 | <!--r:glm.deviance_test-->24.146<!--/r--> | <!--r:glm.status-->PASS<!--/r--> |
 | GLM3 | Wüthrich & Merz [[2](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.5 | 24.102 | <!--r:glm3.deviance_test-->24.102<!--/r--> | <!--r:glm3.status-->PASS<!--/r--> |
 | FNN (15 seeds) | Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (f) | 23.827 | <!--r:fnn.deviance_test-->23.829<!--/r--> | <!--r:fnn.status-->PASS<!--/r--> |
-| CANN (15 seeds) | Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (g) | 23.810 | <!--r:cann.deviance_test-->23.818<!--/r--> | <!--r:cann.status-->PASS<!--/r--> |
+| CANN (15 seeds) | Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (g) | 23.810 | <!--r:cann.deviance_test-->23.818<!--/r--> | <!--r:cann.status-->**FAIL**<!--/r--> |
 | LocalGLMnet | Richman & Wüthrich [[4](https://doi.org/10.1080/03461238.2022.2081816)], Table 2 (c) | 23.945 | <!--r:localglmnet.deviance_test-->23.933<!--/r--> | <!--r:localglmnet.status-->PASS<!--/r--> |
 
 Mortality (lesson 05) and reserving (lesson 06) reconcile the same way.
