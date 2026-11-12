@@ -126,6 +126,7 @@ GITHUB_TOKEN=$(gh auth token) python3 scripts/fix_math.py --github   # math rend
 | Full run | `scripts/full_run.sh`: every model, dataset and benchmark on MPS (`DAS_DEVICE`), logged to W&B; `notebooks/run_all_mps.ipynb` for the notebook version |
 | EDA and model analysis | `python scripts/eda.py` (each dataset) and `python scripts/model_analysis.py` (each fitted model, after a full run): local Markdown reports in `data/10_eda/` and `data/11_model_analysis/`, never logged to MLflow or W&B |
 | Research library (local) | `python scripts/research.py fetch` then `index`: every paper the repo cites, open-access PDFs from OpenAlex, repositories and arXiv, full-text indexed per page in `data/12_research/` (never committed); `research.py search "query"` answers with paper and page; `status` lists paywalled papers to add by hand |
+| Visual report | `docs/index.html` and `docs/slides.md`, rebuilt from `reference/` by `scripts/build_docs.py` (run by the freeze; Pages: `report.html`, `summary.html`) |
 | Container | `docker compose up lab mlflow` (JupyterLab :8888, MLflow :5000) |
 | Slides | `npx @marp-team/marp-cli@4.5.1 --html -s lessons` (published to Pages by `slides.yml`) |
 | Wiki | Generated from `README.md` + `lessons/` on push to `main` (`wiki-sync.yml`) |

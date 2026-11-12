@@ -540,3 +540,15 @@ def test_audit_trail_records_time_rows_and_totals():
     assert len(trail.table()) == 3
     assert metric_key(rows[1], "rows") == "audit/fnn.predict/out/rows"
     assert set(version()) == {"package_version", "git_commit"}
+
+
+def test_docs_match_the_frozen_reference_run():
+    """docs/ (report and slide deck) is rebuilt from reference/ by freeze_reference.py."""
+    import importlib.util
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("build_docs", root / "scripts" / "build_docs.py")
+    bd = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(bd)
+    assert bd.main(check=True) == 0, "run python3 scripts/build_docs.py"
