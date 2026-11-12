@@ -34,7 +34,7 @@ Rules (enforced for pull requests by CI, see [MAINTENANCE.md](./MAINTENANCE.md))
 - Git flow: feature branches off `develop` with conventional branch names and commits; CI also runs on pushes to `develop`. AGENTS.md §7 records the maintainer's working principles.
 - FNN and CANN are reconciled to Brauer (2024) with a tolerance of 2 standard errors of the gap between two 15-seed means (`2se`), not 2 seed sd, which was about 2.7 times too wide.
 - Findings: a gap is called real only if its Holm-adjusted p-value is below 0.05 over all pairs in the table; the 95% intervals stay per pair.
-- Mortality networks: a seed now also sets every epoch's mini-batch order (as Keras's `set_random_seed` does), not only the initial weights, so the seed spread behind the `2sd` tolerance is not understated; the learning-rate plateau uses Keras's absolute `min_delta`.
+- Mortality networks: a seed now also sets every epoch's mini-batch order (as Keras's `set_random_seed` does), not only the initial weights, so the seed spread behind the `2sd` tolerance is not understated. The Transformer's layer normalisation uses Keras's epsilon (1e-3). The learning-rate plateau keeps PyTorch's relative threshold: Keras's absolute `min_delta` was tried and made every network underfit (CNN in-sample RMSE 0.241 against the book's 0.2108).
 - Mortality comparison figure: per-seed dots with the published run (`seeds.png`) replace the bar chart of means.
 - Notebook 01 also fits GLM3; notebook 03 also fits the FNN (the comparison the CANN has to win).
 - CI also runs when lessons, scripts, `reference/` or the README change.

@@ -6,7 +6,7 @@ random-walk-with-drift extrapolation (R `rwf(kt, drift = TRUE)`), and networks o
 10-year windows of log-mortality across all ages that predict the next year,
 forecasting recursively. Keras layers are mirrored where PyTorch differs: an LSTM with
 linear activation and one bias per gate, attention with a learned scale, Keras's
-initialisers and Adam epsilon, and the absolute `min_delta` of its learning-rate plateau.
+initialisers, Adam epsilon and layer-normalisation epsilon.
 
 Seeds: the book publishes one run per network (seed 100) and warns the results "are not very
 robust" across SGD runs. PyTorch cannot reproduce Keras's seed-100 draw, so each network fits
@@ -141,7 +141,7 @@ class Transformer(nn.Module):
         self.rep = nn.Linear(n_age, units)
         self.q, self.k, self.v = (nn.Linear(units, units) for _ in range(3))
         self.scale = nn.Parameter(torch.ones(()))
-        self.norm = nn.LayerNorm(units)
+        self.norm = nn.LayerNorm(units, eps=1e-3)  # Keras layer_normalization default
         self.ff = nn.Linear(units, units)
         self.out = nn.Linear(units * lookback, n_age)
 
@@ -165,7 +165,10 @@ def _train(net, X, y, t: dict, seed: int | None = None) -> dict:
     """Ch. 8 training. The learning sample is shuffled once with `set.seed(100)` (fixed, so
     every seed shares the 10% validation windows), then Keras reshuffles every epoch from the
     model's seed: `seed` drives that order, so seeds differ in their SGD path as well as their
-    initial weights. The learning-rate plateau uses Keras's absolute `min_delta = 1e-4`."""
+    initial weights. The learning-rate plateau keeps PyTorch's relative threshold (1e-4): with
+    Keras's documented absolute `min_delta = 1e-4` the rate decays 5-10x lower and every
+    network underfits (5 seeds: CNN in-sample RMSE 0.241, book 0.2108; relative 0.206), so the
+    book's runs evidently did not decay that way."""
     rng = np.random.RandomState(t.get("shuffle_seed", 100))
     idx = rng.permutation(len(X))
     dev = device()
@@ -175,7 +178,7 @@ def _train(net, X, y, t: dict, seed: int | None = None) -> dict:
     Xt, yt, Xv, yv = X[:cut], y[:cut], X[cut:], y[cut:]
     opt = optim.Adam(net.parameters(), lr=t.get("lr", 0.001), eps=KERAS_EPS)
     sched = optim.lr_scheduler.ReduceLROnPlateau(
-        opt, factor=0.9, patience=t.get("patience", 5), threshold=1e-4, threshold_mode="abs"
+        opt, factor=0.9, patience=t.get("patience", 5), threshold=1e-4, threshold_mode="rel"
     )
     loss_fn = nn.MSELoss()
     best, best_state, hist = (
