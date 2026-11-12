@@ -17,6 +17,9 @@ Rules (enforced for pull requests by CI, see [MAINTENANCE.md](./MAINTENANCE.md))
 - Frequency findings: with Holm adjustment, LocalGLMnet's 15-seed average vs FNN is no longer a real gap (adjusted p 0.15). No frequency metric moved.
 
 ### Added
+- `docs/`: an interactive plotly report (`index.html`: scorecard, each reproduction's distance from its paper, which gaps are real, mortality seeds vs the published run; details expand; model version, data, reproduce commands, links to MLflow, W&B, CI and the wiki) and its slide version (`slides.md`), built from `reference/` by `scripts/build_docs.py` and published to Pages.
+- Audit trail (`audit.py`, `AuditHook`): every pipeline step's duration, row counts and reconciled totals (claims, exposure, predictions, premium, paid, reserves) logged to MLflow (`audit.*` metrics, `audit/steps.csv`) and W&B.
+- Model version on every run: package version (one source, `pyproject.toml`, now 0.2.0) and git commit as MLflow tags, W&B config and in `reference/environment.json`.
 - `paper-to-code` skill (LeCoder, Apache-2.0) vendored verbatim with `scripts/update_paper_to_code_skill.sh` / `.ps1`; `build-research-benchmark-wiki` uses its paper-analysis checklist on the local research library, implementing inside the Kedro pipelines rather than as a new project.
 - MLflow agent skills (`mlflow-docs`, `mlflow-onboarding`, `mlflow-sagemaker`) vendored from mlflow/skills with `scripts/update_mlflow_skills.sh` / `.ps1`. None found in the GitHub organisations of PyTorch, LightGBM, pandas, scikit-learn, statsmodels or plotly (checked 2026-11-12).
 - `refactor-check` skill: a regular, behaviour-preserving review for shared objects, long functions, hard-coded settings and comment drift.

@@ -521,3 +521,34 @@ def test_neural_odp_chooses_epochs_out_of_time():
     assert np.isfinite(hist["val_loss_offset_only"]) and len(hist["val_loss"]) == 30
     assert hist["epochs_refit"] in (0, hist["best_epoch"] + 1)
     assert pred.loc[~pred.upper, "pred"].notna().all()
+
+
+def test_audit_trail_records_time_rows_and_totals():
+    """Each step's row count and reconciled totals (claims, exposure, premium, paid ...), so a
+    total that breaks between steps is visible; non-frame nodes still get a duration."""
+    from deep_actuarial_science.audit import AuditTrail, frame_totals, metric_key, version
+
+    df = pd.DataFrame({"ClaimNb": [0, 1, 2], "Exposure": [0.5, 1.0, 1.0], "other": [9, 9, 9]})
+    assert frame_totals(df) == {"rows": 3.0, "claims": 3.0, "exposure": 2.5}
+    trail = AuditTrail()
+    trail.start("fnn.predict")
+    rows = trail.finish("fnn.predict", {"learn": df}, {"pred": df.head(2), "model": object()})
+    assert [(r["side"], r["rows"]) for r in rows] == [("in", 3.0), ("out", 2.0)]
+    assert all(r["seconds"] >= 0 for r in rows)
+    trail.start("x.fit")
+    assert trail.finish("x.fit", {}, {"m": 1})[0]["dataset"] == ""
+    assert len(trail.table()) == 3
+    assert metric_key(rows[1], "rows") == "audit/fnn.predict/out/rows"
+    assert set(version()) == {"package_version", "git_commit"}
+
+
+def test_docs_match_the_frozen_reference_run():
+    """docs/ (report and slide deck) is rebuilt from reference/ by freeze_reference.py."""
+    import importlib.util
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("build_docs", root / "scripts" / "build_docs.py")
+    bd = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(bd)
+    assert bd.main(check=True) == 0, "run python3 scripts/build_docs.py"

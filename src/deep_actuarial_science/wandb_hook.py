@@ -22,6 +22,7 @@ import pandas as pd
 from kedro.framework.hooks import hook_impl
 from matplotlib.figure import Figure
 
+from deep_actuarial_science.audit import version
 from deep_actuarial_science.training_log import fit_outputs
 
 log = logging.getLogger(__name__)
@@ -87,6 +88,7 @@ class WandbHook:
             name=f"{name}-{env}",
             tags=[name, env, f"device:{device().type}"],
             config={
+                **version(),  # package version and git commit: the model version
                 "env": env,
                 "device": device().type,
                 "namespaces": run_params.get("namespaces"),

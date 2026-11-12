@@ -5,7 +5,8 @@ number in the lessons, the README and the notebooks' "reference run" columns.
     kedro run                                # the reference setup (conf/base), every pipeline
     python3 scripts/freeze_reference.py      # data/08_reporting -> reference/, then the
                                              # lesson figures (export_figures.py) and every
-                                             # number in the lessons and README (fill_results.py)
+                                             # number in the lessons and README (fill_results.py),
+                                             # then docs/ (build_docs.py)
 
 Refuses to freeze a run that is not the reference setup (a benchmark reports SKIPPED).
 
@@ -60,6 +61,7 @@ def main() -> int:
     env = {
         "frozen": date.today().isoformat(),
         "commit": commit,
+        "package_version": metadata.version("deep-actuarial-science"),
         "device": os.environ.get("DAS_DEVICE", "default (CUDA if present, else CPU)"),
         "platform": platform.platform(),
         "python": sys.version.split()[0],
@@ -69,11 +71,14 @@ def main() -> int:
     print(rec.status.value_counts().to_string())
     print("frozen to", OUT.relative_to(ROOT))
     sys.path.insert(0, str(ROOT / "scripts"))
+    import build_docs
     import export_figures
     import fill_results
 
     export_figures.main()
-    return fill_results.main()
+    status = fill_results.main()
+    build_docs.main()  # docs/: the visual report and its slide deck, from reference/
+    return status
 
 
 if __name__ == "__main__":

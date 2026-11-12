@@ -29,8 +29,10 @@ jobs:
       - name: Render decks
         run: |
           mkdir -p decks && mkdir -p decks/figures && cp lessons/[0-9][0-9]*.md decks/ && cp lessons/figures/*.png decks/figures/  # decks only, not README.md
+          sed 's#\.\./lessons/figures/#figures/#g' docs/slides.md > decks/summary.md  # report's slide version
           npx -y @marp-team/marp-cli@4.5.1 --input-dir decks --output site --html --allow-local-files
           cp -r lessons/figures site/figures
+          cp docs/index.html site/report.html   # the interactive report
           {
             echo '<!doctype html><meta charset="utf-8"><title>deep-actuarial-science slides</title>'
             echo '<body style="font-family:system-ui;max-width:40rem;margin:3rem auto;padding:0 1rem">'

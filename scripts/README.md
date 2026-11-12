@@ -9,6 +9,7 @@ flowchart TD
         full_run["full_run.sh / full_run.ps1"] --> freeze_reference["freeze_reference.py"]
         freeze_reference --> export_figures["export_figures.py"]
         freeze_reference --> fill_results["fill_results.py"]
+        freeze_reference --> build_docs["build_docs.py"]
     end
     subgraph content["Lessons, notebooks, wiki"]
         make_notebooks["make_notebooks.py"]
@@ -37,6 +38,7 @@ flowchart TD
 | `full_run.sh`, `full_run.ps1` | every pipeline at the reference setup, freeze, then scale-up; MPS, logged to W&B |
 | `freeze_reference.py` | latest reference run → `reference/`, then figures and numbers |
 | `export_figures.py` | copies the lesson figures from the run |
+| `build_docs.py` | `docs/`: the interactive plotly report and its slide deck, from `reference/` (`--check` in CI) |
 | `fill_results.py` | fills every number in the lessons and README from `reference/` (`--check` in CI) |
 | `make_notebooks.py` | generates `notebooks/` |
 | `build_wiki.py` | builds the wiki from README and lessons (run by `wiki-sync.yml`) |

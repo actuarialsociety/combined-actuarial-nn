@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "deep-actuarial-science"
-version = "0.1.0"
+version = "0.2.0"
 description = "Deep learning models in actuarial science: lessons, Kedro pipelines and benchmarks"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -54,6 +54,7 @@ ignore = ["B905"]  # zip() pairs equal-length model lists by construction
 [tool.ruff.lint.per-file-ignores]
 "src/deep_actuarial_science/settings.py" = ["E402"]  # hook import after loader config
 "scripts/make_notebooks.py" = ["E501"]  # notebook text strings
+"scripts/build_docs.py" = ["E501"]  # HTML template lines
 
 # CPU wheels of torch keep the container small; on a GPU machine or Colab the
 # preinstalled torch is used instead.
