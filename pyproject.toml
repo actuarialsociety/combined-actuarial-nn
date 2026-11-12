@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "deep-actuarial-science"
-version = "0.1.0"
+version = "0.2.0"
 description = "Deep learning models in actuarial science: lessons, Kedro pipelines and benchmarks"
 readme = "README.md"
 requires-python = ">=3.10"

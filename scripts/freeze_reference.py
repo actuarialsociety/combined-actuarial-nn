@@ -60,6 +60,7 @@ def main() -> int:
     env = {
         "frozen": date.today().isoformat(),
         "commit": commit,
+        "package_version": metadata.version("deep-actuarial-science"),
         "device": os.environ.get("DAS_DEVICE", "default (CUDA if present, else CPU)"),
         "platform": platform.platform(),
         "python": sys.version.split()[0],
