@@ -111,7 +111,12 @@ Poisson deviance per policy, $\times 10^{-2}$. The paper reports one run; we rep
 | Model | Published learn | Published test | This repo learn | This repo test | Status |
 | --- | --- | --- | --- | --- | --- |
 | LocalGLMnet | 23.728 | 23.945 | <!--r:localglmnet.deviance_learn-->23.721<!--/r--> (<!--r:localglmnet.deviance_learn_sd-->0.039<!--/r-->) | <!--r:localglmnet.deviance_test-->23.933<!--/r--> (<!--r:localglmnet.deviance_test_sd-->0.025<!--/r-->) | <!--r:localglmnet.status-->PASS<!--/r--> |
-| CANN (lesson 03) | 23.742 | 23.810 | <!--r:cann.deviance_learn-->23.787<!--/r--> | <!--r:cann.deviance_test-->23.818<!--/r--> | <!--r:cann.status-->PASS<!--/r--> |
+| CANN (lesson 03) | 23.742 | 23.810 | <!--r:cann.deviance_learn-->23.787<!--/r--> | <!--r:cann.deviance_test-->23.818<!--/r--> | <!--r:cann.status-->**FAIL**<!--/r--> |
+
+Gap in test deviance, 95% interval over test policies (lesson 00, Core ideas ⑥):
+
+- **GLM3 → LocalGLMnet:** <!--r:gap.glm3.localglmnet-->0.169 (0.076 to 0.261)<!--/r-->, <!--r:verdict.glm3.localglmnet-->real<!--/r-->
+- **LocalGLMnet → FNN:** <!--r:gap.localglmnet.fnn-->0.104 (0.064 to 0.145)<!--/r-->, <!--r:verdict.localglmnet.fnn-->real<!--/r-->: the price of a network that reads like a GLM
 
 ---
 
@@ -143,4 +148,4 @@ Poisson deviance per policy, $\times 10^{-2}$. The paper reports one run; we rep
 3. Wüthrich, M. V., & Merz, M. (2023). *Statistical Foundations of Actuarial Learning and its Applications*. Springer. [doi:10.1007/978-3-031-12409-9](https://doi.org/10.1007/978-3-031-12409-9)
 4. Perla, F., Richman, R., Scognamiglio, S., & Wüthrich, M. V. (2024). Accurate and explainable mortality forecasting with the LocalGLMnet. *Scandinavian Actuarial Journal*, 2024(7), 739–761. [doi:10.1080/03461238.2024.2307620](https://doi.org/10.1080/03461238.2024.2307620)
 
-_Last reviewed: 2026-11-07_
+_Last reviewed: 2026-11-10_

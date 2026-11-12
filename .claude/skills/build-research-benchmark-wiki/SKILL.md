@@ -73,6 +73,16 @@ cann:
 
 ## 4. Implement as the paper does
 
+**Read the paper with the `paper-to-code` skill (Phase 1), then implement here.** Get the
+paper's text from the local library (`python scripts/research.py fetch` and `index`, then
+`data/12_research/text/<key>.txt`; markitdown is not needed), extract its algorithms, equations,
+architecture and hyperparameters, and write paper-to-code's implementation checklist, with
+section and equation for every item, into the PR description. Use its code and test patterns
+(Phases 3-4: math in docstrings, shape and gradient tests, device-agnostic code). **Do not**
+follow its project scaffolding (Phases 2, 5, 6: a new uv project, Gradio demo, config presets,
+packaging): models live in the Kedro pipelines below. Where the paper leaves a detail out, do
+not fill it silently with a default: record the choice as a deviation, with its reason.
+
 1. Model class in `src/deep_actuarial_science/models/<domain>.py`, registered in `MODELS`;
    the docstring names the paper, section and any deviation with its reason.
 2. Parameters under `<domain>.models.<name>` with a comment citing the paper's settings.

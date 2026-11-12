@@ -59,6 +59,12 @@ freq_leaderboard:
     type: pandas.CSVDataset
     filepath: data/08_reporting/frequency/leaderboard.csv
 
+freq_findings:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pandas.CSVDataset
+    filepath: data/08_reporting/frequency/findings.csv
+
 freq_comparison_figures:
   type: matplotlib.MatplotlibDataset
   filepath: data/08_reporting/frequency/comparison
@@ -101,6 +107,12 @@ mort_leaderboard:
     type: pandas.CSVDataset
     filepath: data/08_reporting/mortality/leaderboard.csv
 
+mort_findings:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pandas.CSVDataset
+    filepath: data/08_reporting/mortality/findings.csv
+
 mort_comparison_figures:
   type: matplotlib.MatplotlibDataset
   filepath: data/08_reporting/mortality/comparison
@@ -139,6 +151,12 @@ res_leaderboard:
     type: pandas.CSVDataset
     filepath: data/08_reporting/reserving/leaderboard.csv
 
+res_findings:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pandas.CSVDataset
+    filepath: data/08_reporting/reserving/findings.csv
+
 res_company_reserves:
   type: pandas.CSVDataset
   filepath: data/08_reporting/reserving/company_reserves.csv
@@ -146,3 +164,10 @@ res_company_reserves:
 res_comparison_figures:
   type: matplotlib.MatplotlibDataset
   filepath: data/08_reporting/reserving/comparison
+
+# --- Reference run ------------------------------------------------------------------------------
+# The frozen reference run (scripts/freeze_reference.py), committed in reference/: metrics,
+# reconciliation, frequency_findings, mortality_findings, reserving_findings.
+"reference_{table}":
+  type: pandas.CSVDataset
+  filepath: reference/{table}.csv

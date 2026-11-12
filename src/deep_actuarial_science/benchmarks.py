@@ -3,12 +3,18 @@
 Benchmarks live in `conf/base/parameters_benchmarks.yml`. Each entry gives the
 expected value of a metric, a tolerance and its source. A benchmark only
 applies when the run uses the reference setup (e.g. the full dataset).
+
+Tolerances: a number (closed-form fits, to rounding); "2sd", for a single published run,
+which must lie within 2 sd of our per-seed values; "2se", for a published mean over `n`
+seeds with sd `sd`, which must lie within 2 standard errors of the difference of the two
+means, sqrt(sd_pub^2 / n_pub + sd_ours^2 / n_ours).
 """
 
 from __future__ import annotations
 
 import logging
 
+import numpy as np
 import pandas as pd
 
 log = logging.getLogger(__name__)
@@ -37,6 +43,14 @@ def reconcile(
         if tol == "2sd":  # a single published run: within 2 sd of our seed distribution
             sd = metrics.get(f"{name}_sd")
             tol = None if sd is None else 2 * sd
+        elif tol == "2se":  # published mean over n seeds vs ours: 2 standard errors of the gap
+            sd, pub_sd = metrics.get(f"{name}_sd"), (benchmark.get("sd") or {}).get(name)
+            n_pub, n_ours = benchmark.get("n"), metrics.get("n_runs")
+            tol = (
+                None
+                if None in (sd, pub_sd, n_pub, n_ours)
+                else 2 * float(np.sqrt(pub_sd**2 / n_pub + sd**2 / n_ours))
+            )
         actual = metrics.get(name)
         if not applicable:
             status = "SKIPPED (not reference setup)"

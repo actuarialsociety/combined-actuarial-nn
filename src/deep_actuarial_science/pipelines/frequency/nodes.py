@@ -7,7 +7,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-from deep_actuarial_science import plots
+from deep_actuarial_science import findings, plots
 from deep_actuarial_science.benchmarks import reconcile as _reconcile
 from deep_actuarial_science.metrics import (
     balance_ratio,
@@ -141,16 +141,17 @@ def figures(model: FrequencyModel, pred: pd.DataFrame, test: pd.DataFrame, param
 
 
 def reconcile(
-    metrics: dict, benchmark: dict | None, data_params: dict, params: dict, reference: bool = True
+    metrics: dict, benchmark: dict | None, data_params: dict, reference: bool, name: str
 ) -> pd.DataFrame:
     applicable = reference and data_params.get("scale", 1.0) == 1.0
-    return _reconcile(metrics, benchmark, applicable, params["kind"])
+    return _reconcile(metrics, benchmark, applicable, name)
 
 
 def make_compare(names: list[str]):
-    """Leaderboard across models, with the published benchmark drawn next to each result."""
+    """Leaderboard across models, with the published benchmark drawn next to each result,
+    and the findings table: which gaps between models are real (`findings.gaps`)."""
 
-    def compare_frequency_models(*args) -> tuple[pd.DataFrame, dict]:
+    def compare_frequency_models(*args) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
         k = len(names)
         metrics, preds, recs = args[:k], args[k : 2 * k], args[2 * k :]
         table = pd.DataFrame([{"model": n, **m} for n, m in zip(names, metrics)])
@@ -160,7 +161,11 @@ def make_compare(names: list[str]):
             if len(r)
         }
         table["benchmark_deviance_test"] = table.model.map(bench)
+        found = findings.frequency(dict(zip(names, preds)))
         figs = {
+            "gaps": plots.gaps(
+                findings.summary(found), "Gap in test Poisson deviance (×10⁻²), 95% interval"
+            ),
             "leaderboard_test_deviance": plots.leaderboard(
                 table,
                 "deviance_test",
@@ -172,6 +177,6 @@ def make_compare(names: list[str]):
             ),
             "lorenz": plots.lorenz({n: p[p.split == "test"] for n, p in zip(names, preds)}),
         }
-        return table, plots.named(figs)
+        return table, found, plots.named(figs)
 
     return compare_frequency_models

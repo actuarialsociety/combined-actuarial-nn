@@ -80,7 +80,7 @@ where $U_c$ = actual total paid at development year 10 over all accident years; 
 <details>
 <summary><b>④ Neural ODP: a CANN for triangles</b></summary>
 
-As in [[5](https://doi.org/10.1080/03461238.2019.1633394)]: chain-ladder means as offset; embeddings of company, line and development year plus a scaled accident year; two tanh layers (16, 8); output initialised at zero, so training starts **at the chain-ladder**. Payments divided by each company's premium; Poisson loss; full-batch Adam. Trains on calendar years before 1997 and validates on the latest diagonal, so early stopping sees no future.
+As in [[5](https://doi.org/10.1080/03461238.2019.1633394)]: chain-ladder means as offset; embeddings of company, line and development year plus a scaled accident year; two tanh layers (16, 8); output initialised at zero, so training starts **at the chain-ladder**. Payments divided by each company's premium; Poisson loss; full-batch Adam. The number of epochs is chosen out of time: offsets and training use calendar years up to 1996 only, and the 1997 diagonal validates (offsets fitted to that diagonal would make any learning look worse). The network is then refitted on the whole triangle for that many epochs.
 
 </details>
 
@@ -100,7 +100,7 @@ Private passenger auto, Meyers' [[3](https://www.casact.org/sites/default/files/
 | Model | Paper, table | Published MAPE / RMSPE | This repo MAPE | This repo RMSPE | Status |
 | --- | --- | --- | --- | --- | --- |
 | Chain-ladder | [[4](https://doi.org/10.3390/risks7030097)], Table 1, Mack | 0.038 / 0.061 | <!--r:chain_ladder.mape_ultimate-->0.03815<!--/r--> | <!--r:chain_ladder.rmspe_ultimate-->0.06057<!--/r--> | <!--r:chain_ladder.status-->PASS<!--/r--> |
-| Neural ODP | none published | n/a | <!--r:neural_odp.mape_ultimate-->0.03857<!--/r--> | <!--r:neural_odp.rmspe_ultimate-->0.0609<!--/r--> | comparable only |
+| Neural ODP | none published | n/a | <!--r:neural_odp.mape_ultimate-->0.03871<!--/r--> | <!--r:neural_odp.rmspe_ultimate-->0.06596<!--/r--> | comparable only |
 | DeepTriangle | [[4](https://doi.org/10.3390/risks7030097)], Table 1 | 0.025 / 0.039 | not implemented | | |
 
 Also checked: the chain-ladder equals the `chainladder` package to <!--r:chain_ladder.package_diff-->2.0e-15<!--/r-->. DeepTriangle (a GRU on paid and incurred data) and Mack-Net [[6](https://doi.org/10.1016/j.eswa.2022.117146)] use the same companies but different models and data, so the neural ODP is compared, not reconciled.
@@ -112,9 +112,9 @@ Also checked: the chain-ladder equals the `chainladder` package to <!--r:chain_l
 | Model | Total reserve error | Median abs. company error | Companies within ±10% |
 | --- | --- | --- | --- |
 | Chain-ladder | <!--r:chain_ladder.total_reserve_error_pct-->+10.8<!--/r-->% | <!--r:chain_ladder.median_abs_error_pct-->20.3<!--/r-->% | <!--r:chain_ladder.share_within_10pct-->26%<!--/r--> |
-| Neural ODP | <!--r:neural_odp.total_reserve_error_pct-->+11.1<!--/r-->% | <!--r:neural_odp.median_abs_error_pct-->20.6<!--/r-->% | <!--r:neural_odp.share_within_10pct-->24%<!--/r--> |
+| Neural ODP | <!--r:neural_odp.total_reserve_error_pct-->+8.2<!--/r-->% | <!--r:neural_odp.median_abs_error_pct-->18.6<!--/r-->% | <!--r:neural_odp.share_within_10pct-->30%<!--/r--> |
 
-Neural ODP best epoch: <!--r:neural_odp.best_epoch-->0<!--/r-->. With a per-company chain-ladder offset, little shared structure is left to learn.
+Gap in MAPE, chain-ladder ahead, paired over the 50 companies (lesson 00, Core ideas ⑥): <!--r:gap.neural_odp.chain_ladder-->0.0006 (-0.0025 to 0.0036)<!--/r-->, <!--r:verdict.neural_odp.chain_ladder-->not distinguishable<!--/r--> but a hundredth of the MAPE itself. Best epoch <!--r:neural_odp.best_epoch-->224<!--/r-->, chosen on the 1997 diagonal. The correction trims the chain-ladder's over-reserving (total error above), but on each company's ultimate loss it cannot be told apart from the chain-ladder: with a per-company chain-ladder offset, little shared structure is left to learn.
 
 ![w:440](figures/06-scatter.png) ![w:480](figures/06-errors.png)
 
@@ -141,4 +141,4 @@ Neural ODP best epoch: <!--r:neural_odp.best_epoch-->0<!--/r-->. With a per-comp
 
 Data: [CAS Loss Reserving Database](https://www.casact.org/publications-research/research/research-resources/loss-reserving-data-pulled-naic-schedule-p).
 
-_Last reviewed: 2026-11-07_
+_Last reviewed: 2026-11-10_

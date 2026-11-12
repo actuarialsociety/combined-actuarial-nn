@@ -14,7 +14,7 @@ mortality:
     batch_size: 4
     lr: 0.001
     patience: 5
-    shuffle_seed: 100
+    shuffle_seed: 100   # the book's set.seed(100) shuffle (fixes the validation windows)
     n_runs: 15          # seeds 100, 101, ...: the book's single run (seed 100) is "not very
                         # robust", so the benchmark checks it against our seed distribution
     scaler_fit: all     # reference notebook; use `learn` to remove look-ahead

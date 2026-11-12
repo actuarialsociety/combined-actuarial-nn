@@ -82,6 +82,29 @@ Settings live in config, seeds are fixed, MLflow logs every run. Networks train 
 
 </details>
 
+<details>
+<summary><b>⑥ Is a gap between two models real?</b></summary>
+
+**Paired gap in test loss, with its 95% interval** [[5](https://doi.org/10.1080/07350015.1995.10524599)]
+
+$\displaystyle \hat\Delta = \frac{1}{n}\sum_{i=1}^n \big(d_i^{A} - d_i^{B}\big), \qquad \hat\Delta \pm t_{n-1}\thinspace\frac{s}{\sqrt{n}}$
+
+where $d_i^{A}, d_i^{B}$ = deviance of test policy $i$ under models A and B (their means are the two $D$ of ②); $n$ = 67,801 test policies; $s$ = standard deviation of the differences $d_i^{A} - d_i^{B}$; $t_{n-1}$ = 97.5% Student-t quantile (1.96 here)
+
+- **Real** if the interval excludes 0; otherwise another test sample could reverse the ranking
+- Pairing matters: both models score the same policies, so most of the claim noise cancels
+- A network enters as the mean of its 15 fits; `fnn_x15` is the average of its 15 predictions
+- Code: `findings.py`; every pipeline writes `findings.csv`
+
+</details>
+
+<details>
+<summary><b>⑦ One frozen reference run</b></summary>
+
+`reference/` holds the last full run: every metric, the reconciliation, the findings and the package versions (`scripts/freeze_reference.py`). Every number in these slides is filled from it (`scripts/fill_results.py`; CI fails if a slide disagrees), and each notebook shows it next to the paper and your own run.
+
+</details>
+
 ---
 
 ## Run it three ways
@@ -103,6 +126,20 @@ Out-of-sample Poisson deviance per policy on 67,801 test policies. Diamonds: the
 
 ---
 
+## Which gaps are real?
+
+![w:500](figures/00-gaps.png)
+
+| Step | Gap in test deviance (95% interval) | Verdict |
+| --- | --- | --- |
+| GLM3 → FNN | <!--r:gap.glm3.fnn-->0.273 (0.182 to 0.364)<!--/r--> | <!--r:verdict.glm3.fnn-->real<!--/r--> |
+| FNN → CANN | <!--r:gap.fnn.cann-->0.011 (-0.027 to 0.050)<!--/r--> | <!--r:verdict.fnn.cann-->not distinguishable<!--/r--> |
+| CANN, 15 seeds averaged → GBM | <!--r:gap.cann_x15.gbm-->0.240 (0.169 to 0.311)<!--/r--> | <!--r:verdict.cann_x15.gbm-->real<!--/r--> |
+
+Paired over test policies [[5](https://doi.org/10.1080/07350015.1995.10524599)] (Core ideas ⑥). Grey: the test set cannot rank the two models.
+
+---
+
 ## Reconciliation: every number has a paper
 
 | Model | Paper, table | Published test | This repo | Status |
@@ -111,7 +148,7 @@ Out-of-sample Poisson deviance per policy on 67,801 test policies. Diamonds: the
 | GLM1 | Wüthrich & Merz [[2](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.3 | 24.146 | <!--r:glm.deviance_test-->24.146<!--/r--> | <!--r:glm.status-->PASS<!--/r--> |
 | GLM3 | Wüthrich & Merz [[2](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.5 | 24.102 | <!--r:glm3.deviance_test-->24.102<!--/r--> | <!--r:glm3.status-->PASS<!--/r--> |
 | FNN (15 seeds) | Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (f) | 23.827 | <!--r:fnn.deviance_test-->23.829<!--/r--> | <!--r:fnn.status-->PASS<!--/r--> |
-| CANN (15 seeds) | Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (g) | 23.810 | <!--r:cann.deviance_test-->23.818<!--/r--> | <!--r:cann.status-->PASS<!--/r--> |
+| CANN (15 seeds) | Brauer [[3](https://doi.org/10.1007/s13385-024-00388-2)], Table 2 (g) | 23.810 | <!--r:cann.deviance_test-->23.818<!--/r--> | <!--r:cann.status-->**FAIL**<!--/r--> |
 | LocalGLMnet | Richman & Wüthrich [[4](https://doi.org/10.1080/03461238.2022.2081816)], Table 2 (c) | 23.945 | <!--r:localglmnet.deviance_test-->23.933<!--/r--> | <!--r:localglmnet.status-->PASS<!--/r--> |
 
 Mortality (lesson 05) and reserving (lesson 06) reconcile the same way.
@@ -133,6 +170,7 @@ Mortality (lesson 05) and reserving (lesson 06) reconcile the same way.
 2. Wüthrich, M. V., & Merz, M. (2023). *Statistical Foundations of Actuarial Learning and its Applications*. Springer. [doi:10.1007/978-3-031-12409-9](https://doi.org/10.1007/978-3-031-12409-9) (open access)
 3. Brauer, A. (2024). Enhancing actuarial non-life pricing models via transformers. *European Actuarial Journal*, 14(3), 991–1012. [doi:10.1007/s13385-024-00388-2](https://doi.org/10.1007/s13385-024-00388-2)
 4. Richman, R., & Wüthrich, M. V. (2023). LocalGLMnet: interpretable deep learning for tabular data. *Scandinavian Actuarial Journal*, 2023(1), 71–95. [doi:10.1080/03461238.2022.2081816](https://doi.org/10.1080/03461238.2022.2081816)
-5. [Kedro documentation](https://docs.kedro.org/) · [MLflow documentation](https://mlflow.org/docs/latest/) · [Marp](https://marp.app/)
+5. Diebold, F. X., & Mariano, R. S. (1995). Comparing predictive accuracy. *Journal of Business & Economic Statistics*, 13(3), 253–263. [doi:10.1080/07350015.1995.10524599](https://doi.org/10.1080/07350015.1995.10524599)
+6. [Kedro documentation](https://docs.kedro.org/) · [MLflow documentation](https://mlflow.org/docs/latest/) · [Marp](https://marp.app/)
 
-_Last reviewed: 2026-11-07_
+_Last reviewed: 2026-11-10_

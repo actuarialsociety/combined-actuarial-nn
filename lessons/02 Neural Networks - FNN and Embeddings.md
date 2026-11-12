@@ -115,6 +115,11 @@ Poisson deviance per policy, $\times 10^{-2}$; mean (sd) over 15 seeds.
 | FNN | 23.768 (0.016) | 23.827 (0.015) | <!--r:fnn.deviance_learn-->23.774<!--/r--> (<!--r:fnn.deviance_learn_sd-->0.027<!--/r-->) | <!--r:fnn.deviance_test-->23.829<!--/r--> (<!--r:fnn.deviance_test_sd-->0.020<!--/r-->) | <!--r:fnn.status-->PASS<!--/r--> |
 | FNN, average of 15 | n/a | n/a | <!--r:fnn.deviance_ensemble_learn-->23.745<!--/r--> | <!--r:fnn.deviance_ensemble_test-->23.800<!--/r--> | |
 
+Gap in test deviance, 95% interval over test policies (lesson 00, Core ideas ⑥):
+
+- **GLM3 → FNN:** <!--r:gap.glm3.fnn-->0.273 (0.182 to 0.364)<!--/r-->, <!--r:verdict.glm3.fnn-->real<!--/r-->
+- **Averaging the 15 fits:** <!--r:gap.fnn.fnn_x15-->0.029 (0.028 to 0.030)<!--/r-->, more than the seed sd of one fit
+
 ---
 
 ## Diagnostics
@@ -139,4 +144,4 @@ Poisson deviance per policy, $\times 10^{-2}$; mean (sd) over 15 seeds.
 4. Wüthrich, M. V. (2020). Bias regularization in neural network models for general insurance pricing. *European Actuarial Journal*, 10(1), 179–202. [doi:10.1007/s13385-019-00215-z](https://doi.org/10.1007/s13385-019-00215-z)
 5. Richman, R., & Wüthrich, M. V. (2020). Nagging predictors. *Risks*, 8(3), 83. [doi:10.3390/risks8030083](https://doi.org/10.3390/risks8030083)
 
-_Last reviewed: 2026-11-07_
+_Last reviewed: 2026-11-10_

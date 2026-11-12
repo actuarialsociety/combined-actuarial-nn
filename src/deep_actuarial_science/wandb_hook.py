@@ -22,6 +22,8 @@ import pandas as pd
 from kedro.framework.hooks import hook_impl
 from matplotlib.figure import Figure
 
+from deep_actuarial_science.training_log import fit_outputs
+
 log = logging.getLogger(__name__)
 
 
@@ -127,6 +129,33 @@ class WandbHook:
             dataset_name.endswith("_reconciliation") or dataset_name.endswith("leaderboard")
         ):
             self.run.log({dataset_name: wandb.Table(dataframe=data.reset_index(drop=True))})
+
+    @hook_impl
+    def after_node_run(self, node, outputs: dict) -> None:
+        if self.run is None:
+            return
+        try:
+            for ns, df in fit_outputs(node, outputs):
+                self._log_curves(ns, df)
+        except Exception as e:  # noqa: BLE001 - a logging failure must not fail the node
+            log.warning("W&B training-curve logging of %s failed: %s", node.name, e)
+
+    def _log_curves(self, ns: str, df: pd.DataFrame) -> None:
+        """Every seed's per-epoch curves: one chart per metric (and sex), plus the table."""
+        import wandb
+
+        logged = {f"{ns}/training_curves": wandb.Table(dataframe=df)}
+        for (group, metric), d in df.groupby(["group", "metric"]):
+            runs = [r for _, r in d.groupby("run")]
+            title = " ".join(x for x in (ns, group, metric) if x)
+            logged[f"{ns}/train/{group + '/' if group else ''}{metric}"] = wandb.plot.line_series(
+                xs=[r.epoch.tolist() for r in runs],
+                ys=[r.value.tolist() for r in runs],
+                keys=[f"seed_{int(r.run.iloc[0]):02d}" for r in runs],
+                title=title,
+                xname="epoch",
+            )
+        self.run.log(logged)
 
     def _finish(self, exit_code: int = 0) -> None:
         if self.run is not None:

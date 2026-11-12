@@ -13,6 +13,7 @@ OUT = ROOT / "lessons" / "figures"
 
 FIGURES = {
     "00-leaderboard.png": "frequency/comparison/leaderboard_test_deviance.png",
+    "00-gaps.png": "frequency/comparison/gaps.png",
     "01-glm-calibration.png": "frequency/glm/figures/calibration.png",
     "01-glm-drivage.png": "frequency/glm/figures/marginal_drivage.png",
     "01-gbm-drivage.png": "frequency/gbm/figures/marginal_drivage.png",
@@ -25,7 +26,7 @@ FIGURES = {
     "03-leaderboard.png": "frequency/comparison/leaderboard_test_deviance.png",
     "04-attention.png": "frequency/localglmnet/figures/attention.png",
     "04-importance.png": "frequency/localglmnet/figures/importance.png",
-    "05-leaderboard.png": "mortality/comparison/leaderboard_rmse_out.png",
+    "05-seeds.png": "mortality/comparison/seeds.png",
     "05-observed.png": "mortality/comparison/observed_surface.png",
     "05-age-profile.png": "mortality/comparison/age_profile_last_year.png",
     "05-horizon.png": "mortality/comparison/rmse_by_horizon.png",

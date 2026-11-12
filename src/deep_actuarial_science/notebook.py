@@ -1,9 +1,12 @@
 """Run and inspect the Kedro pipelines from a notebook (local, container or Colab).
 
-    from deep_actuarial_science.notebook import run, load, show, leaderboard
+    from deep_actuarial_science.notebook import run, load, show, reconciliation, findings
     run("frequency", models=["glm", "cann"], params={"frequency.data.scale": 0.1})
-    leaderboard("frequency", ["glm", "cann"])
+    reconciliation("frequency", ["glm", "cann"])   # paper | reference run | this run
+    findings("frequency", ["glm", "cann"])         # which gaps are real, vs the reference run
     show("frequency", "cann")
+
+"Reference run" is the frozen full run committed in `reference/` (catalog: `reference_*`).
 
 Each call opens a fresh KedroSession (a session can only run once), so notebooks can
 re-run with different parameters. Every run is tracked in MLflow like `kedro run`.
@@ -25,6 +28,8 @@ PREP_OUTPUTS = {
     "reserving": ["res_triangles"],
 }
 METRICS = {"frequency": "freq_metrics", "mortality": "mort_metrics", "reserving": "res_metrics"}
+PREFIX = {"frequency": "freq", "mortality": "mort", "reserving": "res"}  # dataset names
+OUTPUT = {"frequency": "predictions", "mortality": "results", "reserving": "predictions"}
 
 
 def _env(env: str | None) -> str:
@@ -85,6 +90,64 @@ def leaderboard(pipeline: str, models: list[str], env: str | None = None) -> pd.
             row["benchmark"] = "n/a"
         rows.append(row)
     return pd.DataFrame(rows).set_index("model")
+
+
+def _models(pipeline: str, models: list[str] | None) -> list[str]:
+    if models:
+        return models
+    from importlib import import_module
+
+    return list(import_module(f"deep_actuarial_science.pipelines.{pipeline}").MODELS)
+
+
+def reconciliation(
+    pipeline: str, models: list[str] | None = None, env: str | None = None
+) -> pd.DataFrame:
+    """Each benchmarked metric three ways: the paper's table, the frozen reference run
+    (`reference/reconciliation.csv`) and this run. `status` is this run against the paper;
+    away from the reference setup (smaller data, fewer epochs) it is SKIPPED."""
+    cat = catalog(env)
+    rec = pd.concat(
+        [cat.load(f"{m}.{PREFIX[pipeline]}_reconciliation") for m in _models(pipeline, models)]
+    )
+    ref = cat.load("reference_reconciliation").set_index(["model", "metric"]).actual
+    out = rec.join(ref.rename("reference_run"), on=["model", "metric"])
+    out = out.rename(columns={"expected": "paper", "actual": "this_run"})
+    cols = ["model", "metric", "paper", "reference_run", "this_run", "tolerance", "status"]
+    return out[cols].reset_index(drop=True)
+
+
+def findings(
+    pipeline: str, models: list[str] | None = None, env: str | None = None
+) -> pd.DataFrame:
+    """This run's findings for `models` (default: all), with the frozen reference run's in
+    the `*_reference` columns (see `deep_actuarial_science.findings`).
+
+    - frequency, reserving: each step down the ranking, `worse` to `better`, with the gap in
+      loss, its 95% interval over test policies (companies) and the verdict; then what
+      averaging a network's seeds adds (`<model>_xN`).
+    - mortality: where the published single run falls among our seeds, and how many seeds
+      beat Lee-Carter.
+    """
+    from deep_actuarial_science import findings as f
+
+    cat, ctx = catalog(env), parameters(env)
+    models = _models(pipeline, models)
+    data = {m: cat.load(f"{m}.{PREFIX[pipeline]}_{OUTPUT[pipeline]}") for m in models}
+    ref = cat.load(f"reference_{pipeline}_findings")
+    if pipeline == "mortality":
+        from deep_actuarial_science.pipelines.mortality import published_rmse
+
+        published = published_rmse(
+            ctx["benchmarks"]["mortality"], ctx["mortality"]["data"], ctx["reference_setup"]
+        )
+        table = f.mortality(data, published)[0].set_index("model")
+        cols = ["seed_mean", "seeds_at_or_below_published", "seeds_beating_lee_carter"]
+        return table.join(ref.set_index("model")[cols].add_suffix("_reference"))
+    table = f.summary(f.frequency(data) if pipeline == "frequency" else f.reserving(data))
+    ref = ref.set_index(["worse", "better"])[["gap", "verdict"]].add_suffix("_reference")
+    cols = ["worse", "better", "gap", "ci_low", "ci_high", "verdict"]
+    return table[cols].join(ref, on=["worse", "better"])
 
 
 def figure_dir(pipeline: str, model: str | None = None) -> Path:

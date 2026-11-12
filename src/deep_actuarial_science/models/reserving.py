@@ -7,12 +7,15 @@ triangle; `predictions` is the long table with a `pred` column for those cells.
 - chain_ladder: volume-weighted chain-ladder per company (= ODP GLM, Renshaw & Verrall 1998)
 - neural_odp: CANN in the spirit of Gabrielli, Richman & Wüthrich (2020). The chain-ladder
   mean is the offset; a network with company, line and development embeddings learns a
-  multiplicative correction, initialised at zero, trained jointly across companies.
+  multiplicative correction, initialised at zero, trained jointly across companies. The
+  number of epochs is chosen out of time: offsets and training cells use calendar years up
+  to 1996 only, and the 1997 diagonal is the validation set. The network is then refitted on
+  the whole upper triangle (offsets from all of it) for that many epochs. Validating on the
+  1997 diagonal with offsets that were themselves fitted to it would make any learning look
+  worse than the offset alone, so the best epoch would always be the first.
 """
 
 from __future__ import annotations
-
-import copy
 
 import numpy as np
 import pandas as pd
@@ -78,10 +81,11 @@ def _finish(d: pd.DataFrame) -> pd.DataFrame:
 def chain_ladder_factors(tri: pd.DataFrame) -> np.ndarray:
     """Volume-weighted age-to-age factors f_1..f_9 from the upper triangle of one company."""
     C = tri[tri.upper].pivot(index="ay", columns="dev", values="cum_paid")
+    C = C.reindex(columns=range(1, 11))
     f = []
     for j in range(1, 10):
-        rows = C[j + 1].notna()
-        f.append(C.loc[rows, j + 1].sum() / C.loc[rows, j].sum())
+        rows = C[j + 1].notna()  # no observation of development j+1 yet: no development (1.0)
+        f.append(C.loc[rows, j + 1].sum() / C.loc[rows, j].sum() if rows.any() else 1.0)
     return np.array(f)
 
 
@@ -161,18 +165,26 @@ class NeuralODP(nn.Module):
         return torch.exp(self.out(z)).flatten() * offset
 
 
-def neural_odp(tri: pd.DataFrame, params: dict) -> tuple[pd.DataFrame, dict]:
-    torch.manual_seed(params.get("seed", 1))
-    cl, _ = chain_ladder(tri)
-    d = cl.copy()
+def _odp_frame(tri: pd.DataFrame) -> pd.DataFrame:
+    """Each cell with its chain-ladder mean `mu_cl`: the fitted value in the upper triangle,
+    the projection below it."""
+    d, _ = chain_ladder(tri)
     d.loc[d.upper, "mu_cl"] = chain_ladder_fitted_upper(d)
     d.loc[~d.upper, "mu_cl"] = d.loc[~d.upper, "pred"]
-    # scale each company by its premium so one network can serve every company (ODP dispersion)
-    scale = d[d.dev == 1].groupby(KEY).premium.sum().rename("scale")
-    d = d.join(scale, on=KEY)
-    codes = {c: pd.Categorical(d[c]).codes for c in ("company", "lob")}
+    return d
 
-    def tensors(m):
+
+def neural_odp(tri: pd.DataFrame, params: dict) -> tuple[pd.DataFrame, dict]:
+    full = _odp_frame(tri)
+    # as known at the end of 1996: offsets and training cells from calendar years <= 1996
+    early = _odp_frame(tri.assign(upper=tri.upper & (tri.calendar < LAST_YEAR)))
+    # scale each company by its premium so one network can serve every company (ODP dispersion)
+    scale = full[full.dev == 1].groupby(KEY).premium.sum().rename("scale")
+    full, early = full.join(scale, on=KEY), early.join(scale, on=KEY)
+    codes = {c: pd.Categorical(full[c]).codes for c in ("company", "lob")}
+    sizes = (int(codes["company"].max()) + 1, int(codes["lob"].max()) + 1)
+
+    def tensors(d, m):
         return (
             torch.as_tensor(codes["company"][m], dtype=torch.long),
             torch.as_tensor(codes["lob"][m], dtype=torch.long),
@@ -182,40 +194,47 @@ def neural_odp(tri: pd.DataFrame, params: dict) -> tuple[pd.DataFrame, dict]:
             torch.as_tensor((d.incr_paid.clip(lower=0) / d.scale).to_numpy()[m].astype(np.float32)),
         )
 
-    train_m = (d.upper & (d.calendar < LAST_YEAR)).to_numpy()  # validate on the latest diagonal
-    val_m = (d.upper & (d.calendar == LAST_YEAR)).to_numpy()
-    net = NeuralODP(
-        int(codes["company"].max()) + 1,
-        int(codes["lob"].max()) + 1,
-        params.get("embedding_dim", 2),
-        params.get("hidden", [16, 8]),
-    )
-    dev = device()
-    net.to(dev)
-    opt = torch.optim.Adam(net.parameters(), lr=params.get("lr", 0.001))
-    tr = tuple(t.to(dev) for t in tensors(train_m))
-    va = tuple(t.to(dev) for t in tensors(val_m))
-    loss_fn = nn.PoissonNLLLoss(log_input=False, reduction="mean")
-    best, state, hist = float("inf"), copy.deepcopy(net.state_dict()), {"loss": [], "val_loss": []}
-    for _ in range(params["epochs"]):
-        net.train()
-        opt.zero_grad()
-        loss = loss_fn(net(*tr[:5]), tr[5])
-        loss.backward()
-        opt.step()
-        net.eval()
-        with torch.no_grad():
-            vl = loss_fn(net(*va[:5]), va[5]).item()
-        hist["loss"].append(loss.item())
-        hist["val_loss"].append(vl)
-        if vl < best:
-            best, state = vl, copy.deepcopy(net.state_dict())
-    net.load_state_dict(state)
-    net.cpu()
-    hist["best_epoch"] = int(np.argmin(hist["val_loss"]))
-    low = (~d.upper).to_numpy()
+    def fit(train, val, epochs):
+        torch.manual_seed(params.get("seed", 1))
+        net = NeuralODP(*sizes, params.get("embedding_dim", 2), params.get("hidden", [16, 8]))
+        dev = device()
+        net.to(dev)
+        opt = torch.optim.Adam(net.parameters(), lr=params.get("lr", 0.001))
+        tr = tuple(t.to(dev) for t in train)
+        va = tuple(t.to(dev) for t in val) if val is not None else None
+        loss_fn = nn.PoissonNLLLoss(log_input=False, reduction="mean")
+        hist = {"loss": [], "val_loss": []}
+        for _ in range(epochs):
+            net.train()
+            opt.zero_grad()
+            loss = loss_fn(net(*tr[:5]), tr[5])
+            loss.backward()
+            opt.step()
+            hist["loss"].append(loss.item())
+            if va is not None:
+                net.eval()
+                with torch.no_grad():
+                    hist["val_loss"].append(loss_fn(net(*va[:5]), va[5]).item())
+        return net.cpu(), hist
+
+    # 1. choose the number of epochs out of time: train <= 1996, validate on the 1997 diagonal
+    # (accident year 1997 has no data at the end of 1996, so no offset: left out)
+    is_val = ((early.calendar == LAST_YEAR) & early.mu_cl.notna()).to_numpy()
+    _, hist = fit(tensors(early, early.upper.to_numpy()), tensors(early, is_val), params["epochs"])
+    # validation loss before any training: the chain-ladder offset alone
+    base = nn.PoissonNLLLoss(log_input=False, reduction="mean")(
+        tensors(early, is_val)[4], tensors(early, is_val)[5]
+    ).item()
+    best = int(np.argmin(hist["val_loss"]))
+    epochs = best + 1 if hist["val_loss"][best] < base else 0
+    hist.update(best_epoch=best, epochs_refit=epochs, val_loss_offset_only=base)
+    # 2. refit on the whole upper triangle for that many epochs and project the lower triangle
+    net, refit = fit(tensors(full, full.upper.to_numpy()), None, epochs)
+    hist["refit_loss"] = refit["loss"]
+    low = (~full.upper).to_numpy()
+    net.eval()
     with torch.no_grad():
-        p = net(*tensors(low)[:5]).numpy() * d.scale.to_numpy()[low]
-    d["pred"] = np.nan
-    d.loc[low, "pred"] = p
-    return d.drop(columns=["mu_cl", "scale"]), hist
+        p = net(*tensors(full, low)[:5]).numpy() * full.scale.to_numpy()[low]
+    full["pred"] = np.nan
+    full.loc[low, "pred"] = p
+    return full.drop(columns=["mu_cl", "scale"]), hist

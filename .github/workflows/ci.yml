@@ -1,13 +1,15 @@
 name: CI
 
-# Unit tests, a smoke run of every pipeline (2% of data, few epochs), and every
-# notebook executed in smoke mode. Downloads are cached between runs.
+# Unit tests (including: lessons and README agree with reference/), a smoke run of every
+# pipeline (2% of data, few epochs), and every notebook executed in smoke mode. Downloads are
+# cached between runs. A pull request must also add a line to CHANGELOG.md.
 
 on:
   pull_request:
-    paths: ["src/**", "conf/**", "tests/**", "notebooks/**", "pyproject.toml", ".github/workflows/ci.yml"]
+    paths: ["src/**", "conf/**", "tests/**", "notebooks/**", "scripts/**", "lessons/**", "reference/**",
+            "README.md", "pyproject.toml", ".github/workflows/ci.yml"]
   push:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 
 permissions:
@@ -24,9 +26,16 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the changelog check compares with the base branch
+      - name: CHANGELOG.md updated (see MAINTENANCE.md)
+        if: github.event_name == 'pull_request'
+        run: git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -qx CHANGELOG.md
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Folder READMEs match the code (AGENTS.md §7)
+        run: python3 scripts/check_readmes.py
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.13.0"

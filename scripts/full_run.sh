@@ -71,6 +71,7 @@ rec.to_csv(f"{sys.argv[1]}/reconciliation_all.csv", index=False)
 print(rec[["model", "metric", "expected", "actual", "tolerance", "status"]].to_string(index=False))
 print(rec.status.value_counts().to_string())
 EOF
+      "$PY" scripts/freeze_reference.py   # reference/, lesson figures and numbers
       ;;
     scale_up)
       for p in mortality reserving; do run "$UP_ENV" "$p"; done

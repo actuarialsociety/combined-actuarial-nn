@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Runs before every `git push` (enable once: scripts/install_hooks.sh or .ps1).
+# Blocks the push if a folder README no longer matches its code, or if the branch
+# changes files without a CHANGELOG.md line (AGENTS.md §4 and §7).
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+python3 scripts/check_readmes.py
+base=$(git rev-parse --verify -q origin/develop || git rev-parse --verify -q origin/main || true)
+if [ -n "$base" ] && [ -n "$(git diff --name-only "$base"...HEAD)" ] \
+   && ! git diff --name-only "$base"...HEAD | grep -qx CHANGELOG.md; then
+  echo "pre-push: add a line to CHANGELOG.md under Unreleased (see MAINTENANCE.md)"; exit 1
+fi

@@ -57,7 +57,7 @@ def process(text: str, found: list | None = None) -> str:
 
 
 def main(argv: list[str]) -> int:
-    files = sorted((ROOT / "lessons").glob("*.md"))
+    files = sorted((ROOT / "lessons").glob("[0-9][0-9] *.md"))
     bad = []
     for f in files:
         text = f.read_text(encoding="utf-8")

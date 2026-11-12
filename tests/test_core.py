@@ -1,10 +1,18 @@
-"""Fast unit tests: metrics, the CANN zero-initialisation property, chain-ladder vs package."""
+"""Fast unit tests: metrics, findings, the CANN zero-initialisation property, chain-ladder vs
+package, and that the lessons agree with the frozen reference run."""
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from deep_actuarial_science.metrics import balance_ratio, gini_index, poisson_deviance
+from deep_actuarial_science import findings
+from deep_actuarial_science.metrics import (
+    balance_ratio,
+    gini_index,
+    poisson_deviance,
+    poisson_deviance_per_policy,
+    poisson_unit_deviance,
+)
 from deep_actuarial_science.models import frequency as fm
 from deep_actuarial_science.models import reserving as rm
 
@@ -19,6 +27,69 @@ def test_balance_and_gini():
     y, mu, v = np.array([0, 1, 3.0]), np.array([0.5, 1.0, 2.5]), np.ones(3)
     assert balance_ratio(y, mu) == pytest.approx(1.0)
     assert gini_index(y, mu, v) > 0
+
+
+def test_gini_of_a_constant_prediction_is_zero():
+    rng = np.random.default_rng(0)
+    y, v = rng.poisson(0.1, 500).astype(float), rng.uniform(0.1, 1, 500)
+    assert gini_index(y, 0.07 * v, v) == pytest.approx(0, abs=1e-9)  # whatever the data order
+
+
+def test_unit_deviances_average_to_the_deviance_per_policy():
+    rng = np.random.default_rng(0)
+    v = rng.uniform(0.1, 1, 300)
+    y, mu = rng.poisson(0.2 * v).astype(float), rng.uniform(0.05, 0.3, 300) * v
+    assert poisson_unit_deviance(y, mu).mean() == pytest.approx(
+        poisson_deviance_per_policy(y, mu, v)
+    )
+
+
+def test_gaps_separate_a_real_gap_from_noise():
+    rng = np.random.default_rng(0)
+    base = rng.gamma(2.0, 1.0, 5000)
+    losses = {
+        "worst": base + 0.5 + rng.normal(0, 0.1, 5000),  # clearly worse than `base`
+        "base": base,
+        "twin": base + rng.normal(0, 0.1, 5000),  # same quality, different noise
+    }
+    g = findings.gaps(losses).set_index(["worse", "better"])
+    assert g.loc[("worst", "base"), "verdict"] == findings.REAL
+    assert g.loc[("worst", "base"), "gap"] == pytest.approx(0.5, abs=0.01)
+    twins = g.loc[[i for i in g.index if set(i) == {"base", "twin"}]].iloc[0]
+    assert twins.verdict == findings.NOISE and twins.ci_low <= 0 <= twins.ci_high
+    assert len(findings.ladder(findings.gaps(losses), ["worst", "base"])) == 1
+    assert findings.summary(findings.gaps({"only": base})).empty
+
+
+def test_seeds_place_the_published_run():
+    per_seed = {"lc": np.array([0.34]), "net": np.array([0.40, 0.33, 0.50])}
+    t = findings.seeds(per_seed, {"lc": 0.34, "net": 0.36}, {"net": 0.30}, "lc")
+    net = t.set_index("model").loc["net"]
+    assert net.published_run == "better than every seed"
+    assert net.seeds_at_or_below_published == 0 and net.seeds_beating_lc == 1
+
+
+def test_lessons_and_readme_match_the_frozen_reference_run():
+    """Every number in the lessons and the README is filled from reference/, and the paper
+    values in reference/ are those of conf/base/parameters_benchmarks.yml."""
+    import importlib.util
+    from pathlib import Path
+
+    import yaml
+
+    root = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("fill", root / "scripts" / "fill_results.py")
+    fill = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fill)
+    assert fill.main(check=True) == 0, "run python3 scripts/fill_results.py"
+
+    rec = pd.read_csv(root / "reference" / "reconciliation.csv")
+    assert set(rec.status) <= {"PASS", "FAIL"}
+    conf = yaml.safe_load((root / "conf/base/parameters_benchmarks.yml").read_text())["benchmarks"]
+    for r in rec.itertuples():
+        entries = conf[r.pipeline][r.model]
+        entries = entries if isinstance(entries, list) else [entries]
+        assert any(e["expected"].get(r.metric) == r.expected for e in entries), (r.model, r.metric)
 
 
 def _synthetic_policies(n=4000, seed=0):
@@ -152,7 +223,7 @@ def test_wiki_has_colab_link_for_every_lesson(tmp_path):
 
     sidebar = (tmp_path / "_Sidebar.md").read_text()
     notebooks = (tmp_path / "Notebooks.md").read_text()
-    for lesson in sorted((root / "lessons").glob("*.md")):
+    for lesson in sorted((root / "lessons").glob("[0-9][0-9] *.md")):  # decks, not README.md
         url = bw.colab_url(lesson.read_text())
         assert url, f"{lesson.name} has no Colab badge"
         assert (root / url.split("/blob/main/")[1]).exists(), f"{url} points at a missing notebook"
@@ -184,7 +255,7 @@ def test_run_all_mps_notebook_trains_on_mps_and_runs_every_pipeline():
     assert 'os.environ["DAS_DEVICE"] = "mps"' in code
     assert "torch.backends.mps.is_available()" in code  # falls back off a Mac (CI)
     assert '("frequency", "mortality", "reserving")' in code
-    assert "reconciliation.csv" in code
+    assert "reconciliation(p, env=ENV)" in code
 
 
 def test_colab_notebooks_force_a_gpu_runtime():
@@ -333,7 +404,8 @@ def test_reserving_reconciliation_checks_the_models_own_metrics():
         {"source": "paper", "tolerance": 0.01, "expected": {"mape_ultimate": 0.0}},
         {"source": "package", "tolerance": 1e-6, "expected": {"max_rel_diff_vs_package": 0.0}},
     ]
-    rec = reconcile({"mape_ultimate": 0.005}, pred, tri, bench, {"kind": "chain_ladder"})
+    data = {"lines": ["ppauto"], "companies": {"ppauto": [1]}}  # the published setup
+    rec = reconcile({"mape_ultimate": 0.005}, pred, tri, bench, data, True, "chain_ladder")
     assert dict(zip(rec.metric, rec.status)) == {
         "mape_ultimate": "PASS",
         "max_rel_diff_vs_package": "PASS",
@@ -390,3 +462,62 @@ def test_wandb_outage_falls_back_to_offline(monkeypatch):
     monkeypatch.setattr(wandb_hook.time, "sleep", lambda s: None)
     run = wandb_hook._init_or_offline(types.SimpleNamespace(init=init), {"project": "p"})
     assert run == "offline-run" and modes == ["online"] * 3 + ["offline"]
+
+
+def test_two_se_tolerance_compares_two_means_over_seeds():
+    """A published mean over n seeds is compared with ours by the standard error of the gap,
+    not by 2 seed sd (which is about 2.7x too wide for two 15-seed means)."""
+    from deep_actuarial_science.benchmarks import reconcile
+
+    bench = {"tolerance": "2se", "sd": {"d": 0.03}, "n": 15, "expected": {"d": 23.8}}
+    rec = reconcile({"d": 23.83, "d_sd": 0.03, "n_runs": 15}, bench, True, "m")
+    assert rec.tolerance[0] == pytest.approx(2 * np.sqrt(2 * 0.03**2 / 15))  # 0.0219
+    assert rec.status[0] == "FAIL"  # a gap of 0.03 passed under the old 2 sd (0.06)
+    ok = reconcile({"d": 23.81, "d_sd": 0.03, "n_runs": 15}, bench, True, "m")
+    assert ok.status[0] == "PASS"
+
+
+def test_holm_adjusts_verdicts_over_all_pairs():
+    p = np.array([0.01, 0.04, 0.03, np.nan])
+    adj = findings.holm(p)
+    assert adj[:3] == pytest.approx([0.03, 0.06, 0.06])
+    assert np.isnan(adj[3])
+    rng = np.random.default_rng(0)
+    base = rng.normal(1, 1, 2000)
+    t = findings.gaps({"a": base + 0.5, "b": base + rng.normal(0, 0.01, 2000), "c": base})
+    assert {"p_value", "p_holm"} <= set(t.columns)
+    assert t.set_index(["worse", "better"]).loc[("a", "c"), "verdict"] == findings.REAL
+    assert (t.p_holm >= t.p_value).all()
+
+
+def test_training_curves_cover_every_pipeline_shape():
+    from types import SimpleNamespace
+
+    from deep_actuarial_science.training_log import curves, fit_outputs, series_key
+
+    h = {"loss": [3, 2, 1], "val_loss": [4, 3, 2], "best_epoch": 2}
+    freq = SimpleNamespace(histories=[h, h], history=h)
+    mort = {"Male": {**h, "runs": [h, {**h, "lr": [1e-3, 1e-3, 9e-4]}]}}
+    assert len(curves(freq)) == 12 and set(curves(freq).run) == {0, 1}
+    m = curves(mort)
+    assert set(m.group) == {"Male"} and set(m.metric) == {"loss", "val_loss", "lr"}
+    assert len(curves(h)) == 6
+    assert curves(pd.DataFrame()).empty and curves({"a": 1}).empty
+    node = SimpleNamespace(name="lstm.fit", namespace="lstm")
+    assert fit_outputs(node, {"lstm.mort_history": mort})[0][0] == "lstm"
+    assert fit_outputs(SimpleNamespace(name="lstm.evaluate", namespace="lstm"), {"x": h}) == []
+    assert series_key("lstm", "Male", 3, "val_loss") == "lstm/train/Male/seed_03/val_loss"
+
+
+def test_neural_odp_chooses_epochs_out_of_time():
+    """Offsets for the 1997 validation diagonal come from data up to 1996 only, so the
+    validation loss of the offset alone is a real out-of-time score, and training on it can
+    beat it; with leaked offsets the best epoch was always the first."""
+    tri = _triangles(n_comp=4)
+    early = rm._odp_frame(tri.assign(upper=tri.upper & (tri.calendar < rm.LAST_YEAR)))
+    val = early[(early.calendar == rm.LAST_YEAR)]
+    assert val.mu_cl.notna().sum() == len(val) - 4  # accident year 1997: no data, no offset
+    pred, hist = rm.neural_odp(tri, {"seed": 1, "epochs": 30, "hidden": [4], "lr": 0.01})
+    assert np.isfinite(hist["val_loss_offset_only"]) and len(hist["val_loss"]) == 30
+    assert hist["epochs_refit"] in (0, hist["best_epoch"] + 1)
+    assert pred.loc[~pred.upper, "pred"].notna().all()

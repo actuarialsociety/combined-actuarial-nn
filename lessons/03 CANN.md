@@ -110,10 +110,15 @@ Poisson deviance per policy, $\times 10^{-2}$; mean (sd) over 15 seeds.
 | Model | Published learn | Published test | This repo learn | This repo test | Status |
 | --- | --- | --- | --- | --- | --- |
 | GLM3 ([[5](https://doi.org/10.1007/978-3-031-12409-9)], Table 5.5) | 24.084 | 24.102 | <!--r:glm3.deviance_learn-->24.084<!--/r--> | <!--r:glm3.deviance_test-->24.102<!--/r--> | <!--r:glm3.status-->PASS<!--/r--> |
-| CANN | 23.742 (0.061) | 23.810 (0.033) | <!--r:cann.deviance_learn-->23.787<!--/r--> (<!--r:cann.deviance_learn_sd-->0.036<!--/r-->) | <!--r:cann.deviance_test-->23.818<!--/r--> (<!--r:cann.deviance_test_sd-->0.016<!--/r-->) | <!--r:cann.status-->PASS<!--/r--> |
+| CANN | 23.742 (0.061) | 23.810 (0.033) | <!--r:cann.deviance_learn-->23.787<!--/r--> (<!--r:cann.deviance_learn_sd-->0.036<!--/r-->) | <!--r:cann.deviance_test-->23.818<!--/r--> (<!--r:cann.deviance_test_sd-->0.016<!--/r-->) | <!--r:cann.status-->**FAIL**<!--/r--> |
 | FNN (lesson 02) | 23.768 (0.016) | 23.827 (0.015) | <!--r:fnn.deviance_learn-->23.774<!--/r--> | <!--r:fnn.deviance_test-->23.829<!--/r--> | <!--r:fnn.status-->PASS<!--/r--> |
 
-![w:520](figures/03-leaderboard.png)
+Gap in test deviance, 95% interval over test policies (lesson 00, Core ideas ⑥):
+
+- **GLM3 → CANN:** <!--r:gap.glm3.cann-->0.284 (0.203 to 0.366)<!--/r-->, <!--r:verdict.glm3.cann-->real<!--/r-->
+- **FNN → CANN:** <!--r:gap.fnn.cann-->0.011 (-0.027 to 0.050)<!--/r-->, <!--r:verdict.fnn.cann-->not distinguishable<!--/r-->: this test set cannot rank the two
+
+![w:440](figures/03-leaderboard.png)
 
 ---
 
@@ -141,4 +146,4 @@ Poisson deviance per policy, $\times 10^{-2}$; mean (sd) over 15 seeds.
 5. Wüthrich, M. V., & Merz, M. (2023). *Statistical Foundations of Actuarial Learning and its Applications*. Springer. [doi:10.1007/978-3-031-12409-9](https://doi.org/10.1007/978-3-031-12409-9)
 6. Richman, R., Scognamiglio, S., & Wüthrich, M. V. (2025). The credibility transformer. *European Actuarial Journal*, 15(2), 345–379. [doi:10.1007/s13385-025-00413-y](https://doi.org/10.1007/s13385-025-00413-y)
 
-_Last reviewed: 2026-11-07_
+_Last reviewed: 2026-11-10_

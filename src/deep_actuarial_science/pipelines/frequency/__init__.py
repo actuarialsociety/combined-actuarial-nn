@@ -7,6 +7,8 @@ kedro run --pipeline frequency --params frequency.data.scale=0.1
 
 from __future__ import annotations
 
+from functools import partial
+
 from kedro.pipeline import Pipeline, node, pipeline
 
 from deep_actuarial_science.pipelines.frequency import nodes as n
@@ -49,12 +51,11 @@ def model_pipeline(name: str, base: str | None) -> Pipeline:
                 name="figures",
             ),
             node(
-                n.reconcile,
+                partial(n.reconcile, name=name),
                 [
                     "freq_metrics",
                     "params:benchmark",
                     "params:frequency.data",
-                    "params:model",
                     "params:reference_setup",
                 ],
                 "freq_reconciliation",
@@ -97,7 +98,7 @@ def create_pipeline(**kwargs) -> Pipeline:
                     for d in ("freq_metrics", "freq_predictions", "freq_reconciliation")
                     for m in MODELS
                 ],
-                ["freq_leaderboard", "freq_comparison_figures"],
+                ["freq_leaderboard", "freq_findings", "freq_comparison_figures"],
                 name="compare_frequency_models",
             )
         ]
